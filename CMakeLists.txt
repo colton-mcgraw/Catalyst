@@ -1,1 +1,35 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.16)
+
+project(Catalyst VERSION 0.1.0 LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+option(CATALYST_BUILD_ALL "Build monolithic Catalyst library (links enabled modules)" ON)
+option(CATALYST_BUILD_ANIMATION "Build Catalyst animation module" ON)
+option(CATALYST_BUILD_AUDIO "Build Catalyst audio module" ON)
+option(CATALYST_BUILD_CORE "Build Catalyst core module" ON)
+option(CATALYST_BUILD_INPUT "Build Catalyst input module" ON)
+option(CATALYST_BUILD_MATH "Build Catalyst math module" ON)
+option(CATALYST_BUILD_NET "Build Catalyst net module" ON)
+option(CATALYST_BUILD_PHYSICS "Build Catalyst physics module" ON)
+option(CATALYST_BUILD_PLATFORM "Build Catalyst platform module" ON)
+option(CATALYST_BUILD_RENDERING "Build Catalyst rendering module" ON)
+option(CATALYST_BUILD_RESOURCE "Build Catalyst resource module" ON)
+option(CATALYST_BUILD_SCENE "Build Catalyst scene module" ON)
+option(CATALYST_BUILD_UI "Build Catalyst UI module" ON)
+option(CATALYST_BUILD_UTILS "Build Catalyst utils module" ON)
+option(CATALYST_BUILD_EXAMPLES "Build Catalyst examples" ON)
+option(CATALYST_BUILD_TESTS "Build Catalyst tests" OFF)
+
+add_subdirectory(src)
+
+if(CATALYST_BUILD_EXAMPLES)
+	add_subdirectory(examples)
+endif()
+
+if(CATALYST_BUILD_TESTS)
+	enable_testing()
+	add_subdirectory(tests)
+endif()
