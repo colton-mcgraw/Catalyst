@@ -1,10 +1,7 @@
 /**
  * @file rect.hpp
  * @brief Axis-aligned 2D rectangle (`rect<T>`) with common operations.
- *
- * Semantics: rectangles are represented as half-open bounds $[\text{min}, \text{max})$.
- * A point is contained iff $\text{min} \le p < \text{max}$ component-wise.
- *
+ * @details The `rect` template represents an axis-aligned rectangle defined by minimum and maximum corners. It provides utility functions for common rectangle operations such as intersection, union, containment, and area calculation. The rectangle is defined as a half-open interval [min, max), meaning it includes the min corner but excludes the max corner. This convention is convenient for pixel rectangles (e.g. Win32 client rects where right/bottom are exclusive) and for composing intersections. All operations assume axis-alignment (i.e. the rectangle edges are parallel to the coordinate axes) and do not support rotation or skewing.
  * License: MIT (see LICENSE).
  */
 #pragma once
@@ -17,6 +14,11 @@
 #include <cstddef>
 #include <type_traits>
 
+/**
+ * @namespace catalyst::math
+ * @brief The catalyst::math namespace contains all the mathematical types and functions provided by the Catalyst Math library. This includes vector and matrix types, quaternion support, angle types with user-defined literals, projection matrix utilities, transformation functions, and more. By organizing all math-related functionality within this namespace, we can avoid naming conflicts and provide a clear structure for users of the library to access the various mathematical tools they need for graphics programming and game development.
+ * @details The Catalyst Math library is designed to be efficient, easy to use, and compatible with modern C++ standards. It provides a comprehensive set of mathematical utilities that are commonly used in graphics applications, making it easier for developers to perform complex mathematical operations without having to implement them from scratch. By including the appropriate headers from the Catalyst Math library, users can access all the functionality they need for their projects.
+ */
 namespace catalyst::math
 {
 
@@ -24,9 +26,9 @@ namespace catalyst::math
      * @struct rect
      * @tparam T Scalar type for rectangle coordinates (e.g. float, double, int).
      * @brief A simple axis-aligned rectangle type defined by minimum and maximum corners. Provides utility functions for common rectangle operations such as intersection, union, containment, and area calculation.
-        * @details The rectangle is defined by two 2D vectors: `min` (inclusive) and `max` (exclusive).
-        * This makes the rectangle a half-open interval $[\text{min}, \text{max})$ which is convenient for pixel
-        * rectangles (e.g. Win32 client rects where right/bottom are exclusive) and for composing intersections.
+     * @details The rectangle is defined by two 2D vectors: `min` (inclusive) and `max` (exclusive).
+     * This makes the rectangle a half-open interval $[\text{min}, \text{max})$ which is convenient for pixel
+     * rectangles (e.g. Win32 client rects where right/bottom are exclusive) and for composing intersections.
      * @note All operations assume axis-alignment (i.e. the rectangle edges are parallel to the coordinate axes) and do not support rotation or skewing.
      * @see vec for 2D vector operations used in rectangle calculations.
      */
