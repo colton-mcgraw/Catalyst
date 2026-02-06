@@ -1,1 +1,3 @@
 add_subdirectory(math)
+add_subdirectory(platform)
+add_subdirectory(ui)

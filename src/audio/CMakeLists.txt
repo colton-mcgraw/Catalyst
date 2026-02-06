@@ -1,5 +1,5 @@
 add_library(catalyst_audio STATIC
-  audio.cpp
+  engine.cpp
 )
 
 add_library(catalyst::audio ALIAS catalyst_audio)
@@ -34,7 +34,17 @@ if(_catalyst_audio_backend STREQUAL "win32")
   target_include_directories(catalyst_audio_backend_win32
     PRIVATE
       ${CMAKE_CURRENT_SOURCE_DIR}
+      ${PROJECT_SOURCE_DIR}/include
   )
+
+  # Win32 audio builds always include ASIO (SDK-free minimal loader).
+  target_sources(catalyst_audio_backend_win32 PRIVATE
+    asio/asio_loader.cpp
+    asio/asio_backend_win32.cpp
+    wasapi/wasapi_backend_win32.cpp
+  )
+
+  target_link_libraries(catalyst_audio_backend_win32 PRIVATE Ole32 Uuid)
 
   target_link_libraries(catalyst_audio PRIVATE catalyst_audio_backend_win32)
 elseif(_catalyst_audio_backend STREQUAL "null")
@@ -45,6 +55,7 @@ elseif(_catalyst_audio_backend STREQUAL "null")
   target_include_directories(catalyst_audio_backend_null
     PRIVATE
       ${CMAKE_CURRENT_SOURCE_DIR}
+      ${PROJECT_SOURCE_DIR}/include
   )
 
   target_link_libraries(catalyst_audio PRIVATE catalyst_audio_backend_null)

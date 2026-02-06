@@ -8,6 +8,13 @@ using catalyst::tests::lane_bits;
 using catalyst::tests::lanes;
 using catalyst::tests::nearly_equal;
 
+std::array<std::uint32_t, 4> lane_bits_mask32x4(catalyst::math::mask32x4 m)
+{
+    std::array<std::uint32_t, 4> bits{};
+    m.store_unaligned(bits.data());
+    return bits;
+}
+
 void test_load_store_roundtrip()
 {
     alignas(16) float in[4] = {1.25f, -2.5f, 3.0f, 100.0f};
@@ -41,7 +48,7 @@ void test_abs_and_mask()
     CT_REQUIRE(nearly_equal(ab[3], 4.25f));
 
     // mask(): 0xFFFFFFFF for negative lanes, else 0.
-    const auto mb = lane_bits(a.mask());
+    const auto mb = lane_bits_mask32x4(a.mask());
     CT_REQUIRE(mb[0] == 0xFFFFFFFFu);
     CT_REQUIRE(mb[1] == 0x00000000u);
     CT_REQUIRE(mb[2] == 0xFFFFFFFFu);

@@ -28,14 +28,15 @@ namespace catalyst::tests
         }              \
     } while (false)
 
-inline bool nearly_equal(float a, float b, float eps = 1e-5f) noexcept
+template <class T>
+inline bool nearly_equal(T a, T b, T eps = static_cast<T>(1e-5)) noexcept
 {
-    const float diff = std::fabs(a - b);
+    const T diff = std::fabs(a - b);
     if (diff <= eps)
         return true;
 
-    const float scale = (std::max)(std::fabs(a), std::fabs(b));
-    return diff <= eps * (std::max)(1.0f, scale);
+    const T scale = (std::max)(std::fabs(a), std::fabs(b));
+    return diff <= eps * (std::max)(static_cast<T>(1), scale);
 }
 
 template <class Vec4>

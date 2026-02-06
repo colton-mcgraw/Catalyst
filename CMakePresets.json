@@ -1,0 +1,597 @@
+{
+  "version": 4,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 19,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
+    },
+    {
+      "name": "base-tests",
+      "hidden": true,
+      "inherits": "base",
+      "cacheVariables": {
+        "CATALYST_BUILD_TESTS": "ON",
+        "CATALYST_BUILD_EXAMPLES": "OFF"
+      }
+    },
+    {
+      "name": "msvc-x64",
+      "displayName": "MSVC (VS 2026, x64)",
+      "inherits": "base",
+      "binaryDir": "${sourceDir}/build/msvc-vs18-x64",
+      "generator": "Visual Studio 18 2026",
+      "architecture": "x64",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    },
+    {
+      "name": "msvc-x64-tests",
+      "displayName": "MSVC (VS 2026, x64, Tests)",
+      "inherits": ["msvc-x64", "base-tests"],
+      "binaryDir": "${sourceDir}/build/msvc-vs18-x64-tests",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    },
+    {
+      "name": "clangcl-x64-debug",
+      "displayName": "Clang-CL (Ninja, Debug)",
+      "inherits": "base",
+      "generator": "Ninja",
+      "cacheVariables": {
+        "CMAKE_CXX_COMPILER": "clang-cl",
+        "CMAKE_BUILD_TYPE": "Debug"
+      },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    },
+    {
+      "name": "clangcl-x64-debug-tests",
+      "displayName": "Clang-CL (Ninja, Debug, Tests)",
+      "inherits": ["clangcl-x64-debug", "base-tests"],
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    },
+    {
+      "name": "clangcl-x64-release",
+      "displayName": "Clang-CL (Ninja, Release)",
+      "inherits": "base",
+      "generator": "Ninja",
+      "cacheVariables": {
+        "CMAKE_CXX_COMPILER": "clang-cl",
+        "CMAKE_BUILD_TYPE": "Release"
+      },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    },
+    {
+      "name": "clangcl-x64-release-tests",
+      "displayName": "Clang-CL (Ninja, Release, Tests)",
+      "inherits": ["clangcl-x64-release", "base-tests"],
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    },
+
+    {
+      "name": "linux-gcc-debug",
+      "displayName": "Linux GCC (Ninja, Debug)",
+      "inherits": "base",
+      "generator": "Ninja",
+      "cacheVariables": {
+        "CMAKE_CXX_COMPILER": "g++",
+        "CMAKE_BUILD_TYPE": "Debug"
+      },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      }
+    },
+    {
+      "name": "linux-gcc-debug-tests",
+      "displayName": "Linux GCC (Ninja, Debug, Tests)",
+      "inherits": ["linux-gcc-debug", "base-tests"],
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      }
+    },
+    {
+      "name": "linux-gcc-release",
+      "displayName": "Linux GCC (Ninja, Release)",
+      "inherits": "base",
+      "generator": "Ninja",
+      "cacheVariables": {
+        "CMAKE_CXX_COMPILER": "g++",
+        "CMAKE_BUILD_TYPE": "Release"
+      },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      }
+    },
+    {
+      "name": "linux-gcc-release-tests",
+      "displayName": "Linux GCC (Ninja, Release, Tests)",
+      "inherits": ["linux-gcc-release", "base-tests"],
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      }
+    },
+    {
+      "name": "linux-clang-debug",
+      "displayName": "Linux Clang (Ninja, Debug)",
+      "inherits": "base",
+      "generator": "Ninja",
+      "cacheVariables": {
+        "CMAKE_CXX_COMPILER": "clang++",
+        "CMAKE_BUILD_TYPE": "Debug"
+      },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      }
+    },
+    {
+      "name": "linux-clang-debug-tests",
+      "displayName": "Linux Clang (Ninja, Debug, Tests)",
+      "inherits": ["linux-clang-debug", "base-tests"],
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      }
+    },
+    {
+      "name": "linux-clang-release",
+      "displayName": "Linux Clang (Ninja, Release)",
+      "inherits": "base",
+      "generator": "Ninja",
+      "cacheVariables": {
+        "CMAKE_CXX_COMPILER": "clang++",
+        "CMAKE_BUILD_TYPE": "Release"
+      },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      }
+    },
+    {
+      "name": "linux-clang-release-tests",
+      "displayName": "Linux Clang (Ninja, Release, Tests)",
+      "inherits": ["linux-clang-release", "base-tests"],
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      }
+    },
+
+    {
+      "name": "macos-clang-debug",
+      "displayName": "macOS Clang (Ninja, Debug)",
+      "inherits": "base",
+      "generator": "Ninja",
+      "cacheVariables": {
+        "CMAKE_CXX_COMPILER": "clang++",
+        "CMAKE_BUILD_TYPE": "Debug"
+      },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      }
+    },
+    {
+      "name": "macos-clang-debug-tests",
+      "displayName": "macOS Clang (Ninja, Debug, Tests)",
+      "inherits": ["macos-clang-debug", "base-tests"],
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      }
+    },
+    {
+      "name": "macos-clang-release",
+      "displayName": "macOS Clang (Ninja, Release)",
+      "inherits": "base",
+      "generator": "Ninja",
+      "cacheVariables": {
+        "CMAKE_CXX_COMPILER": "clang++",
+        "CMAKE_BUILD_TYPE": "Release"
+      },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      }
+    },
+    {
+      "name": "macos-clang-release-tests",
+      "displayName": "macOS Clang (Ninja, Release, Tests)",
+      "inherits": ["macos-clang-release", "base-tests"],
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "msvc-x64-debug",
+      "displayName": "Build MSVC Debug",
+      "configurePreset": "msvc-x64",
+      "configuration": "Debug",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    },
+    {
+      "name": "msvc-x64-release",
+      "displayName": "Build MSVC Release",
+      "configurePreset": "msvc-x64",
+      "configuration": "Release",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    },
+    {
+      "name": "msvc-x64-tests-debug",
+      "displayName": "Build MSVC Debug (Tests)",
+      "configurePreset": "msvc-x64-tests",
+      "configuration": "Debug",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    },
+    {
+      "name": "msvc-x64-tests-release",
+      "displayName": "Build MSVC Release (Tests)",
+      "configurePreset": "msvc-x64-tests",
+      "configuration": "Release",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    },
+    {
+      "name": "clangcl-x64-debug",
+      "displayName": "Build Clang-CL Debug",
+      "configurePreset": "clangcl-x64-debug",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    },
+    {
+      "name": "clangcl-x64-release",
+      "displayName": "Build Clang-CL Release",
+      "configurePreset": "clangcl-x64-release",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    },
+    {
+      "name": "clangcl-x64-debug-tests",
+      "displayName": "Build Clang-CL Debug (Tests)",
+      "configurePreset": "clangcl-x64-debug-tests",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    },
+    {
+      "name": "clangcl-x64-release-tests",
+      "displayName": "Build Clang-CL Release (Tests)",
+      "configurePreset": "clangcl-x64-release-tests",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    },
+
+    {
+      "name": "linux-gcc-debug",
+      "displayName": "Build Linux GCC Debug",
+      "configurePreset": "linux-gcc-debug",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      }
+    },
+    {
+      "name": "linux-gcc-release",
+      "displayName": "Build Linux GCC Release",
+      "configurePreset": "linux-gcc-release",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      }
+    },
+    {
+      "name": "linux-gcc-debug-tests",
+      "displayName": "Build Linux GCC Debug (Tests)",
+      "configurePreset": "linux-gcc-debug-tests",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      }
+    },
+    {
+      "name": "linux-gcc-release-tests",
+      "displayName": "Build Linux GCC Release (Tests)",
+      "configurePreset": "linux-gcc-release-tests",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      }
+    },
+    {
+      "name": "linux-clang-debug",
+      "displayName": "Build Linux Clang Debug",
+      "configurePreset": "linux-clang-debug",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      }
+    },
+    {
+      "name": "linux-clang-release",
+      "displayName": "Build Linux Clang Release",
+      "configurePreset": "linux-clang-release",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      }
+    },
+    {
+      "name": "linux-clang-debug-tests",
+      "displayName": "Build Linux Clang Debug (Tests)",
+      "configurePreset": "linux-clang-debug-tests",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      }
+    },
+    {
+      "name": "linux-clang-release-tests",
+      "displayName": "Build Linux Clang Release (Tests)",
+      "configurePreset": "linux-clang-release-tests",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      }
+    },
+
+    {
+      "name": "macos-clang-debug",
+      "displayName": "Build macOS Clang Debug",
+      "configurePreset": "macos-clang-debug",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      }
+    },
+    {
+      "name": "macos-clang-release",
+      "displayName": "Build macOS Clang Release",
+      "configurePreset": "macos-clang-release",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      }
+    },
+    {
+      "name": "macos-clang-debug-tests",
+      "displayName": "Build macOS Clang Debug (Tests)",
+      "configurePreset": "macos-clang-debug-tests",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      }
+    },
+    {
+      "name": "macos-clang-release-tests",
+      "displayName": "Build macOS Clang Release (Tests)",
+      "configurePreset": "macos-clang-release-tests",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      }
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "msvc-x64-tests-debug",
+      "displayName": "Test MSVC Debug",
+      "configurePreset": "msvc-x64-tests",
+      "configuration": "Debug",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      },
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "msvc-x64-tests-release",
+      "displayName": "Test MSVC Release",
+      "configurePreset": "msvc-x64-tests",
+      "configuration": "Release",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      },
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "clangcl-x64-debug-tests",
+      "displayName": "Test Clang-CL Debug",
+      "configurePreset": "clangcl-x64-debug-tests",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      },
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "clangcl-x64-release-tests",
+      "displayName": "Test Clang-CL Release",
+      "configurePreset": "clangcl-x64-release-tests",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      },
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+
+    {
+      "name": "linux-gcc-debug-tests",
+      "displayName": "Test Linux GCC Debug",
+      "configurePreset": "linux-gcc-debug-tests",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      },
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "linux-gcc-release-tests",
+      "displayName": "Test Linux GCC Release",
+      "configurePreset": "linux-gcc-release-tests",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      },
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "linux-clang-debug-tests",
+      "displayName": "Test Linux Clang Debug",
+      "configurePreset": "linux-clang-debug-tests",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      },
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "linux-clang-release-tests",
+      "displayName": "Test Linux Clang Release",
+      "configurePreset": "linux-clang-release-tests",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      },
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+
+    {
+      "name": "macos-clang-debug-tests",
+      "displayName": "Test macOS Clang Debug",
+      "configurePreset": "macos-clang-debug-tests",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      },
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "macos-clang-release-tests",
+      "displayName": "Test macOS Clang Release",
+      "configurePreset": "macos-clang-release-tests",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      },
+      "output": {
+        "outputOnFailure": true
+      }
+    }
+  ]
+}

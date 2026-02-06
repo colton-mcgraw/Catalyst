@@ -10,6 +10,13 @@ namespace
     using catalyst::tests::lanes;
     using catalyst::tests::nearly_equal;
 
+    std::array<std::uint32_t, 4> lane_bits_mask32x4(catalyst::math::mask32x4 m)
+    {
+        std::array<std::uint32_t, 4> bits{};
+        m.store_unaligned(bits.data());
+        return bits;
+    }
+
     void test_constructors_zero_splat_set()
     {
         using catalyst::math::f32x4;
@@ -73,7 +80,7 @@ namespace
         const auto v = f32x4::set(neg_zero, 0.0f, -1.0f, 1.0f);
 
         // mask() is implemented as (x < 0), not sign-bit.
-        const auto mb = lane_bits(v.mask());
+        const auto mb = lane_bits_mask32x4(v.mask());
         CT_REQUIRE(mb[0] == 0x00000000u);
         CT_REQUIRE(mb[1] == 0x00000000u);
         CT_REQUIRE(mb[2] == 0xFFFFFFFFu);
@@ -81,7 +88,7 @@ namespace
 
         const float nan = std::numeric_limits<float>::quiet_NaN();
         const auto n = f32x4::set(nan, nan, nan, nan);
-        const auto mn = lane_bits(n.mask());
+        const auto mn = lane_bits_mask32x4(n.mask());
         CT_REQUIRE(mn[0] == 0x00000000u);
         CT_REQUIRE(mn[1] == 0x00000000u);
         CT_REQUIRE(mn[2] == 0x00000000u);

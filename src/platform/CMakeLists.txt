@@ -1,5 +1,6 @@
 add_library(catalyst_platform STATIC
   platform.cpp
+  window.cpp
 )
 
 add_library(catalyst::platform ALIAS catalyst_platform)
@@ -29,22 +30,26 @@ if(_catalyst_platform_backend STREQUAL "win32")
 
   add_library(catalyst_platform_backend_win32 STATIC
     win32/platform_backend_win32.cpp
+    win32/window_backend_win32.cpp
   )
 
   target_include_directories(catalyst_platform_backend_win32
     PRIVATE
       ${CMAKE_CURRENT_SOURCE_DIR}
+      ${PROJECT_SOURCE_DIR}/include
   )
 
   target_link_libraries(catalyst_platform PRIVATE catalyst_platform_backend_win32)
 elseif(_catalyst_platform_backend STREQUAL "null")
   add_library(catalyst_platform_backend_null STATIC
     null/platform_backend_null.cpp
+    null/window_backend_null.cpp
   )
 
   target_include_directories(catalyst_platform_backend_null
     PRIVATE
       ${CMAKE_CURRENT_SOURCE_DIR}
+      ${PROJECT_SOURCE_DIR}/include
   )
 
   target_link_libraries(catalyst_platform PRIVATE catalyst_platform_backend_null)

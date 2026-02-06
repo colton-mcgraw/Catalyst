@@ -41,6 +41,110 @@ To get started with Catalyst, follow these steps:
     ./build/examples/sandbox/Release/catalyst_sandbox.exe
     ```
 
+### Multi-compiler builds (Windows)
+
+This repo includes a root [CMakePresets.json](CMakePresets.json) so you can quickly validate builds across multiple compilers.
+
+- List presets:
+
+  ```bash
+  cmake --list-presets
+  ```
+
+- Build MSVC (Visual Studio):
+
+  ```bash
+  cmake --preset msvc-x64
+  cmake --build --preset msvc-x64-debug
+  cmake --build --preset msvc-x64-release
+  ```
+
+  Note about the MSVC generator:
+
+  - The `msvc-x64` preset uses a specific CMake *Visual Studio* generator (e.g. `Visual Studio 18 2026`).
+    If your installed Visual Studio version does not match the generator in the preset, CMake may report that it
+    “could not find any instance of Visual Studio”.
+  - If you change the generator, you must use a fresh build directory (or run `cmake --fresh --preset msvc-x64`) to
+    avoid “generator does not match the generator used previously” errors.
+  - To see which generator names are available on your machine:
+
+    ```powershell
+    cmake --help
+    ```
+
+- Build Clang-CL (Ninja):
+
+  ```bash
+  cmake --preset clangcl-x64-debug
+  cmake --build --preset clangcl-x64-debug
+
+  cmake --preset clangcl-x64-release
+  cmake --build --preset clangcl-x64-release
+  ```
+
+- Build the whole matrix (script):
+
+  ```powershell
+  ./scripts/build-all-presets.ps1
+  # or: ./scripts/build-all-presets.ps1 -Config Debug
+  # or: ./scripts/build-all-presets.ps1 -Config Release
+  ```
+
+### Test presets
+
+Test-enabled configure/build presets are provided with the `-tests` suffix.
+
+- Build + run tests (Windows):
+
+  ```powershell
+  ./scripts/build-all-presets.ps1 -Tests -RunTests
+  ```
+
+- Or run a specific test preset directly:
+
+  ```bash
+  # after building one of the *-tests build presets
+  ctest --preset clangcl-x64-debug-tests
+  ```
+
+### Cross-platform presets (Linux/macOS)
+
+Presets are included for Linux (GCC/Clang) and macOS (Clang). These use the Ninja generator.
+On each host OS, only the relevant presets are shown (Windows won’t list Linux/macOS presets, etc.).
+
+Examples:
+
+```bash
+cmake --preset linux-gcc-debug
+cmake --build --preset linux-gcc-debug
+
+cmake --preset macos-clang-release-tests
+cmake --build --preset macos-clang-release-tests
+ctest --preset macos-clang-release-tests
+```
+
+### Build-all scripts
+
+Scripts are provided to auto-run all *available* presets on the current host:
+
+- Windows: [scripts/build-all-available-presets.ps1](scripts/build-all-available-presets.ps1)
+  - Build: `./scripts/build-all-available-presets.ps1`
+  - Build + test: `./scripts/build-all-available-presets.ps1 -RunTests`
+- Linux: [scripts/build-all-available-presets-linux.sh](scripts/build-all-available-presets-linux.sh)
+  - Build: `./scripts/build-all-available-presets-linux.sh`
+  - Build + test: `./scripts/build-all-available-presets-linux.sh --run-tests`
+- macOS: [scripts/build-all-available-presets-macos.sh](scripts/build-all-available-presets-macos.sh)
+  - Build: `./scripts/build-all-available-presets-macos.sh`
+  - Build + test: `./scripts/build-all-available-presets-macos.sh --run-tests`
+
+Linux/macOS wrappers call the shared runner: [scripts/build-all-available-presets.py](scripts/build-all-available-presets.py)
+
+Note: on Linux/macOS you may need to set the executable bit once:
+
+```bash
+chmod +x scripts/build-all-available-presets-linux.sh scripts/build-all-available-presets-macos.sh
+```
+
 ## CMake Options
 
 Catalyst is modular: you can link individual modules, or link the monolithic umbrella library.
