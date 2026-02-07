@@ -2,7 +2,7 @@
  * @file transform.hpp
  * @brief Functions and types for constructing transformation matrices (translation, rotation, scale) in the Catalyst Math library.
  * @details This header provides functions for creating transformation matrices commonly used in graphics applications, including translation, rotation (from quaternions), and scaling. It also defines a transform struct that encapsulates translation, rotation, and scale components and can be converted to a 4x4 transformation matrix. Additionally, it includes functions for transforming points and vectors using a given transformation matrix, as well as a function for computing the inverse of an affine transformation matrix. These utilities are designed to facilitate common transformation operations in 3D graphics and game development.
- * License: MIT (see LICENSE).
+ * License: CDDL-1.0 (see LICENSE).
  */
 
 #pragma once

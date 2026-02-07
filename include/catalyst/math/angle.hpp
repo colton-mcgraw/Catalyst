@@ -2,7 +2,7 @@
  * @file angle.hpp
  * @brief Strongly-typed angle types for radians and degrees, with user-defined literals and conversion functions.
  * @details This header defines two strongly-typed angle types, radians and degrees, which wrap a raw scalar value representing the angle in radians or degrees, respectively. The types provide basic arithmetic operations, comparisons, and user-defined literals for convenient construction from floating-point or integer literals. Additionally, conversion functions are provided to convert between radians and degrees. The use of strongly-typed angle types helps prevent accidental mixing of raw scalar values with angles and improves code clarity.
- * License: MIT (see LICENSE).
+ * License: CDDL-1.0 (see LICENSE).
  */
 
 #pragma once

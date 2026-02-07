@@ -2,6 +2,7 @@
 #include <catalyst/platform/window.hpp>
 
 #include <cassert>
+#include <memory>
 #include <string>
 
 int main()
@@ -10,14 +11,14 @@ int main()
 
     platform::window_desc a{};
     a.title = "Test A";
-    a.width_px = 320;
-    a.height_px = 240;
+    a.width_px = ui::px(320.0f);
+    a.height_px = ui::px(240.0f);
     a.visible = false;
 
     platform::window_desc b{};
     b.title = "Test B";
-    b.width_px = 640;
-    b.height_px = 480;
+    b.width_px = ui::px(640.0f);
+    b.height_px = ui::px(480.0f);
     b.visible = false;
 
     auto w1 = platform::create_window(a);
@@ -60,7 +61,7 @@ int main()
 
     // Drain initial events (resized/dpi).
     {
-        platform::event e;
+        std::unique_ptr<core::event_base> e;
         for (int i = 0; i < 16; ++i)
         {
             if (!platform::poll_event(e))

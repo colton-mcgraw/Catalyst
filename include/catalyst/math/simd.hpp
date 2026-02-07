@@ -2,7 +2,7 @@
  * @file simd.hpp
  * @brief SIMD vector types and operations for 128-bit wide registers (e.g. SSE on x86, NEON on ARM).
  * @details This header defines SIMD vector types for 4 lanes of 32-bit floats (f32x4), 4 lanes of 32-bit integers (i32x4), 4 lanes of 32-bit unsigned integers (u32x4), 2 lanes of 64-bit integers (i64x2), 2 lanes of 64-bit unsigned integers (u64x2), and 2 lanes of 64-bit doubles (f64x2). Additionally, it defines mask types for boolean operations on these vectors. The actual storage and implementation of the SIMD types are platform-specific and may use intrinsics or compiler built-ins. The interface provides constructors, load/store functions, and basic arithmetic and logical operations for these SIMD types.
- * License: MIT (see LICENSE).
+ * License: CDDL-1.0 (see LICENSE).
  */
 
 #pragma once

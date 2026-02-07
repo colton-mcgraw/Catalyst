@@ -62,6 +62,30 @@ void test_length_calc_style_arithmetic()
     CT_REQUIRE(catalyst::tests::nearly_equal(x, 90.0f));
 }
 
+void test_length_physical_units_use_effective_dpi()
+{
+    catalyst::ui::resolve_context ctx{};
+
+    // Explicit per-axis DPI should drive physical unit resolution.
+    ctx.dpi_x = 144.0f; // 150% of 96
+    ctx.dpi_y = 120.0f; // 125% of 96
+
+    CT_REQUIRE(catalyst::tests::nearly_equal(catalyst::ui::resolve_or(catalyst::ui::inches(1.0f), catalyst::ui::axis::x, ctx), 144.0f));
+    CT_REQUIRE(catalyst::tests::nearly_equal(catalyst::ui::resolve_or(catalyst::ui::inches(1.0f), catalyst::ui::axis::y, ctx), 120.0f));
+
+    CT_REQUIRE(catalyst::tests::nearly_equal(catalyst::ui::resolve_or(catalyst::ui::centimeters(2.54f), catalyst::ui::axis::x, ctx), 144.0f));
+    CT_REQUIRE(catalyst::tests::nearly_equal(catalyst::ui::resolve_or(catalyst::ui::millimeters(25.4f), catalyst::ui::axis::y, ctx), 120.0f));
+}
+
+void test_length_physical_units_fallback_to_dpi_scale()
+{
+    catalyst::ui::resolve_context ctx{};
+    ctx.dpi_scale = 2.0f;
+
+    // When dpi_x/y are left at the default 96, physical units fall back to dpi_scale * 96.
+    CT_REQUIRE(catalyst::tests::nearly_equal(catalyst::ui::resolve_or(catalyst::ui::inches(1.0f), catalyst::ui::axis::x, ctx), 192.0f));
+}
+
 } // namespace
 
 int main()
@@ -70,5 +94,7 @@ int main()
     test_length_resolve_percent_vw_vh_and_axis();
     test_length_auto_fallback();
     test_length_calc_style_arithmetic();
+    test_length_physical_units_use_effective_dpi();
+    test_length_physical_units_fallback_to_dpi_scale();
     return 0;
 }

@@ -2,7 +2,7 @@
  * @file euler.hpp
  * @brief Euler angle types and conversions for yaw-pitch-roll (intrinsic ZYX).
  * @details This header defines a simple struct for representing Euler angles in yaw-pitch-roll convention, as well as utility functions for converting between degrees and radians, and for constructing yaw_pitch_roll structs from degrees or radians. The angles are stored as raw scalar values in radians, and the struct provides a convenient way to represent and manipulate Euler angles in a consistent way.
- * License: MIT (see LICENSE).
+ * License: CDDL-1.0 (see LICENSE).
  */
 #pragma once
 

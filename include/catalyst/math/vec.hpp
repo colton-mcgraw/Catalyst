@@ -2,7 +2,7 @@
  * @file vec.hpp
  * @brief A simple fixed-size vector template with basic arithmetic operations and utilities for common vector functions.
  * @details The vec template is designed for small fixed-size vectors commonly used in graphics applications (e.g. 2D, 3D, 4D vectors). It provides basic arithmetic operations (addition, subtraction, scalar multiplication/division) and utilities for accessing components and loading/storing from arrays. The vector is stored as a simple array of components, and the template parameters allow for flexibility in the size and alignment of the vector.
- * License: MIT (see LICENSE).
+ * License: CDDL-1.0 (see LICENSE).
  */
 
 #pragma once

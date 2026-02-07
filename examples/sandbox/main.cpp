@@ -1,4 +1,9 @@
-// examples/sandbox/main.cpp
+/*
+ * @file main.cpp
+ * @brief Example of using the Catalyst Audio Engine to play a test tone.
+ * @details This example demonstrates how to initialize the Catalyst Audio Engine, set up a callback to render a simple 440Hz sine wave test tone, and cleanly shut down the engine after playback. The example includes a fade-in at the start and a fade-out before stopping to minimize clicks. It also enumerates available audio devices and prints the backend in use. This serves as a basic template for using the Catalyst Audio Engine in applications.
+ * License: CDDL-1.0 (see LICENSE).
+ */
 
 #include <catalyst/catalyst.hpp>
 

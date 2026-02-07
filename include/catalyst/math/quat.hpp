@@ -2,7 +2,7 @@
  * @file quat.hpp
  * @brief A simple quaternion type with basic operations for 3D rotations.
  * @details The quat template represents a quaternion, which is a mathematical construct used to represent rotations in 3D space. It provides basic operations such as normalization, conjugation, inversion, and quaternion multiplication (Hamilton product). Additionally, it includes a function to rotate a vector by the quaternion and a static function to create a quaternion from an axis-angle representation. The quat type is designed to be simple and efficient for common use cases in graphics programming and game development.
- * License: MIT (see LICENSE).
+ * License: CDDL-1.0 (see LICENSE).
  */
 
 #pragma once

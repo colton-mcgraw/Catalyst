@@ -244,6 +244,8 @@ doxygen Doxyfile
 
 This will create HTML documentation in the `docs/html` directory.
 
+You can also view the documentation online at [https://colton_mcgraw.github.io/Catalyst/docs](https://colton_mcgraw.github.io/Catalyst/docs).
+
 ## Contributing
 
 Contributions are welcome! Please read the `CONTRIBUTING.md` file for guidelines on how to contribute to the project.

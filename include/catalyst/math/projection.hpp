@@ -2,7 +2,7 @@
  * @file projection.hpp
  * @brief Projection matrix utilities for Catalyst Math library.
  * @details This header provides functions for constructing perspective projection matrices commonly used in 3D graphics applications. The functions allow for creating perspective projection matrices based on field of view, aspect ratio, near and far clipping planes, and options for handedness and depth range. The library supports both right-handed and left-handed coordinate systems, as well as depth ranges of 0 to 1 (D3D style) and -1 to 1 (OpenGL style). By using these utilities, developers can easily generate projection matrices that are compatible with their rendering pipeline and coordinate system conventions.
- * License: MIT (see LICENSE).
+ * License: CDDL-1.0 (see LICENSE).
  */
 #pragma once
 

@@ -1,3 +1,10 @@
+/**
+ * @file keyboard.hpp
+ * @brief Defines the key_code enumeration, which represents physical keys on a keyboard. The key codes are based on the USB HID Keyboard/Keypad usage IDs (usage page 0x07). This file also includes a function to convert key codes to their corresponding USB HID usage IDs. The key_code enumeration allows for consistent representation of keyboard keys across different platforms and input systems, while text entry is delivered separately via character/text input events.
+ * @details The key_code enumeration provides a comprehensive list of physical keys on a keyboard, including letters, digits, function keys, and various control keys. Each key code corresponds to a specific physical key, and the values are aligned with the USB HID standard for keyboard input. This allows for consistent handling of keyboard input across different platforms and input systems. The to_usb_hid function provides a convenient way to convert key codes to their corresponding USB HID usage IDs, which can be useful when interfacing with low-level input APIs or when implementing custom input handling logic that requires knowledge of the underlying USB HID usage IDs. Text entry is handled separately through character or text input events, allowing for a clear distinction between physical key presses and the resulting text input, which can be affected by factors such as keyboard layout and modifier keys.
+ * License: CDDL-1.0 (see LICENSE).
+ */
+
 #pragma once
 
 #include <algorithm>
@@ -10,15 +17,28 @@
 #include "catalyst/core/event.hpp"
 #include "catalyst/input/usb.hpp"
 
-namespace catalyst::input {
+/**
+ * @namespace catalyst::input
+ * @brief The catalyst::input namespace contains definitions and utilities related to input handling in the Catalyst framework, including keyboard input, mouse input, gamepad input, and other input devices. This namespace provides a consistent interface for handling various types of input across different platforms and input systems, allowing developers to easily manage user interactions in their applications. The key_code enumeration, which represents physical keys on a keyboard, is defined within this namespace, along with functions for converting key codes to USB HID usage IDs and handling text input events separately from physical key presses.
+ * @details The catalyst::input namespace is designed to provide a comprehensive set of tools and definitions for handling user input in a consistent and efficient manner. By organizing all input-related functionality within this namespace, we can avoid naming conflicts and provide a clear structure for developers to access the various input handling utilities they need for their projects. The key_code enumeration allows for consistent representation of physical keys on a keyboard, while the to_usb_hid function provides a convenient way to convert key codes to their corresponding USB HID usage IDs. Text entry is handled separately through character or text input events, allowing for a clear distinction between physical key presses and the resulting text input, which can be affected by factors such as keyboard layout and modifier keys. This design allows for flexibility in handling different types of input while maintaining a clear and organized structure for developers to work with.
+ */
+namespace catalyst::input
+{
 
-    // Unicode code point
+    /**
+     * @typedef character_code
+     * @brief A type alias for char32_t, representing a Unicode code point for character input. This type is used for handling text input events separately from physical key presses, allowing for proper representation of characters that may be produced by various key combinations, keyboard layouts, and modifier keys. By using char32_t, we can support a wide range of Unicode characters, including those outside the Basic Multilingual Plane (BMP), ensuring that text input can be accurately represented regardless of the language or character set being used.
+     * @details The character_code type alias is defined as char32_t, which is a fixed-width character type capable of representing any Unicode code point. This allows for proper handling of text input events that may produce characters from various languages and scripts, including those that require multiple bytes to represent. By using character_code for text input events, we can ensure that the resulting text can be accurately represented and processed, regardless of the specific keys pressed or the keyboard layout in use. This separation of physical key codes and character codes allows for greater flexibility in handling user input and ensures that text input can be properly managed in a wide range of applications.
+     */
     using character_code = char32_t;
 
-    // Represents physical keys on a keyboard.
-    // Values match USB HID Keyboard/Keypad usage IDs (usage page 0x07).
-    // Text entry is delivered separately via character/text input events.
-    enum class key_code : std::uint16_t {
+    /**
+     * @enum key_code
+     * @brief An enumeration representing physical keys on a keyboard, based on the USB HID Keyboard/Keypad usage IDs (usage page 0x07). Each key code corresponds to a specific physical key, allowing for consistent representation of keyboard input across different platforms and input systems. The key codes include letters, digits, function keys, and various control keys, providing a comprehensive list of keys that can be used in applications for handling keyboard input. Text entry is handled separately through character or text input events, allowing for a clear distinction between physical key presses and the resulting text input.
+     * @details The key_code enumeration provides a comprehensive list of physical keys on a keyboard, with values aligned to the USB HID standard for keyboard input. This allows for consistent handling of keyboard input across different platforms and input systems. Each key code corresponds to a specific physical key, such as letters (a-z), digits (0-9), function keys (F1-F24), and various control keys (enter, escape, backspace, etc.). By using this enumeration, developers can easily manage keyboard input in their applications while maintaining compatibility with the underlying USB HID usage IDs when needed. Text entry is handled separately through character or text input events, allowing for proper representation of characters that may be produced by various key combinations, keyboard layouts, and modifier keys.
+     */
+    enum class key_code : std::uint16_t
+    {
         unknown = 0,
         a = 4,
         b = 5,
@@ -168,166 +188,288 @@ namespace catalyst::input {
         lang9 = 152
     };
 
+    /**
+     * @fn to_usb_hid
+     * @brief Converts a key_code to its corresponding USB HID usage ID. This function takes a key_code enumeration value and returns the corresponding usb_hid value that represents the same physical key according to the USB HID standard for keyboard input (usage page 0x07). If the key_code is unknown, it returns usb_hid_unknown. This conversion is useful when interfacing with low-level input APIs or when implementing custom input handling logic that requires knowledge of the underlying USB HID usage IDs.
+     * @param code The key_code value to convert to a USB HID usage ID.
+     * @return The corresponding usb_hid value for the given key_code, or usb_hid_unknown if the key_code is unknown.
+     * @details The to_usb_hid function provides a convenient way to convert key codes to their corresponding USB HID usage IDs, which can be useful when interfacing with low-level input APIs or when implementing custom input handling logic that requires knowledge of the underlying USB HID usage IDs. By using this function, developers can easily obtain the USB HID usage ID for a given key code, allowing for consistent handling of keyboard input across different platforms and input systems while maintaining compatibility with the underlying USB HID standard.
+     */
     [[nodiscard]] inline constexpr usb_hid to_usb_hid(key_code code) noexcept
     {
-        if (code == key_code::unknown) {
+        if (code == key_code::unknown)
+        {
             return usb_hid_unknown;
         }
 
         return make_usb_hid(usb_hid_page_keyboard, static_cast<std::uint16_t>(code));
     }
 
+    /**
+     * @fn from_usb_hid
+     * @brief Converts a USB HID usage ID to its corresponding key_code. This function takes a usb_hid value that represents a USB HID usage ID and returns the corresponding key_code enumeration value that represents the same physical key according to the USB HID standard for keyboard input (usage page 0x07). If the usage ID is unknown or does not belong to the keyboard usage page, it returns key_code::unknown. This conversion is useful when interfacing with low-level input APIs or when implementing custom input handling logic that requires knowledge of the underlying USB HID usage IDs.
+     * @param usage The usb_hid value to convert to a key_code.
+     * @return The corresponding key_code value for the given usb_hid usage ID, or key_code::unknown if the usage ID is unknown or does not belong to the keyboard usage page.
+     * @details The from_usb_hid function provides a convenient way to convert USB HID usage IDs to their corresponding key codes, which can be useful when interfacing with low-level input APIs or when implementing custom input handling logic that requires knowledge of the underlying USB HID usage IDs. By using this function, developers can easily obtain the key code for a given USB HID usage ID, allowing for consistent handling of keyboard input across different platforms and input systems while maintaining compatibility with the underlying USB HID standard.
+     */
     [[nodiscard]] inline constexpr key_code from_usb_hid(usb_hid usage) noexcept
     {
-        if (usage == usb_hid_unknown) {
+        if (usage == usb_hid_unknown)
+        {
             return key_code::unknown;
         }
 
-        if (usb_hid_page(usage) != usb_hid_page_keyboard) {
+        if (usb_hid_page(usage) != usb_hid_page_keyboard)
+        {
             return key_code::unknown;
         }
 
         const auto id = usb_hid_id(usage);
-        if (id == 0u) {
+        if (id == 0u)
+        {
             return key_code::unknown;
         }
 
         return static_cast<key_code>(id);
     }
-    
-    // Represents key actions (press, release, repeat).
-    enum class key_action : std::uint8_t {
+
+    /**
+     * @enum key_action
+     * @brief An enumeration representing the type of action performed on a key, such as pressing, releasing, or repeating a key. This enumeration is used in key events to indicate the specific action that occurred with a key press, allowing for proper handling of different types of key interactions in applications. By distinguishing between key actions, developers can implement features such as key repeat behavior, handling of key releases, and differentiation between initial key presses and repeated key events.
+     * @details The key_action enumeration includes values for press, release, and repeat actions. The press action indicates that a key has been pressed down, the release action indicates that a key has been released, and the repeat action indicates that a key is being held down and is generating repeated events. By using this enumeration in key events, developers can implement features such as key repeat behavior, handling of key releases, and differentiation between initial key presses and repeated key events, allowing for more responsive and intuitive input handling in applications.
+     */
+    enum class key_action : std::uint8_t
+    {
         press,
         release,
         repeat
     };
 
-    // Represents modifier keys (shift, control, alt, super, etc.) as bitflags.
-    enum class key_modifiers : std::uint8_t {
-        none       = 0x00,
-        shift      = 0x01,
-        control    = 0x02,
-        alt        = 0x04,
-        super      = 0x08,
-        caps_lock  = 0x10,
-        num_lock   = 0x20
+    /**
+     * @enum key_modifiers
+     * @brief An enumeration representing modifier keys that can be held down in combination with other keys, such as shift, control, alt, super, caps lock, and num lock. This enumeration is used in key events to indicate which modifier keys are active at the time of a key press, allowing for proper handling of key combinations and modified input in applications. By using this enumeration, developers can easily check for specific modifier keys being held down and implement features such as keyboard shortcuts, modified character input, and special behavior based on active modifiers.
+     * @details The key_modifiers enumeration includes values for common modifier keys such as shift, control, alt, super (often the Windows or Command key), caps lock, and num lock. The none value indicates that no modifiers are active. By using this enumeration in key events, developers can easily check for specific modifier keys being held down and implement features such as keyboard shortcuts (e.g., Ctrl+C for copy), modified character input (e.g., Shift+1 for '!'), and special behavior based on active modifiers (e.g., Caps Lock affecting letter case), allowing for more versatile and user-friendly input handling in applications.
+     */
+    enum class key_modifiers : std::uint8_t
+    {
+        none = 0x00,
+        shift = 0x01,
+        control = 0x02,
+        alt = 0x04,
+        super = 0x08,
+        caps_lock = 0x10,
+        num_lock = 0x20
     };
 
+    /**
+     * @fn operator|
+     * @brief Bitwise OR operator for key_modifiers enumeration. This operator allows for combining multiple key modifiers into a single key_modifiers value, enabling the representation of multiple active modifiers at the same time. For example, if both shift and control modifiers are active, you can combine them using this operator to create a key_modifiers value that represents both modifiers being held down.
+     * @param a The first key_modifiers value to combine.
+     * @param b The second key_modifiers value to combine.
+     * @return A new key_modifiers value that represents the combination of the two input modifiers using a bitwise OR operation.
+     * @details The operator| function allows for combining multiple key modifiers into a single key_modifiers value by performing a bitwise OR operation on the underlying integer representations of the modifiers. This is useful for representing multiple active modifiers at the same time, such as when both shift and control keys are held down. By using this operator, developers can easily create combined modifier values that can be checked against in key events to determine which modifiers are active during a key press.
+     */
     [[nodiscard]] inline constexpr key_modifiers operator|(key_modifiers a, key_modifiers b) noexcept
     {
         using u = std::underlying_type_t<key_modifiers>;
         return static_cast<key_modifiers>(static_cast<u>(a) | static_cast<u>(b));
     }
-
+    /**
+     * @fn operator&
+     * @brief Bitwise AND operator for key_modifiers enumeration. This operator allows for checking if specific modifiers are active within a combined key_modifiers value. For example, if you have a key_modifiers value that represents both shift and control being active, you can use this operator to check if the shift modifier is active by performing a bitwise AND operation with the shift modifier value.
+     * @param a The first key_modifiers value to check.
+     * @param b The second key_modifiers value to check against.
+     * @return A new key_modifiers value that represents the result of the bitwise AND operation between the two input modifiers, which can be used to check for specific active modifiers.
+     * @details The operator& function allows for checking if specific modifiers are active within a combined key_modifiers value by performing a bitwise AND operation on the underlying integer representations of the modifiers. This is useful for determining if certain modifiers are active during a key press, such as when both shift and control keys are held down. By using this operator, developers can easily check for specific active modifiers in key events and implement behavior based on which modifiers are currently active.
+     */
     [[nodiscard]] inline constexpr key_modifiers operator&(key_modifiers a, key_modifiers b) noexcept
     {
         using u = std::underlying_type_t<key_modifiers>;
         return static_cast<key_modifiers>(static_cast<u>(a) & static_cast<u>(b));
     }
-
+    /**
+     * @fn operator^
+     * @brief Bitwise XOR operator for key_modifiers enumeration. This operator allows for toggling specific modifiers within a combined key_modifiers value. For example, if you have a key_modifiers value that represents both shift and control being active, you can use this operator to toggle the shift modifier by performing a bitwise XOR operation with the shift modifier value.
+     * @param a The first key_modifiers value to toggle.
+     * @param b The second key_modifiers value to toggle against.
+     * @return A new key_modifiers value that represents the result of the bitwise XOR operation between the two input modifiers, which can be used to toggle specific modifiers.
+     * @details The operator^ function allows for toggling specific modifiers within a combined key_modifiers value by performing a bitwise XOR operation on the underlying integer representations of the modifiers. This is useful for changing the state of certain modifiers during a key press, such as when both shift and control keys are held down and you want to toggle the state of one of them. By using this operator, developers can easily toggle specific modifiers in key events and implement behavior based on changes to which modifiers are currently active.
+     */
     [[nodiscard]] inline constexpr key_modifiers operator^(key_modifiers a, key_modifiers b) noexcept
     {
         using u = std::underlying_type_t<key_modifiers>;
         return static_cast<key_modifiers>(static_cast<u>(a) ^ static_cast<u>(b));
     }
-
+    /**
+     * @fn operator~
+     * @brief Bitwise NOT operator for key_modifiers enumeration. This operator allows for inverting the state of all modifiers within a key_modifiers value. For example, if you have a key_modifiers value that represents both shift and control being active, using this operator will produce a new key_modifiers value where shift and control are inactive, and all other modifiers are active.
+     * @param a The key_modifiers value to invert.
+     * @return A new key_modifiers value that represents the result of the bitwise NOT operation on the input modifier, which can be used to invert the state of all modifiers.
+     * @details The operator~ function allows for inverting the state of all modifiers within a key_modifiers value by performing a bitwise NOT operation on the underlying integer representation of the modifiers. This is useful for quickly toggling the state of all modifiers at once, such as when you want to check for the absence of certain modifiers or when you want to create a new modifier state that is the opposite of the current one. By using this operator, developers can easily invert the state of all modifiers in key events and implement behavior based on changes to which modifiers are currently active.
+     */
     [[nodiscard]] inline constexpr key_modifiers operator~(key_modifiers a) noexcept
     {
         using u = std::underlying_type_t<key_modifiers>;
         return static_cast<key_modifiers>(~static_cast<u>(a));
     }
-
-    inline constexpr key_modifiers& operator|=(key_modifiers& a, key_modifiers b) noexcept
+    /**
+     * @fn operator|=
+     * @brief Bitwise OR assignment operator for key_modifiers enumeration. This operator allows for combining multiple key modifiers into a single key_modifiers value and assigning the result back to the first operand. For example, if you have a key_modifiers variable that currently represents the shift modifier being active, you can use this operator to add the control modifier to it by performing a bitwise OR operation with the control modifier value and assigning the result back to the variable.
+     * @param a The key_modifiers variable to modify and assign the result to.
+     * @param b The key_modifiers value to combine with the first operand.
+     * @return A reference to the modified key_modifiers variable that now represents the combination of the original value and the second input modifier using a bitwise OR operation.
+     * @details The operator|= function allows for combining multiple key modifiers into a single key_modifiers value and assigning the result back to the first operand by performing a bitwise OR operation on the underlying integer representations of the modifiers. This is useful for representing multiple active modifiers at the same time, such as when both shift and control keys are held down. By using this operator, developers can easily create combined modifier values that can be checked against in key events to determine which modifiers are active during a key press, while also allowing for convenient modification of existing modifier states.
+     */
+    inline constexpr key_modifiers &operator|=(key_modifiers &a, key_modifiers b) noexcept
     {
         a = (a | b);
         return a;
     }
-
-    inline constexpr key_modifiers& operator&=(key_modifiers& a, key_modifiers b) noexcept
+    /**
+     * @fn operator&=
+     * @brief Bitwise AND assignment operator for key_modifiers enumeration. This operator allows for checking if specific modifiers are active within a combined key_modifiers value and assigning the result back to the first operand. For example, if you have a key_modifiers variable that currently represents both shift and control being active, you can use this operator to check if the shift modifier is active by performing a bitwise AND operation with the shift modifier value and assigning the result back to the variable.
+     * @param a The key_modifiers variable to modify and assign the result to.
+     * @param b The key_modifiers value to check against and combine with the first operand.
+     * @return A reference to the modified key_modifiers variable that now represents the result of the bitwise AND operation between the original value and the second input modifier, which can be used to check for specific active modifiers.
+     * @details The operator&= function allows for checking if specific modifiers are active within a combined key_modifiers value and assigning the result back to the first operand by performing a bitwise AND operation on the underlying integer representations of the modifiers. This is useful for determining if certain modifiers are active during a key press, such as when both shift and control keys are held down. By using this operator, developers can easily check for specific active modifiers in key events and implement behavior based on which modifiers are currently active, while also allowing for convenient modification of existing modifier states.
+     */
+    inline constexpr key_modifiers &operator&=(key_modifiers &a, key_modifiers b) noexcept
     {
         a = (a & b);
         return a;
     }
-
-    inline constexpr key_modifiers& operator^=(key_modifiers& a, key_modifiers b) noexcept
+    /**
+     * @fn operator^=
+     * @brief Bitwise XOR assignment operator for key_modifiers enumeration. This operator allows for toggling specific modifiers within a combined key_modifiers value and assigning the result back to the first operand. For example, if you have a key_modifiers variable that currently represents both shift and control being active, you can use this operator to toggle the shift modifier by performing a bitwise XOR operation with the shift modifier value and assigning the result back to the variable.
+     * @param a The key_modifiers variable to modify and assign the result to.
+     * @param b The key_modifiers value to toggle against and combine with the first operand.
+     * @return A reference to the modified key_modifiers variable that now represents the result of the bitwise XOR operation between the original value and the second input modifier, which can be used to toggle specific modifiers.
+     * @details The operator^= function allows for toggling specific modifiers within a combined key_modifiers value and assigning the result back to the first operand by performing a bitwise XOR operation on the underlying integer representations of the modifiers. This is useful for changing the state of certain modifiers during a key press, such as when both shift and control keys are held down and you want to toggle the state of one of them. By using this operator, developers can easily toggle specific modifiers in key events and implement behavior based on changes to which modifiers are currently active, while also allowing for convenient modification of existing modifier states.
+     */
+    inline constexpr key_modifiers &operator^=(key_modifiers &a, key_modifiers b) noexcept
     {
         a = (a ^ b);
         return a;
     }
-
+    /**
+     * @fn has_modifier
+     * @brief Checks if a specific modifier is active within a combined key_modifiers value. This function takes a key_modifiers value that may represent multiple active modifiers and a specific key_modifiers flag to check for, and returns true if the specified modifier is active within the combined value, or false otherwise. For example, if you have a key_modifiers value that represents both shift and control being active, you can use this function to check if the shift modifier is active by passing the combined value and the shift modifier flag.
+     * @param value The combined key_modifiers value to check for the presence of the specified modifier.
+     * @param flag The specific key_modifiers flag to check for within the combined value.
+     * @return True if the specified modifier is active within the combined key_modifiers value, or false otherwise.
+     * @details The has_modifier function allows for checking if a specific modifier is active within a combined key_modifiers value by performing a bitwise AND operation between the combined value and the specified flag, and then checking if the result is not equal to none. This is useful for determining if certain modifiers are active during a key press, such as when both shift and control keys are held down. By using this function, developers can easily check for specific active modifiers in key events and implement behavior based on which modifiers are currently active.
+     */
     [[nodiscard]] inline constexpr bool has_modifier(key_modifiers value, key_modifiers flag) noexcept
     {
         return (value & flag) != key_modifiers::none;
     }
-
-    struct key_event : public core::event<key_event> {
+    /**
+     * @struct key_event
+     * @brief A structure representing a key event, which includes information about the key code, the native USB HID usage ID, the action performed on the key (press, release, repeat), and any active modifiers at the time of the event. This structure is used in key events to provide detailed information about the specific key interaction that occurred, allowing for proper handling of different types of key interactions in applications. By including both the key code and the native USB HID usage ID, developers can maintain compatibility with the underlying USB HID standard while also providing a more abstract representation of keyboard input through the key_code enumeration.
+     * @details The key_event structure inherits from core::event<key_event>, allowing it to be used as an event type within the Catalyst event system. It contains a key_code value that represents the physical key involved in the event, a usb_hid value that represents the native USB HID usage ID for the key, a key_action value that indicates whether the key was pressed, released, or repeated, and a key_modifiers value that indicates which modifier keys were active at the time of the event. This structure provides comprehensive information about a key interaction, enabling developers to implement responsive and intuitive input handling in their applications.
+     */
+    struct key_event : public core::event<key_event>
+    {
         key_code code{};
-        usb_hid native_code{ usb_hid_unknown };
-        key_action action{ key_action::press };
-        key_modifiers modifiers{ key_modifiers::none };
+        usb_hid native_code{usb_hid_unknown};
+        key_action action{key_action::press};
+        key_modifiers modifiers{key_modifiers::none};
     };
-
-    struct character_event : public core::event<character_event> {
+    /**
+     * @struct character_event
+     * @brief A structure representing a character event, which includes information about the character code and any active modifiers at the time of the event. This structure is used in character events to provide detailed information about the specific character input that occurred, allowing for proper handling of text input in applications. By using a separate structure for character events, we can maintain a clear distinction between physical key presses (represented by key_event) and the resulting text input (represented by character_event), which can be affected by factors such as keyboard layout and modifier keys.
+     * @details The character_event structure inherits from core::event<character_event>, allowing it to be used as an event type within the Catalyst event system. It contains a character_code value that represents the Unicode code point for the character input, and a key_modifiers value that indicates which modifier keys were active at the time of the event. This structure provides comprehensive information about a character input interaction, enabling developers to implement responsive and intuitive text input handling in their applications while maintaining a clear separation from physical key events.
+     */
+    struct character_event : public core::event<character_event>
+    {
         character_code character{};
-        key_modifiers modifiers{ key_modifiers::none };
+        key_modifiers modifiers{key_modifiers::none};
     };
-
-    struct text_input_event : public core::event<text_input_event> {
+    /**
+     * @struct text_input_event
+     * @brief A structure representing a text input event, which includes a buffer for storing a sequence of character codes, the length of valid characters in the buffer, and a view of the valid text code points. This structure is used in text input events to provide detailed information about the specific text input that occurred, allowing for proper handling of text input in applications. By using a separate structure for text input events, we can maintain a clear distinction between physical key presses (represented by key_event) and the resulting text input (represented by text_input_event), which can be affected by factors such as keyboard layout and modifier keys.
+     * @details The text_input_event structure inherits from core::event<text_input_event>, allowing it to be used as an event type within the Catalyst event system. It contains a fixed-size array buffer for storing character codes, a length field that indicates how many characters in the buffer are valid, and a std::span view that provides access to the valid text code points in the buffer. This structure provides comprehensive information about a text input interaction, enabling developers to implement responsive and intuitive text input handling in their applications while maintaining a clear separation from physical key events.
+     */
+    struct text_input_event : public core::event<text_input_event>
+    {
+        /**
+         * @var inline_capacity
+         * @brief The inline capacity of the text input buffer. This constant defines the size of the fixed buffer used to store character codes for text input events. By using a fixed-size buffer with an inline capacity, we can optimize for common cases where the text input is short, while still allowing for longer input by using the length field to indicate how many characters in the buffer are valid. This design allows for efficient handling of text input events without the need for dynamic memory allocation in most cases.
+         */
         static constexpr std::size_t inline_capacity = 8;
 
+        /**
+         * @var buffer
+         * @brief A fixed-size array buffer for storing character codes in a text input event.
+         */
         std::array<char32_t, inline_capacity> buffer{};
+        /**
+         * @var length
+         * @brief The length of valid characters in the text input buffer. This field indicates how many characters in the buffer are valid and should be considered part of the text input. By using a length field, we can allow for variable-length text input while still using a fixed-size buffer, optimizing for common cases where the text input is short.
+         */
         std::uint8_t length = 0;
-
-        // Preserved: view of the valid text codepoints.
+        /**
+         * @var text
+         * @brief A view of the valid text code points in the buffer. This std::span provides access to the valid characters in the buffer based on the length field, allowing for easy retrieval of the text input without needing to manually manage the buffer and length separately.
+         */
         std::span<const char32_t> text{};
 
-        text_input_event() noexcept : text(buffer.data(), 0) {}
-
-        explicit text_input_event(std::span<const char32_t> input) noexcept : text(buffer.data(), 0)
-        {
-            assign(input);
-        }
-
-        text_input_event(const text_input_event &other) noexcept
-            : buffer(other.buffer), length(other.length), text(buffer.data(), other.length)
-        {
-        }
-
-        text_input_event &operator=(const text_input_event &other) noexcept
-        {
-            if (this == &other)
-                return *this;
-            buffer = other.buffer;
-            length = other.length;
-            text = {buffer.data(), other.length};
-            return *this;
-        }
-
-        text_input_event(text_input_event &&other) noexcept
-            : buffer(other.buffer), length(other.length), text(buffer.data(), other.length)
-        {
-        }
-
-        text_input_event &operator=(text_input_event &&other) noexcept
-        {
-            buffer = other.buffer;
-            length = other.length;
-            text = {buffer.data(), other.length};
-            return *this;
-        }
-
-        void assign(std::span<const char32_t> input) noexcept
-        {
-            const std::size_t n = std::min<std::size_t>(input.size(), buffer.size());
-            length = static_cast<std::uint8_t>(n);
-            std::copy_n(input.begin(), n, buffer.begin());
-            text = {buffer.data(), n};
-        }
+        /**
+         * @fn text_input_event
+         * @brief Default constructor for text_input_event. This constructor initializes the text input event with an empty buffer and a length of zero, resulting in an empty text view. This allows for the creation of a text_input_event instance that can be assigned text input later using the assign function or through other means.
+         * @details The default constructor initializes the buffer to an empty state, sets the length to zero, and initializes the text view to point to the buffer with a size of zero. This ensures that the text_input_event starts in a valid state, ready to receive text input when assigned or when constructed with specific input.
+         */
+        text_input_event() noexcept;
+        /**
+         * @fn text_input_event
+         * @brief Constructor for text_input_event that takes a span of character codes as input. This constructor initializes the text input event with the provided character codes, copying them into the internal buffer and setting the length accordingly. The text view is then updated to point to the valid characters in the buffer based on the length. This allows for the creation of a text_input_event instance that is immediately populated with specific text input.
+         * @param input A span of character codes to initialize the text input event with.
+         * @details The constructor takes a span of character codes as input, determines how many characters can be copied into the fixed-size buffer (up to inline_capacity), copies the characters into the buffer, sets the length field to indicate how many characters were copied, and initializes the text view to point to the valid characters in the buffer. This allows for efficient initialization of a text_input_event with specific text input while maintaining safety by not exceeding the buffer capacity.
+         */
+        explicit text_input_event(std::span<const char32_t> input) noexcept;
+        /**
+         * @fn text_input_event
+         * @brief Copy constructor for text_input_event. This constructor creates a new text_input_event instance by copying the buffer and length from another instance, and then updating the text view to point to the valid characters in the new buffer. This allows for proper copying of text_input_event instances while ensuring that the internal state is correctly maintained.
+         * @param other The text_input_event instance to copy from.
+         */
+        text_input_event(const text_input_event &other) noexcept;
+        /**
+         * @fn operator=
+         * @brief Copy assignment operator for text_input_event. This operator assigns the buffer and length from another text_input_event instance to the current instance, and then updates the text view to point to the valid characters in the new buffer. This allows for proper assignment of text_input_event instances while ensuring that the internal state is correctly maintained.
+         * @param other The text_input_event instance to assign from.
+         * @return A reference to the assigned text_input_event instance.
+         */
+        text_input_event &operator=(const text_input_event &other) noexcept;
+        /**
+         * @fn text_input_event
+         * @brief Move constructor for text_input_event. This constructor creates a new text_input_event instance by moving the buffer and length from another instance, and then updating the text view to point to the valid characters in the new buffer. This allows for efficient transfer of ownership of the internal state from one text_input_event instance to another without unnecessary copying.
+         * @param other The text_input_event instance to move from.
+         */
+        text_input_event(text_input_event &&other) noexcept;
+        /**
+         * @fn operator=
+         * @brief Move assignment operator for text_input_event. This operator assigns the buffer and length from another text_input_event instance to the current instance by moving them, and then updates the text view to point to the valid characters in the new buffer. This allows for efficient transfer of ownership of the internal state from one text_input_event instance to another without unnecessary copying.
+         * @param other The text_input_event instance to move from.
+         * @return A reference to the assigned text_input_event instance.
+         */
+        text_input_event &operator=(text_input_event &&other) noexcept;
+        /**
+         * @fn assign
+         * @brief Assigns a span of character codes to the text_input_event. This function copies the provided character codes into the internal buffer, updates the length accordingly, and sets the text view to point to the valid characters in the buffer. This allows for updating the text input of an existing text_input_event instance with new character data.
+         * @param input A span of character codes to assign to the text input event.
+         */
+        void assign(std::span<const char32_t> input) noexcept;
     };
 
-    struct edit_key_event : public core::event<edit_key_event> {
+    /**
+     * @struct edit_key_event
+     * @brief A structure representing an edit key event, which includes information about the key code and any active modifiers at the time of the event. This structure is used in edit key events to provide detailed information about specific key interactions that are relevant to text editing operations, such as cursor movement, deletion, and selection. By using a separate structure for edit key events, we can maintain a clear distinction between general key events (represented by key_event) and those that are specifically related to text editing operations, allowing for more focused handling of edit-related input in applications.
+     * @details The edit_key_event structure inherits from core::event<edit_key_event>, allowing it to be used as an event type within the Catalyst event system. It contains a key_code value that represents the physical key involved in the edit operation, and a key_modifiers value that indicates which modifier keys were active at the time of the event. This structure provides comprehensive information about an edit-related key interaction, enabling developers to implement responsive and intuitive handling of text editing input in their applications while maintaining a clear separation from general key events.
+     */
+    struct edit_key_event : public core::event<edit_key_event>
+    {
         key_code code{};
-        key_modifiers modifiers{ key_modifiers::none };
+        key_modifiers modifiers{key_modifiers::none};
     };
 
 } // namespace catalyst::input

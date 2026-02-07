@@ -2,7 +2,7 @@
  * @file math.hpp
  * @brief Main header for Catalyst Math library, including all math components.
  * @details This header serves as the primary include for the Catalyst Math library, which provides a collection of mathematical types and functions commonly used in graphics programming and game development. It includes vector and matrix types, quaternion support, angle types with user-defined literals, projection matrix utilities, and more. By including this single header, users can access all the functionality provided by the Catalyst Math library without needing to include individual component headers. The library is designed to be efficient, easy to use, and compatible with modern C++ standards.
- * License: MIT (see LICENSE).
+ * License: CDDL-1.0 (see LICENSE).
  */
 
 #pragma once

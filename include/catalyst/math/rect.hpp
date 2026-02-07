@@ -2,7 +2,7 @@
  * @file rect.hpp
  * @brief Axis-aligned 2D rectangle (`rect<T>`) with common operations.
  * @details The `rect` template represents an axis-aligned rectangle defined by minimum and maximum corners. It provides utility functions for common rectangle operations such as intersection, union, containment, and area calculation. The rectangle is defined as a half-open interval [min, max), meaning it includes the min corner but excludes the max corner. This convention is convenient for pixel rectangles (e.g. Win32 client rects where right/bottom are exclusive) and for composing intersections. All operations assume axis-alignment (i.e. the rectangle edges are parallel to the coordinate axes) and do not support rotation or skewing.
- * License: MIT (see LICENSE).
+ * License: CDDL-1.0 (see LICENSE).
  */
 #pragma once
 

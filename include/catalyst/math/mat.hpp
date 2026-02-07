@@ -2,7 +2,7 @@
  * @file mat.hpp
  * @brief A simple column-major matrix template with basic arithmetic operations and utilities for constructing common transformation matrices.
  * @details The mat template is designed for small fixed-size matrices commonly used in graphics applications (e.g. 4x4 transformation matrices). It provides basic arithmetic operations (addition, subtraction, scalar multiplication/division) and utilities for constructing identity matrices and accessing rows/columns. The matrix is stored in column-major order, which is common in graphics APIs.
- * License: MIT (see LICENSE).
+ * License: CDDL-1.0 (see LICENSE).
  */
 
 #pragma once

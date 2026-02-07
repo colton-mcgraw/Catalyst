@@ -1,0 +1,6 @@
+/**
+ * @file midi.hpp
+ * @brief Defines the MIDI input handling classes and functions for the Catalyst framework. This file provides an interface for working with MIDI devices, allowing you to receive and process MIDI messages in your applications. The MIDI input system is designed to work seamlessly with the rest of the Catalyst input framework, providing a consistent and flexible way to handle MIDI input across different platforms and devices.
+ * @details The MIDI input handling classes and functions in this file enable you to interact with MIDI devices, such as keyboards, controllers, and other MIDI-compatible hardware. You can use these classes to receive MIDI messages, interpret them, and respond to user input or other MIDI events. The MIDI input system supports various MIDI message types, including note on/off, control change, program change, and more. By integrating MIDI input handling into your applications, you can create rich and interactive experiences that leverage the power of MIDI devices.
+ * License: CDDL-1.0 (see LICENSE).
+ */

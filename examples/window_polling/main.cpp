@@ -1,7 +1,13 @@
-// examples/window_polling/main.cpp
-// Demonstrates a classic "poll each frame" event pump.
+/*
+ * @file main.cpp
+ * @brief Example of using the Catalyst platform library to create a window and poll for events.
+ * @details This example demonstrates how to initialize the Catalyst platform library, create a window, and enter a main loop that polls for events. The example handles window close requests and resize events, printing relevant information to the console. It simulates a simple frame loop with a sleep to mimic a 60 Hz update rate. This serves as a basic template for using the Catalyst platform library in applications that require window management and event handling.
+ * License: CDDL-1.0 (see LICENSE).
+ */
 
 #include <catalyst/catalyst.hpp>
+#include <catalyst/core/dispatcher.hpp>
+#include <catalyst/core/event_sink.hpp>
 #include <catalyst/platform/window.hpp>
 
 #include <cstdio>
@@ -16,8 +22,8 @@ int main()
 
   window_desc desc;
   desc.title = "Catalyst - window_polling";
-  desc.width_px = 800;
-  desc.height_px = 450;
+  desc.width_px = catalyst::ui::px(800.0f);
+  desc.height_px = catalyst::ui::px(450.0f);
   desc.visible = true;
 
   window w = create_window(desc);
@@ -29,35 +35,36 @@ int main()
 
   std::printf("Polling example: call pump_events() once per frame.\n");
 
+  catalyst::core::dispatcher dispatcher;
+  catalyst::core::event_sink sink(dispatcher);
+  set_event_sink(&sink);
+
   bool running = true;
+  const auto sub_close = sink.subscribe<window_close_requested_event>([&](const window_close_requested_event &e)
+  {
+    (void)e;
+    std::printf("Close requested\n");
+    running = false;
+  });
+
+  const auto sub_resize = sink.subscribe<window_resized_event>([&](const window_resized_event &e)
+  {
+    std::printf("Resized: %d x %d\n", e.width_px, e.height_px);
+  });
+
+  const auto sub_enter = sink.subscribe<window_enter_size_move_event>([&](const window_enter_size_move_event &)
+  {
+    std::printf("Enter size/move (interactive resize begins)\n");
+  });
+
+  const auto sub_exit = sink.subscribe<window_exit_size_move_event>([&](const window_exit_size_move_event &)
+  {
+    std::printf("Exit size/move (interactive resize ends)\n");
+  });
   while (running && is_valid(w))
   {
     // Non-blocking: drain OS messages.
     pump_events();
-
-    // Drain queued translated events.
-    event e;
-    while (poll_event(e))
-    {
-      switch (e.type)
-      {
-      case event_type::window_close_requested:
-        std::printf("Close requested\n");
-        running = false;
-        break;
-      case event_type::window_resized:
-        std::printf("Resized: %d x %d\n", e.resized.width_px, e.resized.height_px);
-        break;
-      case event_type::window_enter_size_move:
-        std::printf("Enter size/move (interactive resize begins)\n");
-        break;
-      case event_type::window_exit_size_move:
-        std::printf("Exit size/move (interactive resize ends)\n");
-        break;
-      default:
-        break;
-      }
-    }
 
     // Simulate a frame (60 Hz).
     std::this_thread::sleep_for(std::chrono::milliseconds(16));

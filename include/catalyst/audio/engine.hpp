@@ -1,3 +1,9 @@
+/**
+ * @file engine.hpp
+ * @brief Defines the audio engine class and related types for the Catalyst Audio module. The audio engine provides an interface for managing audio output, including selecting audio backends, configuring audio settings, and handling audio rendering through a user-provided callback. This file also defines the engine configuration structure and the render callback signature, allowing developers to customize their audio output according to their application's needs.
+ * License: CDDL-1.0 (see LICENSE).
+ */
+
 #pragma once
 
 #include <cstdint>

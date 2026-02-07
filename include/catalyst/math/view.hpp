@@ -2,7 +2,7 @@
  * @file view.hpp
  * @brief View matrix utilities for Catalyst Math library.
  * @details This header provides functions for constructing look-at view matrices commonly used in 3D graphics applications. The functions allow for creating view matrices based on camera position, target point, and up vector, with support for both right-handed and left-handed coordinate systems. The resulting view matrices are in column-major order and can be used in graphics APIs that expect this format for transformation matrices. By using these utilities, developers can easily generate view matrices that are compatible with their rendering pipeline and coordinate system conventions.
- * License: MIT (see LICENSE).
+ * License: CDDL-1.0 (see LICENSE).
  */
 
 #pragma once
