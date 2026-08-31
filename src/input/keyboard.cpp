@@ -5,7 +5,7 @@ namespace catalyst::input
 
     text_input_event::text_input_event() noexcept : text(buffer.data(), 0) {}
 
-    explicit text_input_event::text_input_event(std::span<const char32_t> input) noexcept : text(buffer.data(), 0)
+    text_input_event::text_input_event(std::span<const char32_t> input) noexcept : text(buffer.data(), 0)
     {
         assign(input);
     }

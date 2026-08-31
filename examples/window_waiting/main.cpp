@@ -47,17 +47,17 @@ int main()
 
   const auto sub_resize = sink.subscribe<window_resized_event>([&](const window_resized_event &e)
   {
-    std::printf("Resized: %d x %d\n", e.width_px, e.height_px);
+    //std::printf("Resized: %d x %d\n", e.width_px, e.height_px);
   });
 
   const auto sub_enter = sink.subscribe<window_enter_size_move_event>([&](const window_enter_size_move_event &)
   {
-    std::printf("Enter size/move (interactive resize begins)\n");
+    //std::printf("Enter size/move (interactive resize begins)\n");
   });
 
   const auto sub_exit = sink.subscribe<window_exit_size_move_event>([&](const window_exit_size_move_event &)
   {
-    std::printf("Exit size/move (interactive resize ends)\n");
+    //std::printf("Exit size/move (interactive resize ends)\n");
   });
   while (running && is_valid(w))
   {

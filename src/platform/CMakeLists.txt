@@ -1,5 +1,6 @@
 add_library(catalyst_platform STATIC
   platform.cpp
+  monitor.cpp
   window.cpp
 )
 
@@ -30,6 +31,8 @@ if(_catalyst_platform_backend STREQUAL "win32")
 
   add_library(catalyst_platform_backend_win32 STATIC
     win32/platform_backend_win32.cpp
+    win32/win32_helpers.cpp
+    win32/monitor_backend_win32.cpp
     win32/window_backend_win32.cpp
   )
 
@@ -43,6 +46,7 @@ if(_catalyst_platform_backend STREQUAL "win32")
 elseif(_catalyst_platform_backend STREQUAL "null")
   add_library(catalyst_platform_backend_null STATIC
     null/platform_backend_null.cpp
+    null/monitor_backend_null.cpp
     null/window_backend_null.cpp
   )
 

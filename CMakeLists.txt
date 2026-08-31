@@ -2,9 +2,16 @@ cmake_minimum_required(VERSION 3.16)
 
 project(Catalyst VERSION 0.1.0 LANGUAGES CXX)
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+
+# When using MSVC-style debug info (/Zi) with parallel builds, multiple compiler
+# processes can contend for the shared PDB and appear to hang. /FS forces
+# serialized PDB writes.
+if(MSVC)
+	add_compile_options(/FS)
+endif()
 
 option(CATALYST_BUILD_ALL "Build monolithic Catalyst library (links enabled modules)" ON)
 option(CATALYST_BUILD_ANIMATION "Build Catalyst animation module" ON)

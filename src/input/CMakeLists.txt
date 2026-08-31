@@ -1,5 +1,6 @@
 add_library(catalyst_input STATIC
   input.cpp
+  keyboard.cpp
 )
 
 add_library(catalyst::input ALIAS catalyst_input)

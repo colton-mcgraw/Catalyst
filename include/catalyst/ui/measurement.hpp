@@ -438,28 +438,28 @@ namespace catalyst::ui
     [[nodiscard]] constexpr length vh(float v) noexcept { return length::unit(length_unit::vh, v); }
 
     /**
-     * @fn inches
-     * @brief Constructs a length measurement in inches. The actual pixel value will be determined by the DPI scaling factor in the resolve context.
+     * @fn in
+     * @brief Constructs a length measurement in inches. The actual pixel value will be determined by the DPI information in the resolve context.
      * @param v The length value in inches.
      * @return A length instance representing the given value in inches.
      */
-    [[nodiscard]] constexpr length in(float v) noexcept { return length::unit(length_unit::inches, v); }
+    [[nodiscard]] constexpr length in(float v) noexcept { return length::unit(length_unit::in, v); }
 
     /**
-     * @fn centimeters
-     * @brief Constructs a length measurement in centimeters. The actual pixel value will be determined by the DPI scaling factor in the resolve context.
+     * @fn cm
+     * @brief Constructs a length measurement in centimeters. The actual pixel value will be determined by the DPI information in the resolve context.
      * @param v The length value in centimeters.
      * @return A length instance representing the given value in centimeters.
      */
-    [[nodiscard]] constexpr length cm(float v) noexcept { return length::unit(length_unit::centimeters, v); }
+    [[nodiscard]] constexpr length cm(float v) noexcept { return length::unit(length_unit::cm, v); }
 
     /**
-     * @fn millimeters
-     * @brief Constructs a length measurement in millimeters. The actual pixel value will be determined by the DPI scaling factor in the resolve context.
+     * @fn mm
+     * @brief Constructs a length measurement in millimeters. The actual pixel value will be determined by the DPI information in the resolve context.
      * @param v The length value in millimeters.
      * @return A length instance representing the given value in millimeters.
      */
-    [[nodiscard]] constexpr length mm(float v) noexcept { return length::unit(length_unit::millimeters, v); }
+    [[nodiscard]] constexpr length mm(float v) noexcept { return length::unit(length_unit::mm, v); }
 
     /**
      * @fn resolve_or
@@ -488,9 +488,9 @@ namespace catalyst::ui
         out += v.get(length_unit::percent) * (parent_axis_px / 100.0f);
         out += v.get(length_unit::vw) * (ctx.viewport_width_px / 100.0f);
         out += v.get(length_unit::vh) * (ctx.viewport_height_px / 100.0f);
-        out += v.get(length_unit::inches) * dpi;
-        out += v.get(length_unit::centimeters) * (dpi / 2.54f);
-        out += v.get(length_unit::millimeters) * (dpi / 25.4f);
+        out += v.get(length_unit::in) * dpi;
+        out += v.get(length_unit::cm) * (dpi / 2.54f);
+        out += v.get(length_unit::mm) * (dpi / 25.4f);
         return out;
     }
 
@@ -551,20 +551,20 @@ namespace catalyst::ui
          * @param v The length value in inches.
          * @return A length instance representing the given value in inches.
          */
-        [[nodiscard]] constexpr length operator""_in(long double v) noexcept { return inches(static_cast<float>(v)); }
+        [[nodiscard]] constexpr length operator""_in(long double v) noexcept { return in(static_cast<float>(v)); }
         /**
          * @fn operator"" _cm
          * @brief User-defined literal for creating a length measurement in centimeters. For example, 5.0f_cm would create a length representing "5 centimeters".
          * @param v The length value in centimeters.
          * @return A length instance representing the given value in centimeters.
          */
-        [[nodiscard]] constexpr length operator""_cm(long double v) noexcept { return centimeters(static_cast<float>(v)); }
+        [[nodiscard]] constexpr length operator""_cm(long double v) noexcept { return cm(static_cast<float>(v)); }
         /**
          * @fn operator"" _mm
          * @brief User-defined literal for creating a length measurement in millimeters. For example, 10.0f_mm would create a length representing "10 millimeters".
          * @param v The length value in millimeters.
          * @return A length instance representing the given value in millimeters.
          */
-        [[nodiscard]] constexpr length operator""_mm(long double v) noexcept { return millimeters(static_cast<float>(v)); }
+        [[nodiscard]] constexpr length operator""_mm(long double v) noexcept { return mm(static_cast<float>(v)); }
     } // namespace literals
 } // namespace catalyst::ui

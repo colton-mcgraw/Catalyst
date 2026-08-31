@@ -70,11 +70,11 @@ void test_length_physical_units_use_effective_dpi()
     ctx.dpi_x = 144.0f; // 150% of 96
     ctx.dpi_y = 120.0f; // 125% of 96
 
-    CT_REQUIRE(catalyst::tests::nearly_equal(catalyst::ui::resolve_or(catalyst::ui::inches(1.0f), catalyst::ui::axis::x, ctx), 144.0f));
-    CT_REQUIRE(catalyst::tests::nearly_equal(catalyst::ui::resolve_or(catalyst::ui::inches(1.0f), catalyst::ui::axis::y, ctx), 120.0f));
+    CT_REQUIRE(catalyst::tests::nearly_equal(catalyst::ui::resolve_or(catalyst::ui::in(1.0f), catalyst::ui::axis::x, ctx), 144.0f));
+    CT_REQUIRE(catalyst::tests::nearly_equal(catalyst::ui::resolve_or(catalyst::ui::in(1.0f), catalyst::ui::axis::y, ctx), 120.0f));
 
-    CT_REQUIRE(catalyst::tests::nearly_equal(catalyst::ui::resolve_or(catalyst::ui::centimeters(2.54f), catalyst::ui::axis::x, ctx), 144.0f));
-    CT_REQUIRE(catalyst::tests::nearly_equal(catalyst::ui::resolve_or(catalyst::ui::millimeters(25.4f), catalyst::ui::axis::y, ctx), 120.0f));
+    CT_REQUIRE(catalyst::tests::nearly_equal(catalyst::ui::resolve_or(catalyst::ui::cm(2.54f), catalyst::ui::axis::x, ctx), 144.0f));
+    CT_REQUIRE(catalyst::tests::nearly_equal(catalyst::ui::resolve_or(catalyst::ui::mm(25.4f), catalyst::ui::axis::y, ctx), 120.0f));
 }
 
 void test_length_physical_units_fallback_to_dpi_scale()
@@ -83,7 +83,7 @@ void test_length_physical_units_fallback_to_dpi_scale()
     ctx.dpi_scale = 2.0f;
 
     // When dpi_x/y are left at the default 96, physical units fall back to dpi_scale * 96.
-    CT_REQUIRE(catalyst::tests::nearly_equal(catalyst::ui::resolve_or(catalyst::ui::inches(1.0f), catalyst::ui::axis::x, ctx), 192.0f));
+    CT_REQUIRE(catalyst::tests::nearly_equal(catalyst::ui::resolve_or(catalyst::ui::in(1.0f), catalyst::ui::axis::x, ctx), 192.0f));
 }
 
 } // namespace

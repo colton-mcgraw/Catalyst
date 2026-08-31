@@ -8,9 +8,11 @@
 #pragma once
 
 #include <catalyst/math/rect.hpp>
+#include <catalyst/math/vec.hpp>
 #include <catalyst/platform/platform.hpp>
 #include <catalyst/core/event.hpp>
 
+#include <cstddef>
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -30,7 +32,7 @@ namespace catalyst::platform
      * @brief A unique identifier for a monitor. This type is used to represent and manage individual monitors within the Catalyst Platform library. Each monitor connected to the system is assigned a unique monitor_id, which can be used to reference and manipulate that specific monitor throughout its lifecycle. The monitor_id is typically implemented as a 64-bit unsigned integer, allowing for a large number of monitors to be managed simultaneously without conflicts.
      * @details The monitor_id type serves as a fundamental building block for the Catalyst Platform library's monitor management system. By using unique identifiers for each monitor, the library can efficiently track and manage multiple monitors, allowing developers to create applications that can adapt to different display configurations and respond to changes in the display environment effectively. The monitor_id can be used in various functions and methods within the library to perform operations on specific monitors, such as retrieving their properties or processing events related to those monitors.
      */
-    using monitor_id = std::size_t;
+    using monitor_id = std::uint64_t;
 
     /**
      * @struct monitor_desc
@@ -43,20 +45,21 @@ namespace catalyst::platform
          * @brief The unique identifier for the monitor. This value is assigned by the system and can be used to reference the monitor in various functions and events within the Catalyst Platform library.
          */
         monitor_id id = 0;
+
         /**
          * @var name
          * @brief The name of the monitor. This is typically a human-readable string that describes the monitor, such as its model name or manufacturer. The name can be used for display purposes or for identifying the monitor in logs and debugging output.
          */
         std::string name;
+
         /**
-         * @var position_px
-         * @brief The position of the monitor in pixels. This represents the top-left corner of the monitor's display area relative to a common origin (usually the primary monitor). The position can be used to determine how monitors are arranged in a multi-monitor setup and to manage window placement across different monitors effectively.
+         * @var bounds_px
+         * @brief The monitor bounds in virtual desktop pixels.
+         * @details This rectangle includes both position (min) and extent (max). For multi-monitor setups,
+         * this is typically relative to a common origin (often the primary monitor).
          */
         math::rect<std::int32_t> bounds_px{};
-        /**
-         * @var size_px
-         * @brief The size of the monitor in pixels. This represents the width and height of the monitor's display area in pixels. The size can be used to determine the resolution of the monitor and to manage window sizing and scaling appropriately for that monitor.
-         */
+
         /**
          * @var work_area_px
          * @brief The usable work area rectangle in pixels.
@@ -77,12 +80,14 @@ namespace catalyst::platform
          * @details This is the value you want for physical unit conversion (in/cm/mm) in UI.
          */
         float dpi_x = 96.0f;
+
         /**
          * @var dpi_y
          * @brief Effective pixels-per-inch on the y axis.
          * @details This is the value you want for physical unit conversion (in/cm/mm) in UI.
          */
         float dpi_y = 96.0f;
+
         /**
          * @var refresh_rate_hz
          * @brief The refresh rate of the monitor in hertz. This represents how many times per second the monitor updates its display. The refresh rate can be used to manage rendering and animation timing in applications, ensuring that they are synchronized with the monitor's capabilities for smoother visuals and better performance.

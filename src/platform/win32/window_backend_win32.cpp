@@ -4,15 +4,20 @@
 #include <catalyst/input/keyboard.hpp>
 #include <catalyst/input/mouse.hpp>
 
+#ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
-#include <windowsx.h>
+#endif // For basic Windows API functions and types (e.g. HWND, HMONITOR, GetKeyState, etc.).
+
+#include "win32_helpers.hpp"
 
 #include <deque>
 #include <cstring>
 #include <memory>
 #include <string>
 #include <unordered_map>
+
+#include <windowsx.h> // For GET_XBUTTON_WPARAM macro to process extended mouse button messages.
 
 /**
  * @namespace catalyst::platform::detail
@@ -125,7 +130,8 @@ namespace catalyst::platform::detail
         template <typename E>
         void enqueue_event(E e)
         {
-            enqueue_event(std::make_unique<E>(std::move(e))); // Create a unique pointer to the event by moving the event into a new instance, and then enqueue it using the other overload of enqueue_event. This allows for efficient handling of both lvalue and rvalue events, while also ensuring that the memory for the event is managed automatically through the use of unique pointers.
+            std::unique_ptr<core::event_base> event = std::make_unique<E>(std::move(e));
+            enqueue_event(std::move(event));
         }
 
         /**
@@ -668,42 +674,6 @@ namespace catalyst::platform::detail
         }
 
         /**
-         * @fn utf8_to_wide_or_ansi
-         * @brief Converts a UTF-8 encoded string to a wide string (UTF-16 on Windows) using the Windows API. This function attempts to convert the input UTF-8 string to a wide string using MultiByteToWideChar with the CP_UTF8 code page. If the conversion fails (e.g. due to invalid UTF-8 sequences), it falls back to using the ANSI code page (CP_ACP) for conversion. This allows for compatibility with strings that may not be valid UTF-8, while still supporting proper UTF-8 encoding when possible. The resulting wide string can be used for window titles and other APIs that require wide strings on Windows.
-         * @param s The input string encoded in UTF-8 that needs to be converted to a wide string. This is typically used for window titles and other text that may contain non-ASCII characters, allowing for proper encoding and display on Windows. The function will attempt to convert this string to a wide string using UTF-8 encoding, and if that fails, it will fall back to using the ANSI code page for conversion, ensuring that a valid wide string is returned even if the input is not valid UTF-8.
-         * @return A std::wstring containing the converted wide string (UTF-16 on Windows). If the input string is valid UTF-8, the resulting wide string will contain the corresponding characters. If the input string is not valid UTF-8, the function will attempt to convert it using the ANSI code page, and the resulting wide string will contain the characters as interpreted in that code page. If the conversion fails entirely (e.g. if the input string is null or empty), an empty wide string will be returned. This function ensures that a valid wide string is returned for use in Windows APIs, even if the input string may not be properly encoded in UTF-8.
-         */
-        std::wstring utf8_to_wide_or_ansi(const char *str)
-        {
-            if (!str) // If the input string is null, we cannot perform any conversion, so we return an empty wide string. This ensures that the function always returns a valid std::wstring, even if the input is not valid.
-                return L"";
-
-            const int utf8_len = static_cast<int>(std::strlen(str));
-            if (utf8_len == 0) // If the input string is empty, there are no characters to convert, so we return an empty wide string. This ensures that the function handles empty input gracefully and always returns a valid std::wstring.
-                return L"";
-
-            // First, attempt to convert the UTF-8 string to a wide string using the CP_UTF8 code page. This will allow for proper conversion of valid UTF-8 sequences, ensuring that characters are correctly represented in the resulting wide string. The MultiByteToWideChar function is used to perform this conversion, and we first call it with a null output buffer to determine the required length of the wide string.
-            UINT codepage = CP_UTF8;
-            DWORD flags = MB_ERR_INVALID_CHARS;
-            int wide_len = MultiByteToWideChar(codepage, flags, str, utf8_len, nullptr, 0);
-            if (wide_len == 0) // If the conversion fails (e.g. due to invalid UTF-8 sequences), we fall back to using the ANSI code page (CP_ACP) for conversion. This allows for compatibility with strings that may not be valid UTF-8, while still supporting proper encoding when possible. We call MultiByteToWideChar again with the ANSI code page to determine the required length of the wide string for this fallback conversion.
-            {
-                // Fallback to ANSI codepage.
-                codepage = CP_ACP;
-                flags = 0;
-                wide_len = MultiByteToWideChar(codepage, flags, str, utf8_len, nullptr, 0);
-            }
-
-            if (wide_len <= 0) // If the conversion fails entirely (e.g. if the input string is null or empty), we return an empty wide string. This ensures that the function always returns a valid std::wstring, even if the input is not valid or if the conversion process encounters an error.
-                return L"";
-
-            std::wstring buffer;
-            buffer.resize(static_cast<std::size_t>(wide_len));
-            MultiByteToWideChar(codepage, flags, str, utf8_len, buffer.data(), wide_len);
-            return buffer;
-        }
-
-        /**
          * @fn hwnd_from_id
          * @brief Retrieves the HWND (window handle) associated with a given window_id. This function looks up the window_id in the g_windows map, which stores the mapping between window IDs and their corresponding HWNDs. If the window_id is found in the map, the associated HWND is returned; otherwise, nullptr is returned to indicate that the window_id is not valid or does not correspond to an existing window. This function is used internally to retrieve the HWND for a given window_id when processing events or performing operations on windows, allowing for efficient mapping between our internal window identifiers and the native Windows handles.
          * @param id The window_id for which to retrieve the corresponding HWND. This is an internal identifier used by our platform implementation to represent windows, and it is mapped to the native HWND through the g_windows map. By providing a window_id, we can look up the associated HWND and perform operations or generate events for that window as needed.
@@ -736,7 +706,7 @@ namespace catalyst::platform::detail
         const DWORD ex_style = WS_EX_APPWINDOW;
 
         // Convert the title from UTF-8 to a wide string for use with Windows APIs. If the title is null, we use a default title of "Catalyst". If the conversion results in an empty string (e.g. if the input is not valid UTF-8), we also fall back to the default title. This ensures that we always have a valid title for the window, even if the input is not properly encoded or if no title is provided.
-        std::wstring titleW = desc.title ? utf8_to_wide_or_ansi(desc.title) : L"Catalyst";
+        std::wstring titleW = desc.title ? win32::utf8_to_wide_or_ansi(desc.title) : L"Catalyst";
         if (titleW.empty())
             titleW = L"Catalyst";
 

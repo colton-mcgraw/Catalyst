@@ -3,6 +3,5 @@
 # License: CDDL-1.0 (see LICENSE).
 
 add_subdirectory(sandbox)
-
 add_subdirectory(window_polling)
 add_subdirectory(window_waiting)
