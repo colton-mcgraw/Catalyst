@@ -40,6 +40,10 @@ if(_catalyst_rendering_backend STREQUAL "d3d12")
 elseif(_catalyst_rendering_backend STREQUAL "vulkan")
   add_library(catalyst_rendering_backend_vulkan STATIC
     vulkan/rendering_backend_vulkan.cpp
+    vulkan/vulkan_devices.cpp
+    vulkan/vulkan_memory.cpp
+    vulkan/vulkan_buffers.cpp
+    vulkan/vulkan_swapchain.cpp
   )
 
   target_include_directories(catalyst_rendering_backend_vulkan
