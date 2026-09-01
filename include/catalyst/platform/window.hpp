@@ -292,7 +292,7 @@ namespace catalyst::platform
 
     /**
      * @fn poll_event
-     * @brief Polls for a single event from the OS event queue and processes it. This function retrieves the next available event from the operating system's event queue and processes it, returning true if an event was successfully retrieved and processed, or false if there are no more events available at the moment. The retrieved event is returned through the out parameter, which is a reference to a unique_ptr that will be set to point to the retrieved event if one is available. By using poll_event, developers can implement custom event processing loops that allow for more fine-grained control over how events are handled in their applications.
+     * @brief Retrieves the next event queued by the backend, if any. Events are queued only while no event sink is installed (see set_event_sink); once a sink is set, events are published to it immediately and this function always returns false. Use one mechanism or the other, not both.
      * @param out A reference to a unique_ptr that will be set to point to the retrieved event if one is available. If no events are available, this pointer will remain unchanged.
      * @return True if an event was successfully retrieved and processed, false if there are no more events available at the moment.
      */
@@ -300,7 +300,7 @@ namespace catalyst::platform
 
     /**
      * @fn set_event_sink
-     * @brief Sets the event sink for the Catalyst Platform library's event system. This function allows developers to specify a custom event sink that will receive events published by the library, such as window events and input events. By providing an event sink, developers can integrate the Catalyst Platform library's events into their own event handling systems or frameworks, allowing for greater flexibility and control over how events are processed in their applications. The provided event sink should implement the core::event_sink interface, which defines the necessary functions for receiving and handling events from the library.
+     * @brief Installs the event sink that receives every window and input event the backend generates, published synchronously from pump_events()/wait_events() on the calling thread. While a sink is installed nothing is queued for poll_event(). Pass nullptr to go back to polling. The sink (and its dispatcher) must outlive the installation.
      * @param sink A pointer to an instance of a class that implements the core::event_sink interface. This instance will receive events published by the Catalyst Platform library, allowing developers to integrate those events into their own event handling systems or frameworks.
      */
     void set_event_sink(core::event_sink *sink) noexcept;

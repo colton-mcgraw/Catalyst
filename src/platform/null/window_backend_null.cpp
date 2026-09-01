@@ -31,8 +31,14 @@ namespace catalyst::platform::detail
             if (!e)
                 return;
 
+            e->stamp();
+
+            // Exactly one delivery path: sink if installed, otherwise the poll_event() queue (see win32 backend).
             if (g_event_sink)
+            {
                 g_event_sink->publish(*e);
+                return;
+            }
 
             g_events.push_back(std::move(e));
         }

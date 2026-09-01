@@ -28,7 +28,8 @@ option(CATALYST_BUILD_SCENE "Build Catalyst scene module" ON)
 option(CATALYST_BUILD_UI "Build Catalyst UI module" ON)
 option(CATALYST_BUILD_UTILS "Build Catalyst utils module" ON)
 option(CATALYST_BUILD_EXAMPLES "Build Catalyst examples" ON)
-option(CATALYST_BUILD_TESTS "Build Catalyst tests" OFF)
+option(CATALYST_BUILD_TESTS "Build Catalyst tests" ON)
+option(CATALYST_BUILD_BENCHMARKS "Build Catalyst benchmarks" ON)
 
 add_subdirectory(src)
 
@@ -39,4 +40,8 @@ endif()
 if(CATALYST_BUILD_TESTS)
 	enable_testing()
 	add_subdirectory(tests)
+endif()
+
+if(CATALYST_BUILD_BENCHMARKS)
+	add_subdirectory(bench)
 endif()

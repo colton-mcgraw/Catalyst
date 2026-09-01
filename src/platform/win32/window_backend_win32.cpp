@@ -112,18 +112,26 @@ namespace catalyst::platform::detail
 
         void enqueue_event(std::unique_ptr<core::event_base> e)
         {
-            if (!e) // If the event pointer is null, do not enqueue it and simply return.
+            if (!e)
                 return;
 
-            if (g_event_sink) // If the global event_sink pointer is valid, publish the event immediately through the event_sink. This allows subscribed handlers to receive and process the event as soon as it is generated.
-                g_event_sink->publish(*e);
+            e->stamp();
 
-            g_events.push_back(std::move(e)); // Enqueue the event by moving the unique pointer into the global events deque. This allows the event to be stored for later processing if needed, while also ensuring that the memory for the event is managed automatically through the use of unique pointers.
+            // Exactly one delivery path: if the application installed an event_sink the event is published to it right
+            // away and nothing is queued; otherwise it is queued for poll_event(). Doing both would deliver every event
+            // twice to applications that use both APIs, and leak the queue in applications that use only the sink.
+            if (g_event_sink)
+            {
+                g_event_sink->publish(*e);
+                return;
+            }
+
+            g_events.push_back(std::move(e));
         }
 
         /**
          * @fn enqueue_event
-         * @brief Enqueues an event of a specific type by creating a unique pointer to the event and adding it to the global events deque. This function is a convenience overload that allows callers to enqueue an event by value, without needing to manually create a unique pointer. The event will be published immediately through the global event_sink if it is valid, and it will also be stored in the global events deque for later processing if needed. By using perfect forwarding, this function can efficiently handle both lvalue and rvalue events, allowing for optimal performance when enqueuing events of various types.
+         * @brief Enqueues an event of a specific type by creating a unique pointer to the event and adding it to the global events deque. This function is a convenience overload that allows callers to enqueue an event by value, without needing to manually create a unique pointer. The event is timestamped and then delivered through exactly one path: published to the global event_sink if one is set, otherwise stored in the global events deque for poll_event(). By using perfect forwarding, this function can efficiently handle both lvalue and rvalue events, allowing for optimal performance when enqueuing events of various types.
          * @param e The event to enqueue, passed by value. This can be an lvalue or an rvalue, and the function will handle it appropriately to create a unique pointer for storage and publication.
          * @tparam E The type of the event being enqueued. This must be a type that derives from core::event_base, as it will be stored in the global events deque and published through the event_sink.
          */
