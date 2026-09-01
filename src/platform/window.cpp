@@ -166,4 +166,18 @@ namespace catalyst::platform
         detail::set_event_sink(sink);
     }
 
+    void set_cursor_mode(const window &w, cursor_mode mode) noexcept
+    {
+        if (!w)
+            return;
+        detail::set_cursor_mode(w.id(), mode);
+    }
+
+    cursor_mode get_cursor_mode(const window &w) noexcept
+    {
+        if (!w)
+            return cursor_mode::normal;
+        return detail::get_cursor_mode(w.id());
+    }
+
 } // namespace catalyst::platform

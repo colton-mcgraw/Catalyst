@@ -18,7 +18,9 @@ namespace catalyst::input {
 
 	inline constexpr usb_hid usb_hid_unknown = 0u;
 
+	inline constexpr std::uint16_t usb_hid_page_generic_desktop = 0x01u;
 	inline constexpr std::uint16_t usb_hid_page_keyboard = 0x07u;
+	inline constexpr std::uint16_t usb_hid_page_button = 0x09u;
 
 	[[nodiscard]] inline constexpr usb_hid make_usb_hid(std::uint16_t page, std::uint16_t id) noexcept
 	{

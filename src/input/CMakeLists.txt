@@ -1,6 +1,8 @@
 add_library(catalyst_input STATIC
   input.cpp
+  gamepad.cpp
   keyboard.cpp
+  state.cpp
 )
 
 add_library(catalyst::input ALIAS catalyst_input)
@@ -10,6 +12,11 @@ target_include_directories(catalyst_input
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>
 )
+
+# input_state subscribes to a core::dispatcher, so consumers of the input module need the core module's objects too.
+if(TARGET catalyst_core)
+  target_link_libraries(catalyst_input PUBLIC catalyst_core)
+endif()
 
 set(CATALYST_INPUT_BACKEND "auto" CACHE STRING "Input backend (auto|win32|null)")
 set_property(CACHE CATALYST_INPUT_BACKEND PROPERTY STRINGS auto win32 null)
@@ -35,7 +42,11 @@ if(_catalyst_input_backend STREQUAL "win32")
   target_include_directories(catalyst_input_backend_win32
     PRIVATE
       ${CMAKE_CURRENT_SOURCE_DIR}
+      ${PROJECT_SOURCE_DIR}/include
   )
+
+  # XInput 1.4 (Windows 8+) for gamepads.
+  target_link_libraries(catalyst_input_backend_win32 PRIVATE xinput)
 
   target_link_libraries(catalyst_input PRIVATE catalyst_input_backend_win32)
 elseif(_catalyst_input_backend STREQUAL "null")
@@ -46,6 +57,7 @@ elseif(_catalyst_input_backend STREQUAL "null")
   target_include_directories(catalyst_input_backend_null
     PRIVATE
       ${CMAKE_CURRENT_SOURCE_DIR}
+      ${PROJECT_SOURCE_DIR}/include
   )
 
   target_link_libraries(catalyst_input PRIVATE catalyst_input_backend_null)

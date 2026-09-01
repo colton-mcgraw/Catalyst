@@ -18,6 +18,7 @@ namespace catalyst::platform::detail
         {
             catalyst::math::rect<std::int32_t> rect_px{{0, 0}, {0, 0}};
             float dpi_scale = 1.0f;
+            cursor_mode cursor = cursor_mode::normal;
         };
 
         std::uint64_t g_next_window_id = 1;
@@ -164,6 +165,22 @@ namespace catalyst::platform::detail
     void set_event_sink(core::event_sink *sink) noexcept
     {
         g_event_sink = sink;
+    }
+
+    void set_cursor_mode(window_id id, cursor_mode mode) noexcept
+    {
+        auto it = g_windows.find(id);
+        if (it == g_windows.end())
+            return;
+        it->second.cursor = mode;
+    }
+
+    cursor_mode get_cursor_mode(window_id id) noexcept
+    {
+        auto it = g_windows.find(id);
+        if (it == g_windows.end())
+            return cursor_mode::normal;
+        return it->second.cursor;
     }
 
 } // namespace catalyst::platform::detail

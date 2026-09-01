@@ -11,6 +11,7 @@
 
 #include "win32_helpers.hpp"
 
+#include <bitset>
 #include <deque>
 #include <cstring>
 #include <memory>
@@ -48,7 +49,22 @@ namespace catalyst::platform::detail
          * @var g_windows
          * @brief A global unordered map that associates window IDs with their corresponding HWND handles. This map is used to keep track of all the windows that have been created in the application, allowing for efficient lookup of the HWND handle based on the window ID. The window ID is a unique identifier assigned to each window when it is created, and it is used as the key in this map to retrieve the corresponding HWND handle when needed (e.g. for sending messages or querying window properties).
          */
-        std::unordered_map<window_id, HWND> g_windows;
+        /**
+         * @struct window_state
+         * @brief Everything the backend keeps per window besides the HWND: the input bookkeeping needed to derive mouse
+         * deltas, enter/leave transitions, surrogate-pair decoding and the cursor mode.
+         */
+        struct window_state
+        {
+            HWND hwnd = nullptr;
+            math::vec2<std::int32_t> last_mouse_pos_px{};
+            bool has_mouse_pos = false;   ///< false until the first WM_MOUSEMOVE, so the first delta is zero
+            bool mouse_inside = false;    ///< the cursor is over the client area and a WM_MOUSELEAVE is pending
+            cursor_mode cursor = cursor_mode::normal;
+            wchar_t pending_high_surrogate = 0;
+        };
+
+        std::unordered_map<window_id, window_state> g_windows;
         /**
          * @var g_window_ids
          * @brief A global unordered map that associates HWND handles with their corresponding window IDs. This map is used to keep track of all the windows that have been created in the application, allowing for efficient lookup of the window ID based on the HWND handle. The HWND handle is a unique identifier assigned by the Windows API when a window is created, and it is used as the key in this map to retrieve the corresponding window ID when needed (e.g. for processing events or managing windows).
@@ -60,16 +76,33 @@ namespace catalyst::platform::detail
          */
         core::event_sink *g_event_sink = nullptr;
         /**
-         * @var g_last_mouse_pos_px
-         * @brief A global unordered map that associates window IDs with their last known mouse position in pixels. This map is used to track the last mouse position for each window, allowing for accurate processing of mouse movement events and other interactions that depend on the mouse position. The mouse position is typically updated in response to mouse movement messages, and it can be used to calculate deltas for mouse movement or to determine the current position of the mouse cursor within a specific window.
+         * @var g_keys_down
+         * @brief USB HID usage ids of the keys the backend currently considers held. Used to publish releases when the
+         * focused window loses focus, so applications never see a key stuck down after Alt+Tab.
          */
-        std::unordered_map<window_id, math::vec2<std::int32_t>> g_last_mouse_pos_px;
+        std::bitset<input::key_code_count> g_keys_down;
         /**
-         * @var g_pending_high_surrogate
-         * @brief A thread-local variable that holds a pending high surrogate character when processing UTF-16 input from the Windows API. This variable is used to handle cases where a high surrogate character is received without its corresponding low surrogate, allowing the system to wait for the next input event to complete the surrogate pair before processing the character.
-         * @note By using a thread-local variable, we can ensure that this state is maintained separately for each thread that may be processing input events, preventing conflicts and ensuring correct handling of UTF-16 input across multiple threads.
+         * @var g_mouse_buttons_down
+         * @brief The mouse buttons currently held, mirrored from the button messages. The mouse is captured while this is
+         * non-empty so drags keep reporting after the cursor leaves the window.
          */
-        thread_local wchar_t g_pending_high_surrogate = 0;
+        input::mouse_buttons g_mouse_buttons_down = input::mouse_buttons::none;
+        /**
+         * @var g_mouse_capture_window
+         * @brief The window that currently holds the mouse capture on our behalf, or 0.
+         */
+        window_id g_mouse_capture_window = 0;
+        /**
+         * @var g_raw_mouse_window
+         * @brief The window raw mouse input is currently registered for (the one whose cursor is captured), or 0.
+         */
+        window_id g_raw_mouse_window = 0;
+        /**
+         * @var g_last_raw_absolute
+         * @brief Last absolute raw-mouse position, for devices (RDP, tablets) that report absolute rather than relative motion.
+         */
+        math::vec2<std::int32_t> g_last_raw_absolute{};
+        bool g_has_last_raw_absolute = false;
 
         /**
          * @fn dpi_scale_for_window
@@ -161,11 +194,20 @@ namespace catalyst::platform::detail
         }
 
         /**
+         * @fn window_state_from_id
+         * @brief Looks up the per-window state for an id, or nullptr if the id is not one of ours.
+         */
+        window_state *window_state_from_id(window_id id) noexcept
+        {
+            auto it = g_windows.find(id);
+            if (it == g_windows.end())
+                return nullptr;
+            return &it->second;
+        }
+
+        /**
          * @fn to_input_mouse_button
-         * @brief Converts a Windows mouse message and its parameters into a corresponding input::mouse_button enum value. This function takes the message code (e.g. WM_LBUTTONDOWN, WM_RBUTTONUP, etc.) and the WPARAM parameter, which may contain additional information for certain messages (e.g. for WM_XBUTTONDOWN/UP), and maps them to the appropriate mouse button representation defined in the input module. If the message does not correspond to a known mouse button event, this function returns input::mouse_button::unknown.
-         * @param msg The Windows message code representing the mouse event (e.g. WM_LBUTTONDOWN, WM_RBUTTONUP, etc.). This is used to determine which mouse button event occurred.
-         * @param wparam The WPARAM parameter from the Windows message, which may contain additional information for certain messages (e.g. for WM_XBUTTONDOWN/UP). This is used to determine which specific button was involved in the event when processing extended mouse button messages.
-         * @return The corresponding input::mouse_button enum value representing the mouse button involved in the event. If the message does not correspond to a known mouse button event, this function returns input::mouse_button::unknown.
+         * @brief Maps a Win32 mouse-button message (down, up or double-click) to the input::mouse_button it concerns.
          */
         input::mouse_button to_input_mouse_button(UINT msg, WPARAM wparam) noexcept
         {
@@ -173,19 +215,20 @@ namespace catalyst::platform::detail
             {
             case WM_LBUTTONDOWN:
             case WM_LBUTTONUP:
+            case WM_LBUTTONDBLCLK:
                 return input::mouse_button::left;
             case WM_RBUTTONDOWN:
             case WM_RBUTTONUP:
+            case WM_RBUTTONDBLCLK:
                 return input::mouse_button::right;
             case WM_MBUTTONDOWN:
             case WM_MBUTTONUP:
+            case WM_MBUTTONDBLCLK:
                 return input::mouse_button::middle;
-            // For extended mouse buttons, we need to check the WPARAM to determine which button was involved (XBUTTON1 or XBUTTON2).
-            // The GET_XBUTTON_WPARAM macro is used to extract the button information from the hi part of WPARAM for these messages.
-            // Windows only supports two extended mouse buttons (XBUTTON1 and XBUTTON2), so we can directly map them to input::mouse_button::x1 and input::mouse_button::x2 respectively.
-            // Some mouse drivers may support additional buttons, but Windows will still only report them as XBUTTON1 or XBUTTON2, so we will treat any button that is not XBUTTON1 as XBUTTON2 for the purposes of this mapping.
             case WM_XBUTTONDOWN:
             case WM_XBUTTONUP:
+            case WM_XBUTTONDBLCLK:
+                // Windows only has two extended buttons, XBUTTON1 and XBUTTON2.
                 return (GET_XBUTTON_WPARAM(wparam) == XBUTTON1) ? input::mouse_button::x1 : input::mouse_button::x2;
             default:
                 return input::mouse_button::unknown;
@@ -193,9 +236,29 @@ namespace catalyst::platform::detail
         }
 
         /**
+         * @fn buttons_from_wparam
+         * @brief The set of buttons held according to the MK_* flags a mouse message carries in its WPARAM.
+         */
+        input::mouse_buttons buttons_from_wparam(WPARAM wparam) noexcept
+        {
+            input::mouse_buttons b = input::mouse_buttons::none;
+            if (wparam & MK_LBUTTON)
+                b |= input::mouse_buttons::left;
+            if (wparam & MK_RBUTTON)
+                b |= input::mouse_buttons::right;
+            if (wparam & MK_MBUTTON)
+                b |= input::mouse_buttons::middle;
+            if (wparam & MK_XBUTTON1)
+                b |= input::mouse_buttons::x1;
+            if (wparam & MK_XBUTTON2)
+                b |= input::mouse_buttons::x2;
+            return b;
+        }
+
+        /**
          * @fn current_modifiers
-         * @brief Retrieves the current state of key modifiers (e.g. Shift, Control, Alt, etc.) by querying the Windows API for the state of relevant keys. This function checks the state of modifier keys using GetKeyState and constructs an input::key_modifiers value that represents the currently active modifiers. This can be used to determine which modifier keys are currently pressed when processing input events, allowing for accurate handling of keyboard shortcuts and other interactions that depend on modifier keys.
-         * @return An input::key_modifiers value representing the currently active key modifiers. This is constructed by checking the state of relevant keys (e.g. Shift, Control, Alt, etc.) using the Windows API and combining their states into a single value that can be used for input processing.
+         * @brief Samples the modifier keys and lock states with GetKeyState, which is synchronised with the message being
+         * processed, so the result reflects the state at the time of the event rather than "now".
          */
         input::key_modifiers current_modifiers() noexcept
         {
@@ -219,242 +282,317 @@ namespace catalyst::platform::detail
         }
 
         /**
-         * @fn to_input_key_code
-         * @brief Converts a Windows keyboard message and its parameters into a corresponding input::key_code enum value. This function takes the message code (e.g. WM_KEYDOWN, WM_KEYUP, etc.) and the WPARAM and LPARAM parameters, which contain information about the key event, and maps them to the appropriate key code representation defined in the input module. The conversion process involves checking the virtual key code in WPARAM against known key codes and also considering the extended key flag in LPARAM for certain keys (e.g. distinguishing between Enter on the main keyboard vs. Enter on the numeric keypad). If the message does not correspond to a known key event or if the virtual key code is not recognized, this function returns input::key_code::unknown.
-         * @param msg The Windows message code representing the keyboard event (e.g. WM_KEYDOWN, WM_KEYUP, etc.). This is used to determine which type of key event occurred.
-         * @param wparam The WPARAM parameter from the Windows message, which contains the virtual key code representing the specific key involved in the event. This is used to determine which key was pressed or released.
-         * @param lparam The LPARAM parameter from the Windows message, which contains additional information about the key event, such as whether it was an extended key. This is used to distinguish between certain keys that share virtual key codes but have different meanings based on their position (e.g. Enter on the main keyboard vs. Enter on the numeric keypad).
-         * @return The corresponding input::key_code enum value representing the key involved in the event. If the message does not correspond to a known key event or if the virtual key code is not recognized, this function returns input::key_code::unknown.
+         * @var k_scancode_to_hid
+         * @brief Scan code set 1 (what Windows reports in bits 16-23 of a key message's LPARAM) to USB HID keyboard usage,
+         * for keys *without* the extended (0xE0) prefix. Indexed by scan code; 0 means "no mapping". Scan codes describe
+         * the physical key regardless of the active keyboard layout, which is exactly what input::key_code represents.
          */
-        input::key_code to_input_key_code(UINT msg, WPARAM wparam, LPARAM lparam) noexcept
+        constexpr std::uint8_t k_scancode_to_hid[128] = {
+            /* 0x00 */ 0, 41, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 45, 46, 42, 43,
+            /* 0x10 */ 20, 26, 8, 21, 23, 28, 24, 12, 18, 19, 47, 48, 40, 224, 4, 22,
+            /* 0x20 */ 7, 9, 10, 11, 13, 14, 15, 51, 52, 53, 225, 49, 29, 27, 6, 25,
+            /* 0x30 */ 5, 17, 16, 54, 55, 56, 229, 85, 226, 44, 57, 58, 59, 60, 61, 62,
+            /* 0x40 */ 63, 64, 65, 66, 67, 83, 71, 95, 96, 97, 86, 92, 93, 94, 87, 89,
+            /* 0x50 */ 90, 91, 98, 99, 70, 0, 100, 68, 69, 103, 0, 0, 140, 0, 0, 0,
+            /* 0x60 */ 0, 0, 0, 0, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 0,
+            /* 0x70 */ 136, 145, 144, 135, 0, 0, 115, 147, 146, 138, 0, 139, 0, 137, 0, 0,
+        };
+
+        /**
+         * @fn to_input_key_code
+         * @brief Translates the scan code and virtual key of a WM_(SYS)KEY* message into the physical key it belongs to.
+         * @param wparam The virtual key code. Only consulted for keys whose scan codes collide (Pause/NumLock) or when the
+         * message carries no scan code at all (input injected with SendInput), in which case the scan code is recovered
+         * with MapVirtualKey.
+         * @param lparam The message's LPARAM: bits 16-23 are the scan code, bit 24 the extended-key flag.
+         * @param scancode_out Receives the raw scan code, with 0xE000 added for extended keys, for key_event::scancode.
+         * @return The key, or input::key_code::unknown for keys Catalyst has no name for (browser/media keys and the
+         * phantom Shift messages Windows synthesises around keypad keys).
+         */
+        input::key_code to_input_key_code(WPARAM wparam, LPARAM lparam, std::uint32_t &scancode_out) noexcept
         {
-            (void)msg;
+            using input::key_code;
 
-            const bool extended = (lparam & (1 << 24)) != 0;
+            const UINT vk = static_cast<UINT>(wparam);
+            UINT sc = static_cast<UINT>((lparam >> 16) & 0xFFu);
+            bool extended = (lparam & (1 << 24)) != 0;
 
-            // Letters
-            if (wparam >= 'A' && wparam <= 'Z')
+            if (sc == 0)
             {
-                return static_cast<input::key_code>(static_cast<std::uint16_t>(input::key_code::a) +
-                                                    static_cast<std::uint16_t>(wparam - 'A'));
+                const UINT mapped = MapVirtualKeyW(vk, MAPVK_VK_TO_VSC_EX);
+                sc = mapped & 0xFFu;
+                extended = (mapped & 0xFF00u) != 0;
             }
 
-            // Digits (top row)
-            if (wparam >= '0' && wparam <= '9')
+            scancode_out = extended ? (0xE000u | sc) : sc;
+
+            // Pause and NumLock share scan code 0x45 (Pause's 0xE1 prefix is dropped by Windows) and PrintScreen shows up
+            // with several different codes, so those three are resolved from the virtual key.
+            switch (vk)
             {
-                if (wparam == '0')
-                    return input::key_code::digit_0;
-                return static_cast<input::key_code>(static_cast<std::uint16_t>(input::key_code::digit_1) +
-                                                    static_cast<std::uint16_t>(wparam - '1'));
-            }
-
-            switch (wparam)
-            {
-            case VK_ESCAPE:
-                return input::key_code::escape;
-            case VK_RETURN:
-                return extended ? input::key_code::keypad_enter : input::key_code::enter;
-            case VK_BACK:
-                return input::key_code::backspace;
-            case VK_TAB:
-                return input::key_code::tab;
-            case VK_SPACE:
-                return input::key_code::space;
-
-            case VK_OEM_MINUS:
-                return input::key_code::minus;
-            case VK_OEM_PLUS:
-                return input::key_code::equal;
-            case VK_OEM_4:
-                return input::key_code::left_bracket;
-            case VK_OEM_6:
-                return input::key_code::right_bracket;
-            case VK_OEM_5:
-                return input::key_code::backslash;
-            case VK_OEM_1:
-                return input::key_code::semicolon;
-            case VK_OEM_7:
-                return input::key_code::apostrophe;
-            case VK_OEM_3:
-                return input::key_code::grave_accent;
-            case VK_OEM_COMMA:
-                return input::key_code::comma;
-            case VK_OEM_PERIOD:
-                return input::key_code::period;
-            case VK_OEM_2:
-                return input::key_code::slash;
-            case VK_OEM_102:
-                return input::key_code::non_us_backslash;
-
-            case VK_CAPITAL:
-                return input::key_code::caps_lock;
-
-            case VK_SNAPSHOT:
-                return input::key_code::print_screen;
-            case VK_SCROLL:
-                return input::key_code::scroll_lock;
             case VK_PAUSE:
-                return input::key_code::pause;
-
-            case VK_INSERT:
-                return input::key_code::insert;
-            case VK_HOME:
-                return input::key_code::home;
-            case VK_PRIOR:
-                return input::key_code::page_up;
-            case VK_DELETE:
-                return input::key_code::delete_key;
-            case VK_END:
-                return input::key_code::end;
-            case VK_NEXT:
-                return input::key_code::page_down;
-
-            case VK_RIGHT:
-                return input::key_code::right_arrow;
-            case VK_LEFT:
-                return input::key_code::left_arrow;
-            case VK_DOWN:
-                return input::key_code::down_arrow;
-            case VK_UP:
-                return input::key_code::up_arrow;
-
+            case VK_CANCEL:
+                return key_code::pause;
             case VK_NUMLOCK:
-                return input::key_code::num_lock;
-            case VK_DIVIDE:
-                return input::key_code::keypad_divide;
-            case VK_MULTIPLY:
-                return input::key_code::keypad_multiply;
-            case VK_SUBTRACT:
-                return input::key_code::keypad_minus;
-            case VK_ADD:
-                return input::key_code::keypad_plus;
-            case VK_DECIMAL:
-                return input::key_code::keypad_period;
-
-            case VK_NUMPAD0:
-                return input::key_code::keypad_0;
-            case VK_NUMPAD1:
-                return input::key_code::keypad_1;
-            case VK_NUMPAD2:
-                return input::key_code::keypad_2;
-            case VK_NUMPAD3:
-                return input::key_code::keypad_3;
-            case VK_NUMPAD4:
-                return input::key_code::keypad_4;
-            case VK_NUMPAD5:
-                return input::key_code::keypad_5;
-            case VK_NUMPAD6:
-                return input::key_code::keypad_6;
-            case VK_NUMPAD7:
-                return input::key_code::keypad_7;
-            case VK_NUMPAD8:
-                return input::key_code::keypad_8;
-            case VK_NUMPAD9:
-                return input::key_code::keypad_9;
-
-            case VK_F1:
-                return input::key_code::f1;
-            case VK_F2:
-                return input::key_code::f2;
-            case VK_F3:
-                return input::key_code::f3;
-            case VK_F4:
-                return input::key_code::f4;
-            case VK_F5:
-                return input::key_code::f5;
-            case VK_F6:
-                return input::key_code::f6;
-            case VK_F7:
-                return input::key_code::f7;
-            case VK_F8:
-                return input::key_code::f8;
-            case VK_F9:
-                return input::key_code::f9;
-            case VK_F10:
-                return input::key_code::f10;
-            case VK_F11:
-                return input::key_code::f11;
-            case VK_F12:
-                return input::key_code::f12;
-            case VK_F13:
-                return input::key_code::f13;
-            case VK_F14:
-                return input::key_code::f14;
-            case VK_F15:
-                return input::key_code::f15;
-            case VK_F16:
-                return input::key_code::f16;
-            case VK_F17:
-                return input::key_code::f17;
-            case VK_F18:
-                return input::key_code::f18;
-            case VK_F19:
-                return input::key_code::f19;
-            case VK_F20:
-                return input::key_code::f20;
-            case VK_F21:
-                return input::key_code::f21;
-            case VK_F22:
-                return input::key_code::f22;
-            case VK_F23:
-                return input::key_code::f23;
-            case VK_F24:
-                return input::key_code::f24;
-
+                return key_code::num_lock;
+            case VK_SNAPSHOT:
+                return key_code::print_screen;
             default:
-                return input::key_code::unknown;
+                break;
             }
+
+            if (extended)
+            {
+                switch (sc)
+                {
+                case 0x1C: return key_code::keypad_enter;
+                case 0x1D: return key_code::right_control;
+                case 0x20: return key_code::mute;
+                case 0x2E: return key_code::volume_down;
+                case 0x30: return key_code::volume_up;
+                case 0x35: return key_code::keypad_divide;
+                case 0x37: return key_code::print_screen;
+                case 0x38: return key_code::right_alt;
+                case 0x47: return key_code::home;
+                case 0x48: return key_code::up_arrow;
+                case 0x49: return key_code::page_up;
+                case 0x4B: return key_code::left_arrow;
+                case 0x4D: return key_code::right_arrow;
+                case 0x4F: return key_code::end;
+                case 0x50: return key_code::down_arrow;
+                case 0x51: return key_code::page_down;
+                case 0x52: return key_code::insert;
+                case 0x53: return key_code::delete_key;
+                case 0x5B: return key_code::left_super;
+                case 0x5C: return key_code::right_super;
+                case 0x5D: return key_code::application;
+                case 0x5E: return key_code::power;
+                default:
+                    return key_code::unknown; // includes the fake 0xE02A / 0xE036 Shift around keypad keys
+                }
+            }
+
+            if (sc < 128 && k_scancode_to_hid[sc] != 0)
+                return static_cast<key_code>(k_scancode_to_hid[sc]);
+
+            return key_code::unknown;
         }
 
         /**
          * @fn utf32_from_utf16_unit
-         * @brief Converts a single UTF-16 code unit (wchar_t) from Windows into a UTF-32 code point (input::character_code). This function handles the conversion of UTF-16 code units, including the processing of surrogate pairs for characters outside the Basic Multilingual Plane (BMP). If a high surrogate is encountered, it is stored in a thread-local variable until the corresponding low surrogate is received. If a low surrogate is received without a pending high surrogate, or if an invalid code unit is encountered, this function returns the Unicode replacement character (U+FFFD) to indicate an error in decoding.
-         * @param unit The UTF-16 code unit (wchar_t) to convert. This is typically obtained from the WPARAM of a WM_CHAR message in the Windows message loop, which provides UTF-16 encoded character input.
-         * @return The corresponding UTF-32 code point as an input::character_code. If the input code unit is part of a valid surrogate pair, the combined code point is returned. If an invalid code unit is encountered (e.g. a low surrogate without a pending high surrogate), the Unicode replacement character (U+FFFD) is returned to indicate an error in decoding. If the code unit is a valid non-surrogate character, it is returned directly as a UTF-32 code point.
+         * @brief Feeds one UTF-16 code unit from WM_CHAR into the window's decoder. Returns a complete code point, or 0 when
+         * the unit was a high surrogate (the code point is produced when the low surrogate arrives) or invalid.
          */
-        input::character_code utf32_from_utf16_unit(wchar_t unit) noexcept
+        input::character_code utf32_from_utf16_unit(window_state &ws, wchar_t unit) noexcept
         {
-            // Windows UTF-16. wchar_t is 16-bit on Windows.
             const std::uint32_t u = static_cast<std::uint16_t>(unit);
 
             if (u >= 0xD800u && u <= 0xDBFFu)
             {
-                g_pending_high_surrogate = unit;
+                ws.pending_high_surrogate = unit;
                 return 0;
             }
 
             if (u >= 0xDC00u && u <= 0xDFFFu)
             {
-                if (g_pending_high_surrogate == 0)
-                    return U'\uFFFD';
+                if (ws.pending_high_surrogate == 0)
+                    return 0; // stray low surrogate
 
-                const std::uint32_t hi = static_cast<std::uint16_t>(g_pending_high_surrogate);
-                g_pending_high_surrogate = 0;
-                const std::uint32_t lo = u;
-                const std::uint32_t cp = 0x10000u + (((hi - 0xD800u) << 10) | (lo - 0xDC00u));
-                return static_cast<input::character_code>(cp);
+                const std::uint32_t hi = static_cast<std::uint16_t>(ws.pending_high_surrogate);
+                ws.pending_high_surrogate = 0;
+                return static_cast<input::character_code>(0x10000u + (((hi - 0xD800u) << 10) | (u - 0xDC00u)));
             }
 
-            g_pending_high_surrogate = 0;
+            ws.pending_high_surrogate = 0;
             return static_cast<input::character_code>(u);
+        }
+
+        /** @brief True for code points that are control characters rather than text (C0 controls and DEL). */
+        bool is_control_character(input::character_code cp) noexcept
+        {
+            return cp < 0x20u || cp == 0x7Fu;
+        }
+
+        /** @brief Cursor position of a client-area mouse message. */
+        math::vec2<std::int32_t> client_pos_from_lparam(LPARAM lparam) noexcept
+        {
+            return {static_cast<std::int32_t>(GET_X_LPARAM(lparam)), static_cast<std::int32_t>(GET_Y_LPARAM(lparam))};
+        }
+
+        /** @brief Cursor position of a message that reports screen coordinates (wheel messages), converted to client space. */
+        math::vec2<std::int32_t> client_pos_from_screen_lparam(HWND hwnd, LPARAM lparam) noexcept
+        {
+            POINT p{GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam)};
+            ScreenToClient(hwnd, &p);
+            return {static_cast<std::int32_t>(p.x), static_cast<std::int32_t>(p.y)};
+        }
+
+        /** @brief Registers for WM_INPUT mouse messages targeted at @p hwnd (replacing any previous registration). */
+        void register_raw_mouse(HWND hwnd) noexcept
+        {
+            RAWINPUTDEVICE rid{};
+            rid.usUsagePage = input::usb_hid_page_generic_desktop;
+            rid.usUsage = 0x02; // HID_USAGE_GENERIC_MOUSE
+            rid.dwFlags = 0;
+            rid.hwndTarget = hwnd;
+            RegisterRawInputDevices(&rid, 1, sizeof(rid));
+        }
+
+        /** @brief Stops WM_INPUT mouse delivery for the process. */
+        void unregister_raw_mouse() noexcept
+        {
+            RAWINPUTDEVICE rid{};
+            rid.usUsagePage = input::usb_hid_page_generic_desktop;
+            rid.usUsage = 0x02;
+            rid.dwFlags = RIDEV_REMOVE;
+            rid.hwndTarget = nullptr;
+            RegisterRawInputDevices(&rid, 1, sizeof(rid));
+        }
+
+        /** @brief Confines the cursor to the window's client area. */
+        void clip_cursor_to_client(HWND hwnd) noexcept
+        {
+            RECT rc{};
+            if (!GetClientRect(hwnd, &rc))
+                return;
+
+            POINT tl{rc.left, rc.top};
+            POINT br{rc.right, rc.bottom};
+            ClientToScreen(hwnd, &tl);
+            ClientToScreen(hwnd, &br);
+
+            RECT clip{tl.x, tl.y, br.x, br.y};
+            ClipCursor(&clip);
+        }
+
+        /**
+         * @fn apply_cursor_mode
+         * @brief Brings the OS state (cursor clip, raw input registration, cursor image) in line with the window's cursor
+         * mode and focus. Called whenever either changes and whenever the window moves or resizes while captured.
+         */
+        void apply_cursor_mode(window_id id, window_state &ws, bool focused) noexcept
+        {
+            if (ws.cursor == cursor_mode::captured && focused)
+            {
+                clip_cursor_to_client(ws.hwnd);
+                if (g_raw_mouse_window != id)
+                {
+                    register_raw_mouse(ws.hwnd);
+                    g_raw_mouse_window = id;
+                    g_has_last_raw_absolute = false;
+                }
+            }
+            else if (g_raw_mouse_window == id)
+            {
+                ClipCursor(nullptr);
+                unregister_raw_mouse();
+                g_raw_mouse_window = 0;
+            }
+
+            // The cursor image is chosen in WM_SETCURSOR, which only fires on mouse movement; nudge it so a mode change
+            // applies immediately when the cursor is already over the client area.
+            POINT p{};
+            if (GetCursorPos(&p) && WindowFromPoint(p) == ws.hwnd)
+                PostMessageW(ws.hwnd, WM_SETCURSOR, reinterpret_cast<WPARAM>(ws.hwnd), MAKELPARAM(HTCLIENT, WM_MOUSEMOVE));
+        }
+
+        /**
+         * @brief apply_cursor_mode() with the focus state taken from GetFocus(). Not usable from WM_KILLFOCUS, where the
+         * window still reports as focused; pass the state explicitly there.
+         */
+        void apply_cursor_mode(window_id id, window_state &ws) noexcept
+        {
+            apply_cursor_mode(id, ws, GetFocus() == ws.hwnd);
+        }
+
+        /**
+         * @fn release_held_mouse_buttons
+         * @brief Publishes a release for every mouse button the backend thinks is held and drops the capture. Used when the
+         * capture is taken away (WM_CAPTURECHANGED) or the window loses focus, so no button is left stuck down.
+         */
+        void release_held_mouse_buttons(window_id id, const math::vec2<std::int32_t> &pos) noexcept
+        {
+            const input::mouse_buttons held = g_mouse_buttons_down;
+            g_mouse_buttons_down = input::mouse_buttons::none;
+            g_mouse_capture_window = 0;
+
+            if (held == input::mouse_buttons::none)
+                return;
+
+            const input::key_modifiers mods = current_modifiers();
+            for (std::size_t i = 0; i < input::mouse_button_count; ++i)
+            {
+                const auto b = static_cast<input::mouse_button>(i);
+                if (!input::has_button(held, b))
+                    continue;
+
+                input::mouse_button_event be;
+                be.window = id;
+                be.button = b;
+                be.action = input::mouse_button_action::release;
+                be.position_px = pos;
+                be.modifiers = mods;
+                enqueue_event(be);
+            }
+        }
+
+        /**
+         * @fn release_held_keys
+         * @brief Publishes a release for every key the backend thinks is held. Used on focus loss: Windows delivers the
+         * WM_KEYUP for keys released after Alt+Tab to the newly focused application, not to us.
+         */
+        void release_held_keys(window_id id) noexcept
+        {
+            if (g_keys_down.none())
+                return;
+
+            for (std::size_t i = 1; i < input::key_code_count; ++i)
+            {
+                if (!g_keys_down.test(i))
+                    continue;
+
+                input::key_event ke;
+                ke.window = id;
+                ke.code = static_cast<input::key_code>(i);
+                ke.scancode = 0;
+                ke.action = input::key_action::release;
+                ke.modifiers = input::key_modifiers::none;
+                enqueue_event(ke);
+            }
+            g_keys_down.reset();
+        }
+
+        /**
+         * @fn publish_text
+         * @brief Publishes one code point as a text_input_event, unless it is a control character.
+         */
+        void publish_text(window_id id, input::character_code cp) noexcept
+        {
+            if (cp == 0 || is_control_character(cp))
+                return;
+
+            input::text_input_event te(cp);
+            te.window = id;
+            te.modifiers = current_modifiers();
+            enqueue_event(te);
         }
 
         /**
          * @fn window_proc
-         * @brief The window procedure function that processes messages sent to windows created by this platform implementation. This function is called by the Windows API whenever a message is sent to a window, and it is responsible for handling various messages related to window events (e.g. close, resize, DPI changes) and input events (e.g. keyboard and mouse events). The function retrieves the window ID associated with the HWND from the GWLP_USERDATA, and then processes the message accordingly, generating appropriate events and enqueuing them for processing through the event_sink. The function returns an LRESULT value that indicates how the message was handled, allowing for proper integration with the Windows message loop.
-         * @param hwnd The handle to the window that received the message. This is used to identify which window the message is associated with and to retrieve the corresponding window ID for event generation.
-         * @param msg The Windows message code representing the event or action that occurred. This is used to determine how to process the message and which events to generate in response.
-         * @param wparam The WPARAM parameter from the Windows message, which may contain additional information relevant to the message being processed (e.g. virtual key codes for keyboard events, button information for mouse events, etc.).
-         * @param lparam The LPARAM parameter from the Windows message, which may contain additional information relevant to the message being processed (e.g. additional flags for keyboard events, mouse position information for mouse events, etc.).
-         * @return An LRESULT value indicating how the message was handled. This typically returns 0 if the message was handled and should not be processed further by the default window procedure, or it may return a non-zero value if the message was not handled and should be processed by the default window procedure. The specific return value may depend on the message being processed and how it was handled within this function.
-         * @note This function is registered as the window procedure for windows created by this implementation, and it is responsible for translating Windows messages into the appropriate events defined in the catalyst platform and input modules, allowing for consistent event handling across the application. By processing messages in this function, we can ensure that events are generated in response to user interactions and system events, enabling the application to respond accordingly.
+         * @brief The window procedure for every window this backend creates. Translates window and input messages into
+         * Catalyst events (see enqueue_event) and forwards everything else to DefWindowProcW.
+         * @note Messages that arrive before CreateWindowExW returns (WM_NCCREATE, WM_CREATE, the first WM_SIZE...) see a
+         * window id of 0 because GWLP_USERDATA has not been set yet; those are deliberately not translated, and
+         * create_window publishes the initial resize/DPI events itself.
          */
         LRESULT CALLBACK window_proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
         {
             const auto id = static_cast<window_id>(GetWindowLongPtrW(hwnd, GWLP_USERDATA));
+            window_state *ws = (id != 0) ? window_state_from_id(id) : nullptr;
 
             switch (msg)
             {
+            // ---- Window lifecycle -------------------------------------------------------------------------------
             case WM_CLOSE:
             {
                 if (id != 0)
@@ -484,7 +622,16 @@ namespace catalyst::platform::detail
                     we.width_px = ui::px(LOWORD(lparam));
                     we.height_px = ui::px(HIWORD(lparam));
                     enqueue_event(we);
+
+                    if (ws && ws->cursor == cursor_mode::captured)
+                        apply_cursor_mode(id, *ws);
                 }
+                break;
+            }
+            case WM_MOVE:
+            {
+                if (ws && ws->cursor == cursor_mode::captured)
+                    apply_cursor_mode(id, *ws);
                 break;
             }
             case WM_ENTERSIZEMOVE:
@@ -528,6 +675,70 @@ namespace catalyst::platform::detail
                 return 0;
             }
 
+            // ---- Focus ------------------------------------------------------------------------------------------
+            case WM_SETFOCUS:
+            {
+                if (id != 0)
+                {
+                    window_focus_event fe;
+                    fe.window = id;
+                    fe.focused = true;
+                    enqueue_event(fe);
+
+                    if (ws)
+                        apply_cursor_mode(id, *ws, true);
+                }
+                break;
+            }
+            case WM_KILLFOCUS:
+            {
+                if (id != 0)
+                {
+                    release_held_keys(id);
+                    release_held_mouse_buttons(id, ws ? ws->last_mouse_pos_px : math::vec2<std::int32_t>{});
+
+                    if (ws)
+                        apply_cursor_mode(id, *ws, false); // suspends the clip / raw input while unfocused
+
+                    window_focus_event fe;
+                    fe.window = id;
+                    fe.focused = false;
+                    enqueue_event(fe);
+                }
+                break;
+            }
+            case WM_CAPTURECHANGED:
+            {
+                // Another window (possibly in another process) took the capture: the button-up messages will never
+                // reach us, so report the buttons as released now.
+                if (id != 0 && reinterpret_cast<HWND>(lparam) != hwnd && g_mouse_capture_window == id)
+                    release_held_mouse_buttons(id, ws ? ws->last_mouse_pos_px : math::vec2<std::int32_t>{});
+                break;
+            }
+            case WM_SYSCOMMAND:
+            {
+                // Alt or F10 on their own would enter the menu loop and stall the message pump; Alt+F4 (SC_CLOSE) and
+                // the rest still go through.
+                if ((wparam & 0xFFF0u) == SC_KEYMENU)
+                    return 0;
+                break;
+            }
+            case WM_MENUCHAR:
+            {
+                // Silence the beep for Alt+<key> combinations, which have no menu to accelerate.
+                return MAKELRESULT(0, MNC_CLOSE);
+            }
+            case WM_SETCURSOR:
+            {
+                if (ws && LOWORD(lparam) == HTCLIENT && ws->cursor != cursor_mode::normal)
+                {
+                    SetCursor(nullptr);
+                    return TRUE;
+                }
+                break;
+            }
+
+            // ---- Keyboard ---------------------------------------------------------------------------------------
             case WM_KEYDOWN:
             case WM_SYSKEYDOWN:
             {
@@ -536,10 +747,18 @@ namespace catalyst::platform::detail
                     const bool repeat = (lparam & (1 << 30)) != 0;
 
                     input::key_event ke;
-                    ke.code = to_input_key_code(msg, wparam, lparam);
-                    ke.native_code = input::to_usb_hid(ke.code);
+                    ke.window = id;
+                    ke.code = to_input_key_code(wparam, lparam, ke.scancode);
                     ke.action = repeat ? input::key_action::repeat : input::key_action::press;
                     ke.modifiers = current_modifiers();
+
+                    // Phantom Shift messages around keypad keys map to unknown with a Shift virtual key; drop them.
+                    if (ke.code == input::key_code::unknown && wparam == VK_SHIFT)
+                        break;
+
+                    if (ke.code != input::key_code::unknown)
+                        g_keys_down.set(static_cast<std::size_t>(ke.code));
+
                     enqueue_event(ke);
                 }
                 break;
@@ -550,50 +769,83 @@ namespace catalyst::platform::detail
                 if (id != 0)
                 {
                     input::key_event ke;
-                    ke.code = to_input_key_code(msg, wparam, lparam);
-                    ke.native_code = input::to_usb_hid(ke.code);
+                    ke.window = id;
+                    ke.code = to_input_key_code(wparam, lparam, ke.scancode);
                     ke.action = input::key_action::release;
                     ke.modifiers = current_modifiers();
+
+                    if (ke.code == input::key_code::unknown && wparam == VK_SHIFT)
+                        break;
+
+                    if (ke.code != input::key_code::unknown)
+                        g_keys_down.reset(static_cast<std::size_t>(ke.code));
+
                     enqueue_event(ke);
                 }
                 break;
             }
-
             case WM_CHAR:
             {
-                if (id != 0)
-                {
-                    const auto cp = utf32_from_utf16_unit(static_cast<wchar_t>(wparam));
-                    if (cp != 0)
-                    {
-                        input::character_event ce;
-                        ce.character = cp;
-                        ce.modifiers = current_modifiers();
-                        enqueue_event(ce);
+                if (ws)
+                    publish_text(id, utf32_from_utf16_unit(*ws, static_cast<wchar_t>(wparam)));
+                break;
+            }
+            case WM_UNICHAR:
+            {
+                // Some input tools send UTF-32 directly; answering TRUE to UNICODE_NOCHAR tells them we accept it.
+                if (wparam == UNICODE_NOCHAR)
+                    return TRUE;
+                if (ws)
+                    publish_text(id, static_cast<input::character_code>(wparam));
+                return 0;
+            }
 
-                        const char32_t one[1] = {static_cast<char32_t>(cp)};
-                        input::text_input_event te{std::span<const char32_t>(one, 1)};
-                        enqueue_event(te);
+            // ---- Mouse ------------------------------------------------------------------------------------------
+            case WM_MOUSEMOVE:
+            {
+                if (ws)
+                {
+                    const math::vec2<std::int32_t> pos = client_pos_from_lparam(lparam);
+
+                    if (!ws->mouse_inside)
+                    {
+                        ws->mouse_inside = true;
+
+                        TRACKMOUSEEVENT tme{};
+                        tme.cbSize = sizeof(tme);
+                        tme.dwFlags = TME_LEAVE;
+                        tme.hwndTrack = hwnd;
+                        TrackMouseEvent(&tme);
+
+                        input::mouse_enter_event ee;
+                        ee.window = id;
+                        ee.position_px = pos;
+                        enqueue_event(ee);
                     }
+
+                    const math::vec2<std::int32_t> last = ws->has_mouse_pos ? ws->last_mouse_pos_px : pos;
+                    ws->last_mouse_pos_px = pos;
+                    ws->has_mouse_pos = true;
+
+                    input::mouse_move_event me;
+                    me.window = id;
+                    me.position_px = pos;
+                    me.delta_px = {pos.x - last.x, pos.y - last.y};
+                    me.buttons = buttons_from_wparam(wparam);
+                    me.modifiers = current_modifiers();
+                    enqueue_event(me);
                 }
                 break;
             }
-            case WM_MOUSEMOVE:
+            case WM_MOUSELEAVE:
             {
-                if (id != 0)
+                if (ws && ws->mouse_inside)
                 {
-                    const auto x = static_cast<std::int32_t>(GET_X_LPARAM(lparam));
-                    const auto y = static_cast<std::int32_t>(GET_Y_LPARAM(lparam));
+                    ws->mouse_inside = false;
 
-                    const math::vec2<std::int32_t> pos{x, y};
-                    const auto it = g_last_mouse_pos_px.find(id);
-                    const math::vec2<std::int32_t> last = (it != g_last_mouse_pos_px.end()) ? it->second : pos;
-                    g_last_mouse_pos_px[id] = pos;
-
-                    input::mouse_move_event me;
-                    me.position_px = pos;
-                    me.delta_px = {pos.x - last.x, pos.y - last.y};
-                    enqueue_event(me);
+                    input::mouse_leave_event le;
+                    le.window = id;
+                    enqueue_event(le);
                 }
                 break;
             }
@@ -601,18 +853,35 @@ namespace catalyst::platform::detail
             case WM_RBUTTONDOWN:
             case WM_MBUTTONDOWN:
             case WM_XBUTTONDOWN:
+            case WM_LBUTTONDBLCLK:
+            case WM_RBUTTONDBLCLK:
+            case WM_MBUTTONDBLCLK:
+            case WM_XBUTTONDBLCLK:
             {
-                if (id != 0)
+                if (ws)
                 {
-                    SetCapture(hwnd);
+                    const bool double_click = (msg == WM_LBUTTONDBLCLK || msg == WM_RBUTTONDBLCLK ||
+                                               msg == WM_MBUTTONDBLCLK || msg == WM_XBUTTONDBLCLK);
 
                     input::mouse_button_event be;
+                    be.window = id;
                     be.button = to_input_mouse_button(msg, wparam);
                     be.action = input::mouse_button_action::press;
-                    be.position_px = {static_cast<std::int32_t>(GET_X_LPARAM(lparam)), static_cast<std::int32_t>(GET_Y_LPARAM(lparam))};
+                    be.clicks = double_click ? 2 : 1;
+                    be.position_px = client_pos_from_lparam(lparam);
+                    be.modifiers = current_modifiers();
+
+                    // Capture on the first button so the matching release arrives even if the cursor leaves the window.
+                    if (g_mouse_buttons_down == input::mouse_buttons::none)
+                    {
+                        SetCapture(hwnd);
+                        g_mouse_capture_window = id;
+                    }
+                    g_mouse_buttons_down |= input::to_mouse_buttons(be.button);
+
                     enqueue_event(be);
                 }
-                if (msg == WM_XBUTTONDOWN)
+                if (msg == WM_XBUTTONDOWN || msg == WM_XBUTTONDBLCLK)
                     return TRUE;
                 break;
             }
@@ -621,14 +890,23 @@ namespace catalyst::platform::detail
             case WM_MBUTTONUP:
             case WM_XBUTTONUP:
             {
-                if (id != 0)
+                if (ws)
                 {
-                    ReleaseCapture();
-
                     input::mouse_button_event be;
+                    be.window = id;
                     be.button = to_input_mouse_button(msg, wparam);
                     be.action = input::mouse_button_action::release;
-                    be.position_px = {static_cast<std::int32_t>(GET_X_LPARAM(lparam)), static_cast<std::int32_t>(GET_Y_LPARAM(lparam))};
+                    be.clicks = 1;
+                    be.position_px = client_pos_from_lparam(lparam);
+                    be.modifiers = current_modifiers();
+
+                    g_mouse_buttons_down &= ~input::to_mouse_buttons(be.button);
+                    if (g_mouse_buttons_down == input::mouse_buttons::none && g_mouse_capture_window == id)
+                    {
+                        g_mouse_capture_window = 0;
+                        ReleaseCapture();
+                    }
+
                     enqueue_event(be);
                 }
                 if (msg == WM_XBUTTONUP)
@@ -636,20 +914,58 @@ namespace catalyst::platform::detail
                 break;
             }
             case WM_MOUSEWHEEL:
+            case WM_MOUSEHWHEEL:
             {
-                if (id != 0)
+                if (ws)
                 {
-                    const float delta_y = static_cast<float>(GET_WHEEL_DELTA_WPARAM(wparam)) / 120.0f;
-
-                    POINT p{GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam)}; // screen coords
-                    ScreenToClient(hwnd, &p);
+                    const float notches = static_cast<float>(GET_WHEEL_DELTA_WPARAM(wparam)) / static_cast<float>(WHEEL_DELTA);
 
                     input::mouse_wheel_event we;
-                    we.position_px = {static_cast<std::int32_t>(p.x), static_cast<std::int32_t>(p.y)};
-                    we.delta = {0.0f, delta_y};
+                    we.window = id;
+                    we.position_px = client_pos_from_screen_lparam(hwnd, lparam);
+                    we.delta = (msg == WM_MOUSEWHEEL) ? math::vec2<float>{0.0f, notches} : math::vec2<float>{notches, 0.0f};
+                    we.modifiers = current_modifiers();
                     enqueue_event(we);
                 }
                 break;
+            }
+            case WM_INPUT:
+            {
+                if (ws && ws->cursor == cursor_mode::captured && g_raw_mouse_window == id)
+                {
+                    RAWINPUT raw{};
+                    UINT size = sizeof(raw);
+                    const UINT got = GetRawInputData(reinterpret_cast<HRAWINPUT>(lparam), RID_INPUT, &raw, &size,
+                                                     sizeof(RAWINPUTHEADER));
+                    if (got != static_cast<UINT>(-1) && raw.header.dwType == RIM_TYPEMOUSE)
+                    {
+                        const RAWMOUSE &m = raw.data.mouse;
+                        math::vec2<std::int32_t> delta{};
+
+                        if ((m.usFlags & MOUSE_MOVE_ABSOLUTE) != 0)
+                        {
+                            // Remote desktop / tablets report absolute positions; turn them into deltas ourselves.
+                            const math::vec2<std::int32_t> abs{static_cast<std::int32_t>(m.lLastX), static_cast<std::int32_t>(m.lLastY)};
+                            if (g_has_last_raw_absolute)
+                                delta = {abs.x - g_last_raw_absolute.x, abs.y - g_last_raw_absolute.y};
+                            g_last_raw_absolute = abs;
+                            g_has_last_raw_absolute = true;
+                        }
+                        else
+                        {
+                            delta = {static_cast<std::int32_t>(m.lLastX), static_cast<std::int32_t>(m.lLastY)};
+                        }
+
+                        if (delta.x != 0 || delta.y != 0)
+                        {
+                            input::mouse_raw_move_event re;
+                            re.window = id;
+                            re.delta = delta;
+                            enqueue_event(re);
+                        }
+                    }
+                }
+                break; // DefWindowProc must see WM_INPUT so the system can clean up
             }
             default:
                 break;
@@ -672,6 +988,7 @@ namespace catalyst::platform::detail
 
             WNDCLASSEXW wc{};
             wc.cbSize = sizeof(wc);
+            wc.style = CS_DBLCLKS; // deliver WM_*BUTTONDBLCLK so mouse_button_event::clicks can report double-clicks
             wc.lpfnWndProc = &window_proc;                              // The window procedure function that will process messages for windows created with this class. This is set to the window_proc function defined in this implementation, which handles various messages related to window events and input events, allowing for consistent event handling across the application.
             wc.hInstance = GetModuleHandleW(nullptr);                   // The handle to the instance of the module that contains the window procedure. This is typically obtained using GetModuleHandleW with a null parameter to get the handle for the current module. This handle is used by the Windows API to identify which module is responsible for handling messages for windows created with this class, and it is necessary for proper message routing and handling within the application.
             wc.lpszClassName = k_window_class_name;                     // The name of the window class being registered. This is used to identify the class when creating windows, and it must be unique within the application. By defining this as a constant, we can ensure that all windows created by this implementation use the same class name, which simplifies the window creation process and ensures consistency across all windows.
@@ -692,7 +1009,7 @@ namespace catalyst::platform::detail
             auto it = g_windows.find(id);
             if (it == g_windows.end())
                 return nullptr;
-            return it->second;
+            return it->second.hwnd;
         }
     }
 
@@ -745,7 +1062,9 @@ namespace catalyst::platform::detail
             return 0;
 
         SetWindowLongPtrW(hwnd, GWLP_USERDATA, static_cast<LONG_PTR>(id));
-        g_windows.emplace(id, hwnd);
+        window_state ws;
+        ws.hwnd = hwnd;
+        g_windows.emplace(id, ws);
 
         if (desc.visible)
             ShowWindow(hwnd, SW_SHOW);
@@ -766,6 +1085,14 @@ namespace catalyst::platform::detail
             e.dpi_scale = dpi_scale_for_window(hwnd);
             enqueue_event(e);
         }
+        if (GetFocus() == hwnd)
+        {
+            // WM_SETFOCUS was delivered before the window id was attached to the HWND, so report it now.
+            window_focus_event e;
+            e.window = id;
+            e.focused = true;
+            enqueue_event(e);
+        }
 
         return id;
     }
@@ -780,6 +1107,18 @@ namespace catalyst::platform::detail
         HWND hwnd = hwnd_from_id(id);
         if (!hwnd)
             return;
+
+        if (g_raw_mouse_window == id)
+        {
+            ClipCursor(nullptr);
+            unregister_raw_mouse();
+            g_raw_mouse_window = 0;
+        }
+        if (g_mouse_capture_window == id)
+        {
+            g_mouse_capture_window = 0;
+            g_mouse_buttons_down = input::mouse_buttons::none;
+        }
 
         DestroyWindow(hwnd);
         g_windows.erase(id);
@@ -913,6 +1252,25 @@ namespace catalyst::platform::detail
     void set_event_sink(core::event_sink *sink) noexcept
     {
         g_event_sink = sink;
+    }
+
+    void set_cursor_mode(window_id id, cursor_mode mode) noexcept
+    {
+        window_state *ws = window_state_from_id(id);
+        if (!ws)
+            return;
+
+        if (ws->cursor == mode)
+            return;
+
+        ws->cursor = mode;
+        apply_cursor_mode(id, *ws);
+    }
+
+    cursor_mode get_cursor_mode(window_id id) noexcept
+    {
+        const window_state *ws = window_state_from_id(id);
+        return ws ? ws->cursor : cursor_mode::normal;
     }
 
 } // namespace catalyst::platform::detail

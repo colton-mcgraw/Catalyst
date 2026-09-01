@@ -185,6 +185,35 @@ namespace catalyst::platform
     };
 
     /**
+     * @struct window_focus_event
+     * @brief Published when a window gains or loses keyboard focus. On focus loss the backend also publishes a release for
+     * every key and mouse button it still considers held, so consumers never see stuck input, and any cursor capture is
+     * suspended until focus returns.
+     */
+    struct window_focus_event : public core::event<window_focus_event>
+    {
+        window_id window = 0;
+        bool focused = false;
+    };
+
+    /**
+     * @enum cursor_mode
+     * @brief How the mouse cursor behaves over a window's client area. See set_cursor_mode.
+     */
+    enum class cursor_mode : std::uint8_t
+    {
+        /** @brief The cursor is visible and moves freely. */
+        normal,
+        /** @brief The cursor is hidden while over the client area but still moves freely (for a custom software cursor). */
+        hidden,
+        /**
+         * @brief The cursor is hidden and confined to the client area while the window has focus, and unaccelerated motion
+         * is delivered as input::mouse_raw_move_event. Use this for first-person camera control.
+         */
+        captured
+    };
+
+    /**
      * @class window
      * @brief A class representing a window in the Catalyst Platform library. This class provides a platform-agnostic interface for managing windows, allowing developers to create, destroy, and interact with windows in a consistent manner across different operating systems. The window class encapsulates a unique window_id that identifies the window within the library, and it provides member functions for retrieving the window's ID and checking its validity. By using the window class, developers can easily manage multiple windows in their applications while maintaining a clean and organized codebase.
      * @details The window class is a fundamental part of the Catalyst Platform library's window management system. It provides a simple and efficient way to represent windows and perform operations on them without exposing platform-specific details. The class includes an explicit constructor that takes a window_id, allowing for the creation of window instances that reference specific windows managed by the library. Additionally, the class provides an operator bool() to allow for easy validity checks, enabling developers to write clean and intuitive code when working with windows in their applications.
@@ -304,5 +333,16 @@ namespace catalyst::platform
      * @param sink A pointer to an instance of a class that implements the core::event_sink interface. This instance will receive events published by the Catalyst Platform library, allowing developers to integrate those events into their own event handling systems or frameworks.
      */
     void set_event_sink(core::event_sink *sink) noexcept;
+
+    /**
+     * @fn set_cursor_mode
+     * @brief Changes how the cursor behaves over the window (see cursor_mode). Capture takes effect immediately if the
+     * window has focus, otherwise when it next gains focus, and is released automatically while the window is unfocused.
+     * Invalid windows are ignored.
+     */
+    void set_cursor_mode(const window &w, cursor_mode mode) noexcept;
+
+    /** @brief The mode set with set_cursor_mode, or cursor_mode::normal for invalid windows. */
+    [[nodiscard]] cursor_mode get_cursor_mode(const window &w) noexcept;
 
 } // namespace catalyst::platform
