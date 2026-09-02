@@ -1,16 +1,32 @@
+/**
+ * @file win32_helpers.hpp
+ * @brief The platform module's Windows-only helpers: DPI awareness and effective-DPI queries.
+ * @details The UTF-8 conversion routines that used to be defined here now have one implementation
+ * in src/win32/strings.hpp, shared with the audio and input backends, and are re-exported into this
+ * namespace so the window and monitor backends keep spelling them `win32::wide_to_utf8`. What
+ * remains below is specific to this module: nothing outside the platform backend queries DPI.
+ *
+ * This header stays free of <windows.h> -- the backends that include it also include much else, and
+ * the opaque handle typedefs cost nothing.
+ * License: CDDL-1.0 (see LICENSE).
+ */
+
 #pragma once
+
+#include <win32/strings.hpp>
 
 #include <string>
 
 namespace catalyst::platform::detail::win32
 {
+    using ::catalyst::detail::win32::utf8_to_wide;
+    using ::catalyst::detail::win32::utf8_to_wide_or_ansi;
+    using ::catalyst::detail::win32::wide_to_utf8;
+
     // Opaque handles to avoid including <windows.h> in the header.
     // These are ABI-compatible with Win32's HWND/HMONITOR (both are pointer types).
     using hwnd_handle = void *;
     using hmonitor_handle = void *;
-
-    [[nodiscard]] std::wstring utf8_to_wide_or_ansi(const char *str);
-    [[nodiscard]] std::string wide_to_utf8(const wchar_t *w);
 
     /**
      * @fn ensure_process_dpi_awareness

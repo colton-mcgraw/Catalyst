@@ -53,6 +53,9 @@ if(_catalyst_audio_backend STREQUAL "win32")
 
   # Avrt provides MMCSS ("Pro Audio") scheduling for the WASAPI render thread.
   target_link_libraries(catalyst_audio PRIVATE Ole32 Uuid Avrt)
+
+  # UTF-8 conversion and the <windows.h> include, shared with the platform and input backends.
+  target_link_libraries(catalyst_audio PRIVATE catalyst::win32_support)
 elseif(_catalyst_audio_backend STREQUAL "null")
   # Nothing to add: the always-compiled null and offline backends cover this configuration.
 else()

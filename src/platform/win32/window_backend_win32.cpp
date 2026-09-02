@@ -13,16 +13,13 @@
 #include <catalyst/input/keyboard.hpp>
 #include <catalyst/input/mouse.hpp>
 
-#ifndef NOMINMAX
-#define NOMINMAX // windows.h defines min/max as macros, which break every std::min/std::max spelled out below.
-#endif
-
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-#endif // For basic Windows API functions and types (e.g. HWND, HMONITOR, GetKeyState, etc.).
+// For basic Windows API functions and types (e.g. HWND, HMONITOR, GetKeyState, etc.). The header also
+// suppresses the min/max macros, which would otherwise break every std::min/std::max spelled out below.
+#include <win32/windows_lean.hpp>
 
 #include "win32_helpers.hpp"
+
+#include <win32/module.hpp>
 
 #include <algorithm>
 #include <bitset>
@@ -233,15 +230,14 @@ namespace catalyst::platform::detail
 
             win32::ensure_process_dpi_awareness();
 
-            if (HMODULE user32 = GetModuleHandleW(L"user32.dll"))
-            {
-                g_os.get_dpi_for_window =
-                    reinterpret_cast<decltype(g_os.get_dpi_for_window)>(GetProcAddress(user32, "GetDpiForWindow"));
-                g_os.get_dpi_for_system =
-                    reinterpret_cast<decltype(g_os.get_dpi_for_system)>(GetProcAddress(user32, "GetDpiForSystem"));
-                g_os.adjust_window_rect_ex_for_dpi = reinterpret_cast<decltype(g_os.adjust_window_rect_ex_for_dpi)>(
-                    GetProcAddress(user32, "AdjustWindowRectExForDpi"));
-            }
+            using ::catalyst::detail::win32::linked_symbol;
+
+            g_os.get_dpi_for_window =
+                linked_symbol<decltype(g_os.get_dpi_for_window)>(L"user32.dll", "GetDpiForWindow");
+            g_os.get_dpi_for_system =
+                linked_symbol<decltype(g_os.get_dpi_for_system)>(L"user32.dll", "GetDpiForSystem");
+            g_os.adjust_window_rect_ex_for_dpi =
+                linked_symbol<decltype(g_os.adjust_window_rect_ex_for_dpi)>(L"user32.dll", "AdjustWindowRectExForDpi");
         }
 
         /** @brief The effective DPI of @p hwnd, or the system DPI (ultimately 96) where the API is unavailable. */

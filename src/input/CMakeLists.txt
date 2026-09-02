@@ -48,6 +48,9 @@ if(_catalyst_input_backend STREQUAL "win32")
   # XInput 1.4 (Windows 8+) for gamepads.
   target_link_libraries(catalyst_input_backend_win32 PRIVATE xinput)
 
+  # The <windows.h> include, shared with the platform and audio backends.
+  target_link_libraries(catalyst_input_backend_win32 PRIVATE catalyst::win32_support)
+
   target_link_libraries(catalyst_input PRIVATE catalyst_input_backend_win32)
 elseif(_catalyst_input_backend STREQUAL "null")
   add_library(catalyst_input_backend_null STATIC

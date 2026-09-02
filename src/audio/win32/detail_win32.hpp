@@ -1,8 +1,10 @@
 /**
  * @file detail_win32.hpp
- * @brief Windows-only helpers shared by the WASAPI and ASIO backends: UTF-8/UTF-16 conversion and
- * the mapping from HRESULT to `audio_error`. Previously each backend carried its own copy of the
- * conversion routines.
+ * @brief The audio module's Windows-only helpers, shared by the WASAPI and ASIO backends.
+ * @details What is genuinely audio-specific -- the mapping from the HRESULTs the audio APIs return
+ * onto `audio_error` -- is defined here. The UTF-8 conversion routines that used to live here are
+ * now one implementation in src/win32/strings.hpp, shared with the platform and input backends, and
+ * are re-exported into this namespace so the backends keep spelling them `win32::wide_to_utf8`.
  * License: CDDL-1.0 (see LICENSE).
  */
 
@@ -10,69 +12,18 @@
 
 #if defined(_WIN32)
 
-#  ifndef WIN32_LEAN_AND_MEAN
-#    define WIN32_LEAN_AND_MEAN
-#  endif
-#  ifndef NOMINMAX
-#    define NOMINMAX
-#  endif
+#  include <win32/strings.hpp>
+#  include <win32/windows_lean.hpp>
 
-#  include <windows.h>
 #  include <audioclient.h>
 
 #  include <catalyst/audio/engine.hpp>
 
-#  include <string>
-#  include <string_view>
-
 namespace catalyst::audio::detail::win32
 {
 
-    inline std::string wide_to_utf8(std::wstring_view text)
-    {
-        if (text.empty())
-            return {};
-
-        const int needed = WideCharToMultiByte(
-            CP_UTF8, 0, text.data(), static_cast<int>(text.size()), nullptr, 0, nullptr, nullptr);
-
-        if (needed <= 0)
-            return {};
-
-        std::string out(static_cast<size_t>(needed), '\0');
-
-        const int written = WideCharToMultiByte(
-            CP_UTF8, 0, text.data(), static_cast<int>(text.size()), out.data(), needed, nullptr, nullptr);
-
-        if (written <= 0)
-            return {};
-
-        out.resize(static_cast<size_t>(written));
-        return out;
-    }
-
-    inline std::wstring utf8_to_wide(std::string_view text)
-    {
-        if (text.empty())
-            return {};
-
-        const int needed = MultiByteToWideChar(
-            CP_UTF8, MB_ERR_INVALID_CHARS, text.data(), static_cast<int>(text.size()), nullptr, 0);
-
-        if (needed <= 0)
-            return {};
-
-        std::wstring out(static_cast<size_t>(needed), L'\0');
-
-        const int written = MultiByteToWideChar(
-            CP_UTF8, MB_ERR_INVALID_CHARS, text.data(), static_cast<int>(text.size()), out.data(), needed);
-
-        if (written <= 0)
-            return {};
-
-        out.resize(static_cast<size_t>(written));
-        return out;
-    }
+    using ::catalyst::detail::win32::utf8_to_wide;
+    using ::catalyst::detail::win32::wide_to_utf8;
 
     /// Translates the HRESULTs the audio APIs actually return into the module's error type, so
     /// callers can distinguish "someone else owns the device" from "the device vanished" without

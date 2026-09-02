@@ -1,5 +1,11 @@
 # Module targets live in subdirectories
 
+# Win32 plumbing shared by the platform, input and audio backends. Not a module: no build switch,
+# and it is added before them so every backend can link it.
+if(WIN32)
+  add_subdirectory(win32)
+endif()
+
 if(CATALYST_BUILD_ANIMATION)
   add_subdirectory(animation)
 endif()

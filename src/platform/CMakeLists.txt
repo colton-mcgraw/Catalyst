@@ -54,6 +54,10 @@ if(_catalyst_platform_backend STREQUAL "win32")
   # loop, and DwmSetWindowAttribute selects the dark window frame.
   target_link_libraries(catalyst_platform_backend_win32 PUBLIC dwmapi catalyst::core)
 
+  # UTF-8 conversion, run-time entry-point lookup and the <windows.h> include, shared with the input
+  # and audio backends. PUBLIC because win32_helpers.hpp re-exports the string helpers.
+  target_link_libraries(catalyst_platform_backend_win32 PUBLIC catalyst::win32_support)
+
   target_link_libraries(catalyst_platform PRIVATE catalyst_platform_backend_win32)
 elseif(_catalyst_platform_backend STREQUAL "null")
   add_library(catalyst_platform_backend_null STATIC
