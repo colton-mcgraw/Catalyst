@@ -220,7 +220,7 @@ cmake --build build --config Release
 Catalyst is composed of several key components that can be used independently or together:
 
 - **Renderer**: Handles all rendering operations, supporting both 2D and 3D graphics.
-- **UI System**: Provides a set of UI components for building user interfaces.
+- **UI System**: A retained tree of styled nodes with CSS-like units and a flexbox layout engine, emitting a backend-agnostic draw list. See [docs/ui.md](docs/ui.md) for the architecture and roadmap.
 - **Input Handling**: Layout-independent keyboard events, text input, mouse (including raw motion and cursor capture) and gamepads, with an event stream and a polled `input_state` view.
 - **Math Library**: Offers a collection of mathematical functions and data structures commonly used in graphics programming.
 - **Utilities**: A set of helper functions and classes to simplify common tasks.

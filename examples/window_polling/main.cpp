@@ -49,7 +49,7 @@ int main()
 
   const auto sub_resize = sink.subscribe<window_resized_event>([&](const window_resized_event &e)
   {
-    std::printf("Resized: %d x %d\n", e.width_px, e.height_px);
+    std::printf("Resized: %f x %f\n", e.width_px, e.height_px);
   });
 
   const auto sub_enter = sink.subscribe<window_enter_size_move_event>([&](const window_enter_size_move_event &)

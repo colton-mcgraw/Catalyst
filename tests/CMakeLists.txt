@@ -6,3 +6,7 @@ add_subdirectory(core)
 add_subdirectory(math)
 add_subdirectory(input)
 add_subdirectory(rendering)
+
+if(CATALYST_BUILD_UI)
+	add_subdirectory(ui)
+endif()
