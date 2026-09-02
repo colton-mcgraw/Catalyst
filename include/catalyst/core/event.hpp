@@ -11,6 +11,7 @@
 #include <chrono>
 #include <concepts>
 #include <cstddef>
+#include <cstdint>
 #include <type_traits>
 
 /**
@@ -27,6 +28,25 @@ namespace catalyst::core
      * counter. Events must not cross a DLL boundary unless the core module itself is built as a shared library.
      */
     using event_type_id = std::size_t;
+
+    /**
+     * @typedef coalesce_key
+     * @brief Identifies the "slot" an event occupies for the purpose of collapsing redundant events in a queue.
+     * @details Some events carry only a current value rather than an occurrence: the position of a window, the size of a
+     * window, the state of an axis. When several of them are queued for the same slot before anything drains the queue, only
+     * the newest one carries information and the older ones are dead on arrival. Giving such an event a non-zero coalesce
+     * key tells event_queue that it may replace the event already at the back of the queue when that event has the same
+     * type id and the same key.
+     *
+     * The key is entirely the producer's to choose; it only has to distinguish the streams that must not be merged with one
+     * another. A window backend uses the window id, so a resize of one window never swallows the resize of another.
+     * @note Never give a key to an event that describes an occurrence rather than a value. Key presses, button presses,
+     * characters and close requests are each meaningful individually and must never be collapsed.
+     */
+    using coalesce_key = std::uint64_t;
+
+    /** @brief The key value that means "this event must never be coalesced". It is the default for every event. */
+    inline constexpr coalesce_key no_coalescing = 0u;
 
     /**
      * @class event_base
@@ -55,6 +75,16 @@ namespace catalyst::core
         /** @brief Sets an explicit timestamp (e.g. one captured by a producer on another thread). */
         void set_timestamp(timestamp_t t) noexcept { m_timestamp = t; }
 
+        /** @brief The coalescing slot of this event, or no_coalescing (the default) if it must never be collapsed. */
+        [[nodiscard]] coalesce_key get_coalesce_key() const noexcept { return m_coalesce_key; }
+
+        /**
+         * @brief Marks this event as coalescible within @p key. See coalesce_key for when this is and is not appropriate.
+         * @note Only event_queue acts on this. An event published straight to a dispatcher is delivered synchronously and
+         * has nothing to be collapsed against, so setting a key on it is harmless and does nothing.
+         */
+        void set_coalesce_key(coalesce_key key) noexcept { m_coalesce_key = key; }
+
         /** @brief Runtime type id of the concrete event. */
         [[nodiscard]] event_type_id type_id() const noexcept { return m_type_id; }
 
@@ -73,6 +103,7 @@ namespace catalyst::core
     private:
         event_type_id m_type_id;
         timestamp_t m_timestamp{};
+        coalesce_key m_coalesce_key = no_coalescing;
 
         inline static std::atomic<event_type_id> s_next_type_id{1u};
     };

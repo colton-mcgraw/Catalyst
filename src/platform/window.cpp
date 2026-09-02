@@ -180,4 +180,166 @@ namespace catalyst::platform
         return detail::get_cursor_mode(w.id());
     }
 
+    void set_frame_callback(const window &w, frame_callback cb, void *user) noexcept
+    {
+        if (!w)
+            return;
+        detail::set_frame_callback(w.id(), cb, user);
+    }
+
+    void set_event_queue_capacity(std::size_t max_events) noexcept
+    {
+        detail::set_event_queue_capacity(max_events);
+    }
+
+    std::size_t event_queue_capacity() noexcept
+    {
+        return detail::event_queue_capacity();
+    }
+
+    std::size_t dropped_event_count() noexcept
+    {
+        return detail::dropped_event_count();
+    }
+
+    void set_title(const window &w, const char *utf8_title) noexcept
+    {
+        if (!w)
+            return;
+        detail::set_title(w.id(), utf8_title);
+    }
+
+    void set_client_size(const window &w, ui::length width_px, ui::length height_px) noexcept
+    {
+        if (!w)
+            return;
+        detail::set_client_size(w.id(), width_px, height_px);
+    }
+
+    void set_position(const window &w, const math::vec2<std::int32_t> &position_px) noexcept
+    {
+        if (!w)
+            return;
+        detail::set_position(w.id(), position_px);
+    }
+
+    math::vec2<std::int32_t> position_px(const window &w) noexcept
+    {
+        if (!w)
+            return {};
+        return detail::position_px(w.id());
+    }
+
+    void set_size_limits(const window &w, const math::vec2<std::int32_t> &min_px, const math::vec2<std::int32_t> &max_px) noexcept
+    {
+        if (!w)
+            return;
+        detail::set_size_limits(w.id(), min_px, max_px);
+    }
+
+    void show(const window &w) noexcept
+    {
+        if (!w)
+            return;
+        detail::show_window(w.id());
+    }
+
+    void hide(const window &w) noexcept
+    {
+        if (!w)
+            return;
+        detail::hide_window(w.id());
+    }
+
+    void minimize(const window &w) noexcept
+    {
+        if (!w)
+            return;
+        detail::minimize_window(w.id());
+    }
+
+    void maximize(const window &w) noexcept
+    {
+        if (!w)
+            return;
+        detail::maximize_window(w.id());
+    }
+
+    void restore(const window &w) noexcept
+    {
+        if (!w)
+            return;
+        detail::restore_window(w.id());
+    }
+
+    void focus(const window &w) noexcept
+    {
+        if (!w)
+            return;
+        detail::focus_window(w.id());
+    }
+
+    void request_attention(const window &w) noexcept
+    {
+        if (!w)
+            return;
+        detail::request_attention(w.id());
+    }
+
+    window_display_state display_state(const window &w) noexcept
+    {
+        if (!w)
+            return window_display_state::restored;
+        return detail::display_state(w.id());
+    }
+
+    void set_resizable(const window &w, bool resizable) noexcept
+    {
+        if (!w)
+            return;
+        detail::set_resizable(w.id(), resizable);
+    }
+
+    bool is_resizable(const window &w) noexcept
+    {
+        if (!w)
+            return false;
+        return detail::is_resizable(w.id());
+    }
+
+    void set_always_on_top(const window &w, bool on_top) noexcept
+    {
+        if (!w)
+            return;
+        detail::set_always_on_top(w.id(), on_top);
+    }
+
+    void set_opacity(const window &w, float opacity) noexcept
+    {
+        if (!w)
+            return;
+        detail::set_opacity(w.id(), opacity);
+    }
+
+    void set_fullscreen(const window &w, bool fullscreen) noexcept
+    {
+        if (!w)
+            return;
+        detail::set_fullscreen(w.id(), fullscreen);
+    }
+
+    bool is_fullscreen(const window &w) noexcept
+    {
+        if (!w)
+            return false;
+        return detail::is_fullscreen(w.id());
+    }
+
+    void set_dark_mode(const window &w, bool dark) noexcept
+    {
+        if (!w)
+            return;
+        detail::set_dark_mode(w.id(), dark);
+    }
+
 } // namespace catalyst::platform

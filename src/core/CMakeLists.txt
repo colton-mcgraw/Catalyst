@@ -2,7 +2,6 @@ add_library(catalyst_core STATIC
   core.cpp
   subscription.cpp
   event_queue.cpp
-  concurrent_event_queue.cpp
 )
 
 add_library(catalyst::core ALIAS catalyst_core)

@@ -176,7 +176,7 @@ namespace catalyst::rendering::detail::vulkan
         }
 
         // Move to GENERAL (the layout user textures live in) and upload mip 0 / layer 0 if requested.
-        staging_buffer staging;
+        VkBuffer staging_source = VK_NULL_HANDLE;
         bool ok = false;
         if (VkCommandBuffer cmd = begin_immediate(*dev))
         {
@@ -195,7 +195,7 @@ namespace catalyst::rendering::detail::vulkan
             ok = true;
             if (!initial_data.empty())
             {
-                ok = create_staging_buffer(*dev, initial_data, staging);
+                ok = stage_upload(*dev, initial_data, staging_source);
                 if (ok)
                 {
                     VkBufferImageCopy region{};
@@ -205,12 +205,11 @@ namespace catalyst::rendering::detail::vulkan
                     region.imageSubresource.baseArrayLayer = 0;
                     region.imageSubresource.layerCount = 1;
                     region.imageExtent = info.extent;
-                    vkCmdCopyBufferToImage(cmd, staging.buffer, t.image, VK_IMAGE_LAYOUT_GENERAL, 1, &region);
+                    vkCmdCopyBufferToImage(cmd, staging_source, t.image, VK_IMAGE_LAYOUT_GENERAL, 1, &region);
                 }
             }
             ok = end_immediate(*dev) && ok;
         }
-        destroy_staging_buffer(*dev, staging);
 
         if (!ok)
         {

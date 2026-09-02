@@ -19,6 +19,7 @@ namespace catalyst::core
     namespace detail
     {
         class dispatcher_state;
+        struct handler_node;
     }
 
     /**
@@ -29,8 +30,15 @@ namespace catalyst::core
      * after the dispatcher it came from has been destroyed (it simply becomes a no-op). It is also safe to reset a
      * subscription from inside a handler, including the handler it owns.
      *
-     * Ownership must be released on the dispatcher's owner thread (see dispatcher). Flipping the active flag is atomic, but
-     * removing the entry touches the dispatcher's handler tables.
+     * reset() is safe to call from any thread, including concurrently with a publish of the same event type on another
+     * thread. On the thread that is dispatching, it is immediate: a handler unsubscribed from inside a handler will not run
+     * for the event in flight, because the dispatcher tests the flag again before each invocation.
+     *
+     * Across threads it is *prompt* rather than immediate. A dispatch already running on another thread may have tested the
+     * flag just before reset() cleared it, in which case that one invocation still happens - possibly after reset() has
+     * returned. Stopping even that would mean reset() waiting for every concurrent dispatch to finish. So on a dispatcher
+     * that other threads publish to, do not treat reset() as a barrier: whatever the handler captures must stay valid until
+     * those threads are known to be done publishing.
      */
     class subscription
     {
@@ -63,12 +71,12 @@ namespace catalyst::core
         subscription(std::weak_ptr<detail::dispatcher_state> state,
                      event_type_id type_id,
                      std::size_t token,
-                     std::shared_ptr<std::atomic_bool> active) noexcept;
+                     std::shared_ptr<detail::handler_node> node) noexcept;
 
         std::weak_ptr<detail::dispatcher_state> m_state;
         event_type_id m_type_id = event_base::invalid_type_id();
         std::size_t m_token = 0u;
-        std::shared_ptr<std::atomic_bool> m_active;
+        std::shared_ptr<detail::handler_node> m_node;
     };
 
 } // namespace catalyst::core

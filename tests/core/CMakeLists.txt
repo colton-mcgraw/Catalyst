@@ -7,6 +7,9 @@ target_link_libraries(catalyst_tests_core_dispatcher
 		catalyst::core
 )
 
+find_package(Threads REQUIRED)
+target_link_libraries(catalyst_tests_core_dispatcher PRIVATE Threads::Threads)
+
 add_test(
 	NAME catalyst.core.dispatcher
 	COMMAND catalyst_tests_core_dispatcher
@@ -21,7 +24,6 @@ target_link_libraries(catalyst_tests_core_event_queue
 		catalyst::core
 )
 
-find_package(Threads REQUIRED)
 target_link_libraries(catalyst_tests_core_event_queue PRIVATE Threads::Threads)
 
 add_test(

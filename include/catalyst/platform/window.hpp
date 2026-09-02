@@ -197,6 +197,62 @@ namespace catalyst::platform
     };
 
     /**
+     * @struct window_moved_event
+     * @brief Published when the window's client area changes position on the virtual desktop. The position is the top-left
+     * corner of the *client* area in screen pixels, which is what an application needs to map between client and screen
+     * space; it is not the top-left of the window frame.
+     */
+    struct window_moved_event : public core::event<window_moved_event>
+    {
+        window_id window = 0;
+        math::vec2<std::int32_t> position_px{};
+    };
+
+    /**
+     * @enum window_display_state
+     * @brief Whether a window is in its normal restored state, iconified, or zoomed to fill the work area.
+     */
+    enum class window_display_state : std::uint8_t
+    {
+        /** @brief The window occupies its normal, user-set rectangle. */
+        restored,
+        /** @brief The window is iconified. Its client area is 0x0 and it should not be rendered to. */
+        minimized,
+        /** @brief The window is zoomed to fill the monitor's work area. */
+        maximized
+    };
+
+    /**
+     * @struct window_display_state_event
+     * @brief Published when a window is minimised, maximised or restored. Renderers should use this rather than inferring
+     * the state from a 0x0 window_resized_event: a minimised window still receives resize events, and presenting to a
+     * zero-sized surface is an error on every graphics API.
+     */
+    struct window_display_state_event : public core::event<window_display_state_event>
+    {
+        window_id window = 0;
+        window_display_state state = window_display_state::restored;
+    };
+
+    /**
+     * @typedef frame_callback
+     * @brief A function the backend calls when the window needs a frame drawn *right now*, from inside pump_events() or
+     * wait_events().
+     * @details Resizing and moving a window runs a modal loop inside the operating system's own message pump, which does not
+     * return control to the application until the user releases the mouse. Events published during that loop therefore pile
+     * up unrendered and the window's contents freeze. Installing a frame callback with set_frame_callback gives the backend
+     * a way to ask the application to render mid-loop, which is what keeps the window live while it is being dragged.
+     *
+     * The callback is invoked re-entrantly from within pump_events()/wait_events(), possibly many times per call and
+     * possibly while a window/input event handler higher up the stack is still running. It must therefore be safe to call
+     * at any point, must not create or destroy windows, and must not itself call pump_events(). The backend guards against
+     * direct recursion (a callback that triggers another frame request will not re-enter), but nothing else.
+     * @param w The window that needs to be drawn.
+     * @param user The opaque pointer that was passed to set_frame_callback.
+     */
+    using frame_callback = void (*)(const class window &w, void *user);
+
+    /**
      * @enum cursor_mode
      * @brief How the mouse cursor behaves over a window's client area. See set_cursor_mode.
      */
@@ -344,5 +400,148 @@ namespace catalyst::platform
 
     /** @brief The mode set with set_cursor_mode, or cursor_mode::normal for invalid windows. */
     [[nodiscard]] cursor_mode get_cursor_mode(const window &w) noexcept;
+
+    // -----------------------------------------------------------------------------
+    // Frame callback
+    // -----------------------------------------------------------------------------
+
+    /**
+     * @fn set_frame_callback
+     * @brief Installs (or, with a null callback, removes) the function the backend calls when @p w needs to be redrawn
+     * while the application is not in control of the message pump. See frame_callback for the re-entrancy contract.
+     * @details Install this if you want the window to keep rendering while the user drags its border or title bar. Without
+     * it the operating system's modal size/move loop holds the thread for the whole drag and the window's contents are
+     * stretched or frozen until the user lets go. The backend calls it on OS repaint requests, on every size change, and on
+     * a timer while a size/move loop is running, so a stationary drag still produces frames.
+     *
+     * While a size/move loop is running the backend caps the callback at one call per display refresh period, so a drag
+     * cannot spin it faster than the display can show the result. It caps only; it does not wait for vsync, because that
+     * is the presenting code's job and doing both would halve the frame rate of a drag in any application that already
+     * presents with vsync enabled. Outside such a loop the callback fires only when the OS asks for a repaint; it does not
+     * replace the application's own render loop.
+     * @param w The window to install the callback for. Invalid windows are ignored.
+     * @param cb The function to call, or nullptr to stop receiving frame requests for this window.
+     * @param user An opaque pointer passed back to @p cb unchanged. The backend does not own or inspect it.
+     */
+    void set_frame_callback(const window &w, frame_callback cb, void *user) noexcept;
+
+    // -----------------------------------------------------------------------------
+    // Queued-event bounds (poll_event path only)
+    // -----------------------------------------------------------------------------
+
+    /**
+     * @fn set_event_queue_capacity
+     * @brief Sets the maximum number of events poll_event() will hold before it starts discarding the oldest ones.
+     * @details This bounds the queue that poll_event() drains; it has no effect while an event sink is installed, because a
+     * sink is published to synchronously and nothing is ever queued. The bound matters because the operating system can
+     * hold the thread inside its own message pump for an unbounded amount of time (a resize drag, a menu, a modal dialog),
+     * during which the backend keeps producing events that the application has no opportunity to drain. Without a bound
+     * that is an unbounded allocation, and the stale events it accumulates are of no use once the drag ends anyway.
+     *
+     * When the queue is full the *oldest* event is discarded and dropped_event_count() is incremented, so what survives is
+     * the most recent state rather than a stale prefix. Position and size events additionally coalesce with an immediately
+     * preceding event of the same type for the same window, since only the latest value of either is meaningful; this keeps
+     * a pixel-by-pixel resize drag from consuming the whole queue on its own.
+     * @param max_events The capacity, or 0 for an unbounded queue (the pre-existing behaviour). The default is 4096.
+     */
+    void set_event_queue_capacity(std::size_t max_events) noexcept;
+
+    /** @brief The capacity set with set_event_queue_capacity, or 0 if the queue is unbounded. */
+    [[nodiscard]] std::size_t event_queue_capacity() noexcept;
+
+    /**
+     * @brief How many events have been discarded because the queue was full, since process start. A non-zero and growing
+     * value means the application is not draining poll_event() often enough, or the capacity is too small for its frame
+     * time.
+     */
+    [[nodiscard]] std::size_t dropped_event_count() noexcept;
+
+    // -----------------------------------------------------------------------------
+    // Window state
+    // -----------------------------------------------------------------------------
+
+    /** @brief Replaces the window's title. @p utf8_title is UTF-8; null or invalid windows are ignored. */
+    void set_title(const window &w, const char *utf8_title) noexcept;
+
+    /**
+     * @brief Resizes the window so that its *client* area becomes the given size, keeping its top-left corner in place.
+     * Lengths are resolved against the window's current DPI. Ignored for invalid windows.
+     */
+    void set_client_size(const window &w, ui::length width_px, ui::length height_px) noexcept;
+
+    /** @brief Moves the window so that the top-left of its client area lands on @p position_px in screen coordinates. */
+    void set_position(const window &w, const math::vec2<std::int32_t> &position_px) noexcept;
+
+    /** @brief The top-left of the window's client area in screen coordinates, or {0,0} for invalid windows. */
+    [[nodiscard]] math::vec2<std::int32_t> position_px(const window &w) noexcept;
+
+    /**
+     * @brief Constrains how far the user can resize the window, in client-area pixels. A zero component means
+     * "unconstrained" on that axis, so {0,0},{0,0} (the default) removes all limits.
+     * @note A minimum size is the simplest defence against the zero-sized swapchain a minimised or over-shrunk window would
+     * otherwise hand a renderer.
+     */
+    void set_size_limits(const window &w, const math::vec2<std::int32_t> &min_px, const math::vec2<std::int32_t> &max_px) noexcept;
+
+    /** @brief Shows the window without activating it if it is hidden. */
+    void show(const window &w) noexcept;
+
+    /** @brief Hides the window. A hidden window still exists and still receives non-input messages. */
+    void hide(const window &w) noexcept;
+
+    /** @brief Iconifies the window. Publishes a window_display_state_event. */
+    void minimize(const window &w) noexcept;
+
+    /** @brief Zooms the window to the work area of its monitor. Publishes a window_display_state_event. */
+    void maximize(const window &w) noexcept;
+
+    /** @brief Returns the window to its normal rectangle from a minimised or maximised state. */
+    void restore(const window &w) noexcept;
+
+    /** @brief Brings the window to the front and gives it keyboard focus. */
+    void focus(const window &w) noexcept;
+
+    /**
+     * @brief Asks the desktop environment to draw the user's attention to the window (a flashing taskbar button on
+     * Windows). Does nothing if the window already has focus.
+     */
+    void request_attention(const window &w) noexcept;
+
+    /** @brief The window's current display state, or window_display_state::restored for invalid windows. */
+    [[nodiscard]] window_display_state display_state(const window &w) noexcept;
+
+    /** @brief Adds or removes the window's resize border and maximise button after creation. */
+    void set_resizable(const window &w, bool resizable) noexcept;
+
+    /** @brief Whether the user can resize the window. */
+    [[nodiscard]] bool is_resizable(const window &w) noexcept;
+
+    /** @brief Keeps the window above all non-topmost windows, or stops doing so. */
+    void set_always_on_top(const window &w, bool on_top) noexcept;
+
+    /**
+     * @brief Sets whole-window opacity, from 0 (fully transparent) to 1 (opaque). Values outside that range are clamped.
+     * @note Making a window translucent forces it down a composited path that is measurably slower to present; set it back
+     * to 1 when the effect is no longer needed.
+     */
+    void set_opacity(const window &w, float opacity) noexcept;
+
+    /**
+     * @brief Puts the window into borderless fullscreen on the monitor it currently occupies, or takes it back out to the
+     * rectangle and style it had beforehand.
+     * @details This is "borderless windowed" fullscreen: the window is restyled and resized to cover the monitor, and the
+     * display mode is left alone. It composites like any other window, so alt-tabbing is instant and the desktop resolution
+     * never changes. Exclusive fullscreen (a real display mode change) is a rendering-backend concern, not a window one.
+     */
+    void set_fullscreen(const window &w, bool fullscreen) noexcept;
+
+    /** @brief Whether the window is in borderless fullscreen (see set_fullscreen). */
+    [[nodiscard]] bool is_fullscreen(const window &w) noexcept;
+
+    /**
+     * @brief Asks the desktop environment to draw the window's title bar and frame in its dark or light variant. Silently
+     * does nothing where the platform has no such notion.
+     */
+    void set_dark_mode(const window &w, bool dark) noexcept;
 
 } // namespace catalyst::platform

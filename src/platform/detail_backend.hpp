@@ -105,6 +105,46 @@ namespace catalyst::platform::detail
 	void set_cursor_mode(window_id id, cursor_mode mode) noexcept;
 	[[nodiscard]] cursor_mode get_cursor_mode(window_id id) noexcept;
 
+	/**
+	 * @fn set_frame_callback
+	 * @brief Installs the function the backend invokes when the window must be redrawn from inside the platform's own
+	 * message pump (see platform::set_frame_callback and platform::frame_callback for the full contract).
+	 */
+	void set_frame_callback(window_id id, frame_callback cb, void *user) noexcept;
+
+	// ----------------------
+	// Queued-event bounds
+	// ----------------------
+
+	void set_event_queue_capacity(std::size_t max_events) noexcept;
+	[[nodiscard]] std::size_t event_queue_capacity() noexcept;
+	[[nodiscard]] std::size_t dropped_event_count() noexcept;
+
+	// ----------------------
+	// Window state
+	// ----------------------
+
+	void set_title(window_id id, const char *utf8_title) noexcept;
+	void set_client_size(window_id id, ui::length width_px, ui::length height_px) noexcept;
+	void set_position(window_id id, const math::vec2<std::int32_t> &position_px) noexcept;
+	[[nodiscard]] math::vec2<std::int32_t> position_px(window_id id) noexcept;
+	void set_size_limits(window_id id, const math::vec2<std::int32_t> &min_px, const math::vec2<std::int32_t> &max_px) noexcept;
+	void show_window(window_id id) noexcept;
+	void hide_window(window_id id) noexcept;
+	void minimize_window(window_id id) noexcept;
+	void maximize_window(window_id id) noexcept;
+	void restore_window(window_id id) noexcept;
+	void focus_window(window_id id) noexcept;
+	void request_attention(window_id id) noexcept;
+	[[nodiscard]] window_display_state display_state(window_id id) noexcept;
+	void set_resizable(window_id id, bool resizable) noexcept;
+	[[nodiscard]] bool is_resizable(window_id id) noexcept;
+	void set_always_on_top(window_id id, bool on_top) noexcept;
+	void set_opacity(window_id id, float opacity) noexcept;
+	void set_fullscreen(window_id id, bool fullscreen) noexcept;
+	[[nodiscard]] bool is_fullscreen(window_id id) noexcept;
+	void set_dark_mode(window_id id, bool dark) noexcept;
+
 	// ----------------------
 	// Monitor backend API
 	// ----------------------

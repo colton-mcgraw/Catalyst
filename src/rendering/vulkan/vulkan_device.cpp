@@ -334,6 +334,27 @@ namespace catalyst::rendering::detail::vulkan
                     dev.dedicated_video_memory += dev.memory_properties.memoryHeaps[i].size;
             }
 
+            // Integrated and software adapters render out of system RAM, so a device-local type that is also
+            // host-visible covers the whole heap and GPU-only buffers can be written without a staging copy.
+            // Confirm the type actually exists rather than trusting deviceType alone.
+            const bool uma_adapter = dev.properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU ||
+                                     dev.properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_CPU;
+            dev.unified_memory = false;
+            if (uma_adapter)
+            {
+                constexpr VkMemoryPropertyFlags wanted = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT |
+                                                         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                                                         VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+                for (std::uint32_t i = 0; i < dev.memory_properties.memoryTypeCount; ++i)
+                {
+                    if ((dev.memory_properties.memoryTypes[i].propertyFlags & wanted) == wanted)
+                    {
+                        dev.unified_memory = true;
+                        break;
+                    }
+                }
+            }
+
             VkFormatProperties d24s8{};
             vkGetPhysicalDeviceFormatProperties(dev.physical_device, VK_FORMAT_D24_UNORM_S8_UINT, &d24s8);
             dev.depth_stencil_format = (d24s8.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT)
@@ -528,6 +549,8 @@ namespace catalyst::rendering::detail::vulkan
                 for (VkFence f : dev.free_fences)
                     vkDestroyFence(dev.device, f, nullptr);
                 dev.free_fences.clear();
+
+                release_staging(dev);
 
                 if (dev.immediate_fence)
                     vkDestroyFence(dev.device, dev.immediate_fence, nullptr);
@@ -802,6 +825,8 @@ namespace catalyst::rendering::detail
         info.backend = backend_kind::vulkan;
         info.adapter_name = dev->adapter_name.c_str();
         info.dedicated_video_memory_bytes = dev->dedicated_video_memory;
+        info.max_memory_allocation_count = dev->properties.limits.maxMemoryAllocationCount;
+        info.unified_memory = dev->unified_memory;
         return info;
     }
 

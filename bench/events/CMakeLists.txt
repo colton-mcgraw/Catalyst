@@ -11,3 +11,6 @@ target_include_directories(catalyst_bench_events_dispatcher
   PRIVATE
     ${PROJECT_SOURCE_DIR}/bench
 )
+
+find_package(Threads REQUIRED)
+target_link_libraries(catalyst_bench_events_dispatcher PRIVATE Threads::Threads)

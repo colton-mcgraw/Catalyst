@@ -4,7 +4,7 @@
  *
  * @file
  * @brief Memory layer of the Vulkan backend: memory-type selection, one `VkDeviceMemory` allocation per resource
- * (sub-allocation is a later optimisation), persistent mapping of host-visible buffers and short-lived staging buffers.
+ * (sub-allocation is a later optimisation), persistent mapping of host-visible buffers and a reused staging buffer.
  */
 
 #include "vulkan_backend.hpp"
@@ -73,6 +73,11 @@ namespace catalyst::rendering::detail::vulkan
         {
         case memory_access::gpu_only:
             required = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+            // On a unified-memory adapter the device-local heap is system RAM and a host-visible type covers it, so
+            // asking for one turns write_buffer into a memcpy. Only a preference: discrete adapters expose a small
+            // host-visible device-local window (the PCI BAR) that GPU-only resources must not exhaust.
+            if (dev.unified_memory)
+                preferred = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
             break;
         case memory_access::cpu_to_gpu:
             required = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
@@ -105,7 +110,9 @@ namespace catalyst::rendering::detail::vulkan
 
         out_mapped = nullptr;
         out_coherent = true;
-        if (access != memory_access::gpu_only)
+        // Map on the property we actually got rather than on the requested access: a gpu_only allocation that landed
+        // in host-visible memory is written directly, and one that did not still falls back to a staged copy.
+        if (flags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
         {
             result = vkMapMemory(dev.device, memory, 0, VK_WHOLE_SIZE, 0, &out_mapped);
             if (result != VK_SUCCESS)
@@ -161,44 +168,78 @@ namespace catalyst::rendering::detail::vulkan
         vkInvalidateMappedMemoryRanges(dev.device, 1, &range);
     }
 
-    bool create_staging_buffer(device_state &dev, std::span<const std::byte> data, staging_buffer &out) noexcept
+    namespace
     {
-        VkBufferCreateInfo info{VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
-        info.size = std::max<VkDeviceSize>(data.size(), 1);
-        info.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-        info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        /** Smallest staging allocation; sized so the common small upload never reallocates. */
+        constexpr VkDeviceSize min_staging_bytes = 64u * 1024u;
 
-        staging_buffer staging;
-        const VkResult result = vkCreateBuffer(dev.device, &info, nullptr, &staging.buffer);
-        if (result != VK_SUCCESS)
+        VkDeviceSize staging_capacity_for(VkDeviceSize size) noexcept
         {
-            report("staging: vkCreateBuffer failed (%s)", result_string(result));
-            return false;
+            VkDeviceSize capacity = min_staging_bytes;
+            while (capacity < size)
+                capacity *= 2; // Geometric growth: a stream of growing uploads reallocates O(log n) times, not O(n).
+            return capacity;
         }
 
-        if (!allocate_buffer_memory(dev, staging.buffer, memory_access::cpu_to_gpu, staging.memory, staging.mapped,
-                                    staging.coherent))
+        /** Grows the device staging buffer to hold at least `size` bytes. Existing contents are not preserved. */
+        bool reserve_staging(device_state &dev, VkDeviceSize size) noexcept
         {
-            vkDestroyBuffer(dev.device, staging.buffer, nullptr);
-            return false;
+            if (dev.staging.buffer && dev.staging.capacity >= size)
+                return true;
+
+            // Nothing can still be reading the old buffer: every staged transfer waits on its submission before
+            // returning, so the previous upload has completed by the time we get here.
+            release_staging(dev);
+
+            const VkDeviceSize capacity = staging_capacity_for(size);
+
+            VkBufferCreateInfo info{VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
+            info.size = capacity;
+            info.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+            info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+            staging_buffer staging;
+            const VkResult result = vkCreateBuffer(dev.device, &info, nullptr, &staging.buffer);
+            if (result != VK_SUCCESS)
+            {
+                report("staging: vkCreateBuffer failed (%s)", result_string(result));
+                return false;
+            }
+
+            if (!allocate_buffer_memory(dev, staging.buffer, memory_access::cpu_to_gpu, staging.memory, staging.mapped,
+                                        staging.coherent))
+            {
+                vkDestroyBuffer(dev.device, staging.buffer, nullptr);
+                return false;
+            }
+
+            staging.capacity = capacity;
+            dev.staging = staging;
+            return true;
         }
+    } // namespace
+
+    bool stage_upload(device_state &dev, std::span<const std::byte> data, VkBuffer &out_source) noexcept
+    {
+        if (!reserve_staging(dev, std::max<VkDeviceSize>(data.size(), 1)))
+            return false;
 
         if (!data.empty())
-            std::memcpy(staging.mapped, data.data(), data.size());
-        if (!staging.coherent)
-            flush_host_writes(dev, staging.memory);
+            std::memcpy(dev.staging.mapped, data.data(), data.size());
+        if (!dev.staging.coherent)
+            flush_host_writes(dev, dev.staging.memory);
 
-        out = staging;
+        out_source = dev.staging.buffer;
         return true;
     }
 
-    void destroy_staging_buffer(device_state &dev, staging_buffer &staging) noexcept
+    void release_staging(device_state &dev) noexcept
     {
-        if (staging.buffer)
-            vkDestroyBuffer(dev.device, staging.buffer, nullptr);
-        if (staging.memory)
-            vkFreeMemory(dev.device, staging.memory, nullptr); // Implicitly unmaps.
-        staging = {};
+        if (dev.staging.buffer)
+            vkDestroyBuffer(dev.device, dev.staging.buffer, nullptr);
+        if (dev.staging.memory)
+            vkFreeMemory(dev.device, dev.staging.memory, nullptr); // Implicitly unmaps.
+        dev.staging = {};
     }
 
 } // namespace catalyst::rendering::detail::vulkan

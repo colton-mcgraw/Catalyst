@@ -40,6 +40,13 @@ namespace catalyst::rendering
         /** Human-readable adapter name; owned by the backend and valid until the device is destroyed. */
         const char *adapter_name = "";
         std::uint64_t dedicated_video_memory_bytes = 0;
+        /**
+         * Backend limit on simultaneous memory allocations, or 0 when the backend does not report one. The Vulkan
+         * backend allocates once per buffer and per texture, so this is an upper bound on live resources.
+         */
+        std::uint32_t max_memory_allocation_count = 0;
+        /** True when device-local memory is host-visible (integrated adapters), so uploads skip the staging copy. */
+        bool unified_memory = false;
     };
 
     struct device_tag

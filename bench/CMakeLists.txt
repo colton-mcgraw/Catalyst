@@ -3,3 +3,4 @@ if(NOT TARGET catalyst::core)
 endif()
 
 add_subdirectory(events)
+add_subdirectory(render)

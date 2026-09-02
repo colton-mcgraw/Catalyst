@@ -9,11 +9,11 @@ namespace catalyst::core
     subscription::subscription(std::weak_ptr<detail::dispatcher_state> state,
                                event_type_id type_id,
                                std::size_t token,
-                               std::shared_ptr<std::atomic_bool> active) noexcept
+                               std::shared_ptr<detail::handler_node> node) noexcept
         : m_state(std::move(state)),
           m_type_id(type_id),
           m_token(token),
-          m_active(std::move(active))
+          m_node(std::move(node))
     {
     }
 
@@ -21,7 +21,7 @@ namespace catalyst::core
         : m_state(std::move(other.m_state)),
           m_type_id(std::exchange(other.m_type_id, event_base::invalid_type_id())),
           m_token(std::exchange(other.m_token, 0u)),
-          m_active(std::move(other.m_active))
+          m_node(std::move(other.m_node))
     {
         other.m_state.reset();
     }
@@ -36,7 +36,7 @@ namespace catalyst::core
         m_state = std::move(other.m_state);
         m_type_id = std::exchange(other.m_type_id, event_base::invalid_type_id());
         m_token = std::exchange(other.m_token, 0u);
-        m_active = std::move(other.m_active);
+        m_node = std::move(other.m_node);
         other.m_state.reset();
 
         return *this;
@@ -49,9 +49,10 @@ namespace catalyst::core
 
     void subscription::reset() noexcept
     {
-        // Deactivate first: even if the dispatcher's table is not touched below, the handler will never run again.
-        if (m_active)
-            m_active->store(false, std::memory_order_relaxed);
+        // Deactivate first: even if the dispatcher's table is not touched below, the handler will never run again - a
+        // dispatch already iterating an older table on another thread checks this flag before every invocation.
+        if (m_node)
+            m_node->active.store(false, std::memory_order_release);
 
         if (m_token != 0u)
         {
@@ -63,7 +64,7 @@ namespace catalyst::core
         m_state.reset();
         m_type_id = event_base::invalid_type_id();
         m_token = 0u;
-        m_active.reset();
+        m_node.reset();
     }
 
     bool subscription::valid() const noexcept

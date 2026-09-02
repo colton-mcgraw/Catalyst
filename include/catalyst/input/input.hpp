@@ -32,7 +32,8 @@ namespace catalyst::input
      * @fn set_event_sink
      * @brief Installs the sink that receives the events published by poll_gamepads(). Pass nullptr to stop publishing
      * (the snapshots returned by get_gamepad_state() keep updating). The sink and its dispatcher must outlive the
-     * installation, and poll_gamepads() must be called on the dispatcher's owner thread.
+     * installation. The dispatcher itself may be used from any thread, but this module's own state is not synchronised:
+     * call poll_gamepads() from one thread only. Handlers run on whichever thread calls it.
      */
     void set_event_sink(core::event_sink *sink) noexcept;
 

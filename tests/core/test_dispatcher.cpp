@@ -4,10 +4,14 @@
 #include <catalyst/core/event.hpp>
 #include <catalyst/core/event_sink.hpp>
 
+#include <atomic>
+#include <chrono>
 #include <cstddef>
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <thread>
+#include <vector>
 #include <utility>
 #include <vector>
 
@@ -294,7 +298,114 @@ namespace
         d.publish(pong{});
         CT_REQUIRE(pong_calls == 100);
     }
+
+    void test_concurrent_publish()
+    {
+        // Publishes from many threads run at once. The handler is the only thing that needs to be thread-safe.
+        dispatcher d;
+        std::atomic<int> calls{0};
+        auto sub = d.subscribe<ping>([&](const ping &e) { calls.fetch_add(e.value, std::memory_order_relaxed); });
+
+        constexpr int threads = 8;
+        constexpr int per_thread = 10'000;
+        std::vector<std::thread> workers;
+        for (int t = 0; t < threads; ++t)
+            workers.emplace_back([&] { for (int i = 0; i < per_thread; ++i) d.publish(ping{1}); });
+        for (auto &w : workers)
+            w.join();
+
+        CT_REQUIRE(calls.load() == threads * per_thread);
+    }
+
+    void test_subscription_churn_during_concurrent_publish()
+    {
+        // Subscribing and unsubscribing while other threads publish the same event type. Every handler that is live for
+        // the whole run must see every event, and a publisher must never observe a half-built or freed handler table.
+        dispatcher d;
+        std::atomic<int> stable_calls{0};
+        std::atomic<int> published{0};
+        auto stable = d.subscribe<ping>([&](const ping &) { stable_calls.fetch_add(1, std::memory_order_relaxed); });
+
+        std::atomic<bool> running{true};
+        std::vector<std::thread> workers;
+
+        for (int t = 0; t < 4; ++t)
+            workers.emplace_back([&]
+            {
+                while (running.load(std::memory_order_acquire))
+                {
+                    d.publish(ping{1});
+                    published.fetch_add(1, std::memory_order_relaxed);
+                }
+            });
+
+        for (int t = 0; t < 2; ++t)
+            workers.emplace_back([&]
+            {
+                for (int i = 0; i < 2000; ++i)
+                {
+                    auto transient = d.subscribe<ping>([](const ping &) {}, i % 3);
+                    (void)d.handler_count<ping>();
+                }
+            });
+
+        for (std::size_t t = 4; t < workers.size(); ++t)
+            workers[t].join();
+        running.store(false, std::memory_order_release);
+        for (std::size_t t = 0; t < 4; ++t)
+            workers[t].join();
+
+        CT_REQUIRE(stable_calls.load() == published.load());
+        CT_REQUIRE(d.handler_count<ping>() == 1u); // only the stable handler is left; the churn cleaned itself up
+    }
+
+    void test_unsubscribe_from_another_thread_stops_delivery()
+    {
+        dispatcher d;
+        std::atomic<int> calls{0};
+        std::atomic<bool> stop{false};
+        auto sub = d.subscribe<ping>([&](const ping &) { calls.fetch_add(1, std::memory_order_relaxed); });
+
+        std::thread publisher([&]
+        {
+            while (!stop.load(std::memory_order_acquire))
+                d.publish(ping{});
+        });
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        sub.reset();
+        stop.store(true, std::memory_order_release);
+        publisher.join();
+
+        // What reset() guarantees across threads is that no *further* dispatch will select the handler - not that a
+        // dispatch already between the flag test and the call will be stopped, which would need reset() to wait for
+        // concurrent dispatches to finish. So the assertion is that delivery has stopped once the publishers are quiet.
+        const int settled = calls.load();
+        for (int i = 0; i < 1000; ++i)
+            d.publish(ping{});
+
+        CT_REQUIRE(calls.load() == settled);
+        CT_REQUIRE(d.handler_count<ping>() == 0u);
+    }
+
+    void test_handler_added_by_another_thread_is_eventually_seen()
+    {
+        dispatcher d;
+        std::atomic<int> late_calls{0};
+
+        std::atomic<bool> stop{false};
+        std::thread publisher([&] { while (!stop.load(std::memory_order_acquire)) d.publish(ping{}); });
+
+        auto late = d.subscribe<ping>([&](const ping &) { late_calls.fetch_add(1, std::memory_order_relaxed); });
+        while (late_calls.load() == 0)
+            std::this_thread::yield();
+
+        stop.store(true, std::memory_order_release);
+        publisher.join();
+        CT_REQUIRE(late_calls.load() > 0);
+    }
 } // namespace
+
 
 int main()
 {
@@ -311,5 +422,9 @@ int main()
     test_move_semantics();
     test_event_sink_forwarding();
     test_many_types_isolated();
+    test_concurrent_publish();
+    test_subscription_churn_during_concurrent_publish();
+    test_unsubscribe_from_another_thread_stops_delivery();
+    test_handler_added_by_another_thread_is_eventually_seen();
     return 0;
 }

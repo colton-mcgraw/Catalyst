@@ -53,8 +53,52 @@ namespace catalyst::platform::detail::win32
         return out;
     }
 
+    void ensure_process_dpi_awareness() noexcept
+    {
+        static const bool done = []() noexcept
+        {
+            // DPI_AWARENESS_CONTEXT is an opaque HANDLE whose well-known values are small negative numbers. They are
+            // spelled out rather than using the SDK macros so this builds against older Windows SDKs too.
+            constexpr INT_PTR per_monitor_aware_v2 = -4;
+            constexpr INT_PTR per_monitor_aware = -3;
+            constexpr INT_PTR system_aware = -2;
+
+            if (HMODULE user32 = GetModuleHandleW(L"user32.dll"))
+            {
+                using set_context_fn = BOOL(WINAPI *)(HANDLE);
+                if (const auto fn = reinterpret_cast<set_context_fn>(GetProcAddress(user32, "SetProcessDpiAwarenessContext")))
+                {
+                    for (const INT_PTR ctx : {per_monitor_aware_v2, per_monitor_aware, system_aware})
+                    {
+                        if (fn(reinterpret_cast<HANDLE>(ctx)))
+                            return true;
+                    }
+                }
+            }
+
+            // Windows 8.1: PROCESS_PER_MONITOR_DPI_AWARE == 2.
+            if (const HMODULE shcore = LoadLibraryW(L"shcore.dll"))
+            {
+                using set_awareness_fn = HRESULT(WINAPI *)(int);
+                if (const auto fn = reinterpret_cast<set_awareness_fn>(GetProcAddress(shcore, "SetProcessDpiAwareness")))
+                {
+                    if (SUCCEEDED(fn(2)))
+                        return true;
+                }
+            }
+
+            // Vista through 8: system-DPI aware is the best available.
+            SetProcessDPIAware();
+            return true;
+        }();
+
+        (void)done;
+    }
+
     float effective_dpi_for_system() noexcept
     {
+        ensure_process_dpi_awareness();
+
         using get_dpi_for_system_fn = UINT(WINAPI *)();
         static const auto fn = reinterpret_cast<get_dpi_for_system_fn>(
             GetProcAddress(GetModuleHandleW(L"user32.dll"), "GetDpiForSystem"));
@@ -71,6 +115,8 @@ namespace catalyst::platform::detail::win32
 
     float effective_dpi_for_window(hwnd_handle hwnd) noexcept
     {
+        ensure_process_dpi_awareness();
+
         using get_dpi_for_window_fn = UINT(WINAPI *)(HWND);
         static const auto fn = reinterpret_cast<get_dpi_for_window_fn>(
             GetProcAddress(GetModuleHandleW(L"user32.dll"), "GetDpiForWindow"));
@@ -90,6 +136,8 @@ namespace catalyst::platform::detail::win32
     {
         // Prefer GetDpiForMonitor (Win 8.1+). Dynamically load to keep compatibility.
         // Signature: HRESULT GetDpiForMonitor(HMONITOR, MONITOR_DPI_TYPE, UINT*, UINT*)
+        ensure_process_dpi_awareness();
+
         using get_dpi_for_monitor_fn = HRESULT(WINAPI *)(HMONITOR, int, UINT *, UINT *);
 
         static const HMODULE shcore = LoadLibraryW(L"shcore.dll");

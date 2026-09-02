@@ -4,7 +4,8 @@
  *
  * @file
  * @brief Buffer resources of the Vulkan backend. Host-visible buffers stay persistently mapped so `write_buffer` and
- * `read_buffer` are memcpys; GPU-only buffers are written through a staging copy on the immediate command buffer.
+ * `read_buffer` are memcpys; GPU-only buffers that could not be mapped are written through a staging copy on the
+ * immediate command buffer.
  */
 
 #include "vulkan_backend.hpp"
@@ -31,8 +32,8 @@ namespace catalyst::rendering::detail::vulkan
         bool upload_via_staging(device_state &dev, VkBuffer dst, VkDeviceSize offset,
                                 std::span<const std::byte> data) noexcept
         {
-            staging_buffer staging;
-            if (!create_staging_buffer(dev, data, staging))
+            VkBuffer source = VK_NULL_HANDLE;
+            if (!stage_upload(dev, data, source))
                 return false;
 
             bool ok = false;
@@ -42,10 +43,9 @@ namespace catalyst::rendering::detail::vulkan
                 region.srcOffset = 0;
                 region.dstOffset = offset;
                 region.size = data.size();
-                vkCmdCopyBuffer(cmd, staging.buffer, dst, 1, &region);
+                vkCmdCopyBuffer(cmd, source, dst, 1, &region);
                 ok = end_immediate(dev);
             }
-            destroy_staging_buffer(dev, staging);
             return ok;
         }
     } // namespace

@@ -6,7 +6,8 @@
  * cannot hide events from it) and folds them into per-device state. Level state (held keys, cursor position, held
  * gamepad buttons, axis values) persists until the opposite event arrives; edge state (pressed/released this frame,
  * movement and wheel deltas, typed text) accumulates until the application calls new_frame(), which it should do once
- * per frame *before* pumping events. All members must be used on the dispatcher's owner thread.
+ * per frame *before* pumping events. input_state is not internally synchronised: its handlers run on whichever thread
+ * publishes the events, so publish (or drain the event queue feeding it) and call its members from a single thread.
  * License: CDDL-1.0 (see LICENSE).
  */
 

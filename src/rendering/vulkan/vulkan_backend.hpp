@@ -90,6 +90,19 @@ namespace catalyst::rendering::detail::vulkan
         bool depth_clamp = false;
     };
 
+    /**
+     * Persistently mapped transfer-source buffer. One is owned by each device and grown on demand rather than
+     * allocated per transfer: `vkAllocateMemory` / `vkFreeMemory` dominate the cost of a small staged upload.
+     */
+    struct staging_buffer
+    {
+        VkBuffer buffer = VK_NULL_HANDLE;
+        VkDeviceMemory memory = VK_NULL_HANDLE;
+        void *mapped = nullptr;
+        VkDeviceSize capacity = 0;
+        bool coherent = true;
+    };
+
     struct device_state
     {
         device_desc desc;
@@ -127,6 +140,14 @@ namespace catalyst::rendering::detail::vulkan
         VkCommandPool immediate_pool = VK_NULL_HANDLE;
         VkCommandBuffer immediate_cmd = VK_NULL_HANDLE;
         VkFence immediate_fence = VK_NULL_HANDLE;
+        /** Reused upload buffer for staged transfers; only ever touched by the immediate command buffer. */
+        staging_buffer staging;
+
+        /**
+         * True when device-local memory is host-visible, as on integrated adapters where the device-local heap is
+         * system RAM. `gpu_only` buffers are then mapped and written directly instead of through a staging copy.
+         */
+        bool unified_memory = false;
 
         /** Swapchains holding an acquired image whose acquire semaphore no submission has waited on yet. */
         std::vector<resource_id> pending_acquires;
@@ -139,7 +160,10 @@ namespace catalyst::rendering::detail::vulkan
         std::string debug_name;
         VkBuffer buffer = VK_NULL_HANDLE;
         VkDeviceMemory memory = VK_NULL_HANDLE;
-        /** Persistent mapping for host-visible buffers; null for `memory_access::gpu_only`. */
+        /**
+         * Persistent mapping when the allocation landed in host-visible memory, else null. `gpu_only` buffers are
+         * mapped too on unified-memory adapters, which is what lets `write_buffer` avoid staging there.
+         */
         void *mapped = nullptr;
         bool coherent = true;
     };
@@ -396,17 +420,13 @@ namespace catalyst::rendering::detail::vulkan
     void flush_host_writes(device_state &dev, VkDeviceMemory memory) noexcept;
     void invalidate_host_reads(device_state &dev, VkDeviceMemory memory) noexcept;
 
-    struct staging_buffer
-    {
-        VkBuffer buffer = VK_NULL_HANDLE;
-        VkDeviceMemory memory = VK_NULL_HANDLE;
-        void *mapped = nullptr;
-        bool coherent = true;
-    };
-
-    /** Creates a host-visible transfer-source buffer holding a copy of `data`. */
-    bool create_staging_buffer(device_state &dev, std::span<const std::byte> data, staging_buffer &out) noexcept;
-    void destroy_staging_buffer(device_state &dev, staging_buffer &staging) noexcept;
+    /**
+     * Copies `data` into the device's staging buffer (growing it first if needed) and reports the buffer to use as
+     * the transfer source. Valid until the next staged transfer on this device; the immediate command buffer is
+     * submitted and waited on before control returns to the caller, so successive transfers cannot overlap.
+     */
+    bool stage_upload(device_state &dev, std::span<const std::byte> data, VkBuffer &out_source) noexcept;
+    void release_staging(device_state &dev) noexcept;
 
     // -------------------------------------------------------------------------
     // Per-resource release hooks used by destroy_device (each in its own file)
