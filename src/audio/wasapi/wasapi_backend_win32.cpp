@@ -1,37 +1,37 @@
-#include "wasapi_backend_win32.hpp"
+/**
+ * @file wasapi_backend_win32.cpp
+ * @brief WASAPI output and capture backend for Windows. Enumerates endpoints by their stable
+ * endpoint identifier, negotiates a format and reports what was actually agreed, runs its render
+ * thread under MMCSS "Pro Audio" scheduling, detects device invalidation instead of silently
+ * going quiet, and forwards endpoint topology changes to the application.
+ *
+ * Duplex is not implemented here: WASAPI render and capture are independent clients with
+ * independent clocks, so a correct implementation needs an asynchronous ring buffer and drift
+ * compensation. Rather than ship a version that glitches, this backend reports
+ * `audio_error::unsupported_operation` for `stream_direction::duplex`.
+ * License: CDDL-1.0 (see LICENSE).
+ */
 
-#if !defined(_WIN32)
+#include "../detail_backend.hpp"
 
-namespace catalyst::audio::detail
-{
-    std::unique_ptr<backend> create_wasapi_backend_win32(const engine_config &) noexcept
-    {
-        return nullptr;
-    }
-}
+#if defined(_WIN32)
 
-#else
-
-#ifndef WIN32_LEAN_AND_MEAN
-#  define WIN32_LEAN_AND_MEAN
-#endif
-#ifndef NOMINMAX
-#  define NOMINMAX
-#endif
-
-#include <windows.h>
+#include "../detail_render.hpp"
+#include "../win32/detail_win32.hpp"
 
 #include <mmdeviceapi.h>
 #include <audioclient.h>
 #include <functiondiscoverykeys_devpkey.h>
-#include <propvarutil.h>
+#include <avrt.h>
 #include <wrl/client.h>
 
 #include <ks.h>
 #include <ksmedia.h>
 
+#include <algorithm>
 #include <atomic>
 #include <cstring>
+#include <memory>
 #include <string>
 #include <thread>
 #include <vector>
@@ -42,451 +42,9 @@ namespace catalyst::audio::detail
     namespace
     {
         using Microsoft::WRL::ComPtr;
-
-        std::string wide_to_utf8(const std::wstring &w)
-        {
-            if (w.empty())
-                return {};
-
-            const int needed = WideCharToMultiByte(
-                CP_UTF8,
-                0,
-                w.c_str(),
-                static_cast<int>(w.size()),
-                nullptr,
-                0,
-                nullptr,
-                nullptr);
-
-            if (needed <= 0)
-                return {};
-
-            std::string out;
-            out.resize(static_cast<size_t>(needed));
-
-            const int written = WideCharToMultiByte(
-                CP_UTF8,
-                0,
-                w.c_str(),
-                static_cast<int>(w.size()),
-                out.data(),
-                needed,
-                nullptr,
-                nullptr);
-
-            if (written <= 0)
-                return {};
-
-            return out;
-        }
-
-        DWORD channel_mask_for(uint32_t channels)
-        {
-            switch (channels)
-            {
-            case 1:
-                return SPEAKER_FRONT_CENTER;
-            case 2:
-                return SPEAKER_FRONT_LEFT | SPEAKER_FRONT_RIGHT;
-            default:
-                return 0;
-            }
-        }
-
-        bool is_float32_format(const WAVEFORMATEX *fmt) noexcept
-        {
-            if (!fmt)
-                return false;
-
-            if (fmt->wFormatTag == WAVE_FORMAT_IEEE_FLOAT)
-            {
-                return fmt->wBitsPerSample == 32;
-            }
-
-            if (fmt->wFormatTag == WAVE_FORMAT_EXTENSIBLE && fmt->cbSize >= sizeof(WAVEFORMATEXTENSIBLE) - sizeof(WAVEFORMATEX))
-            {
-                const auto *ext = reinterpret_cast<const WAVEFORMATEXTENSIBLE *>(fmt);
-                return ext->Format.wBitsPerSample == 32 && ext->SubFormat == KSDATAFORMAT_SUBTYPE_IEEE_FLOAT;
-            }
-
-            return false;
-        }
-
-        std::unique_ptr<WAVEFORMATEX, void (*)(WAVEFORMATEX *)> make_desired_format(const engine_config &cfg)
-        {
-            auto *ext = reinterpret_cast<WAVEFORMATEXTENSIBLE *>(CoTaskMemAlloc(sizeof(WAVEFORMATEXTENSIBLE)));
-            if (!ext)
-                return {nullptr, +[](WAVEFORMATEX *) {}};
-
-            std::memset(ext, 0, sizeof(WAVEFORMATEXTENSIBLE));
-
-            ext->Format.wFormatTag = WAVE_FORMAT_EXTENSIBLE;
-            ext->Format.nChannels = static_cast<WORD>(cfg.channels);
-            ext->Format.nSamplesPerSec = cfg.sample_rate;
-            ext->Format.wBitsPerSample = 32;
-            ext->Format.nBlockAlign = static_cast<WORD>(cfg.channels * sizeof(float));
-            ext->Format.nAvgBytesPerSec = ext->Format.nSamplesPerSec * ext->Format.nBlockAlign;
-            ext->Format.cbSize = sizeof(WAVEFORMATEXTENSIBLE) - sizeof(WAVEFORMATEX);
-
-            ext->Samples.wValidBitsPerSample = 32;
-            ext->dwChannelMask = channel_mask_for(cfg.channels);
-            ext->SubFormat = KSDATAFORMAT_SUBTYPE_IEEE_FLOAT;
-
-            return {reinterpret_cast<WAVEFORMATEX *>(ext), +[](WAVEFORMATEX *p) {
-                        if (p)
-                            CoTaskMemFree(p);
-                    }};
-        }
-
-        REFERENCE_TIME hns_from_frames(uint32_t frames, uint32_t sample_rate)
-        {
-            if (sample_rate == 0)
-                sample_rate = 48000;
-            if (frames == 0)
-                frames = 512;
-
-            // 10,000,000 x 100ns per second
-            const double seconds = static_cast<double>(frames) / static_cast<double>(sample_rate);
-            const auto hns = static_cast<REFERENCE_TIME>(seconds * 10000000.0);
-            return (hns > 0) ? hns : 1;
-        }
-
-        void render_silence(float *output_interleaved, uint32_t frames, uint32_t channels) noexcept
-        {
-            const uint32_t count = frames * channels;
-            for (uint32_t i = 0; i < count; ++i)
-                output_interleaved[i] = 0.0f;
-        }
-
-    } // namespace
-
-    class wasapi_backend_win32 final : public backend
-    {
-    public:
-        explicit wasapi_backend_win32(engine_config config) : config_(config) {}
-        ~wasapi_backend_win32() override { shutdown(); }
-
-        std::string_view name() const noexcept override { return "WASAPI Backend Win32"; }
-
-        std::vector<std::string_view> enumerate_devices() const override
-        {
-            if (!devices_cached_)
-            {
-                devices_cached_ = true;
-                device_names_utf8_.clear();
-
-                const HRESULT hr = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
-                const bool did_init = SUCCEEDED(hr);
-
-                try
-                {
-                    ComPtr<IMMDeviceEnumerator> enumerator;
-                    if (FAILED(CoCreateInstance(__uuidof(MMDeviceEnumerator), nullptr, CLSCTX_ALL, IID_PPV_ARGS(&enumerator))))
-                        throw 1;
-
-                    ComPtr<IMMDeviceCollection> collection;
-                    if (FAILED(enumerator->EnumAudioEndpoints(eRender, DEVICE_STATE_ACTIVE, &collection)))
-                        throw 1;
-
-                    UINT count = 0;
-                    if (FAILED(collection->GetCount(&count)))
-                        throw 1;
-
-                    device_names_utf8_.reserve(count);
-                    for (UINT i = 0; i < count; ++i)
-                    {
-                        ComPtr<IMMDevice> device;
-                        if (FAILED(collection->Item(i, &device)) || !device)
-                            continue;
-
-                        ComPtr<IPropertyStore> props;
-                        if (FAILED(device->OpenPropertyStore(STGM_READ, &props)) || !props)
-                            continue;
-
-                        PROPVARIANT pv;
-                        PropVariantInit(&pv);
-                        if (SUCCEEDED(props->GetValue(PKEY_Device_FriendlyName, &pv)) && pv.vt == VT_LPWSTR && pv.pwszVal)
-                        {
-                            device_names_utf8_.push_back(wide_to_utf8(pv.pwszVal));
-                        }
-                        PropVariantClear(&pv);
-                    }
-                }
-                catch (...)
-                {
-                    device_names_utf8_.clear();
-                }
-
-                if (did_init)
-                    CoUninitialize();
-            }
-
-            std::vector<std::string_view> out;
-            out.reserve(device_names_utf8_.size());
-            for (const auto &s : device_names_utf8_)
-                out.emplace_back(s);
-            return out;
-        }
-
-        bool initialize() override
-        {
-            shutdown();
-
-            const HRESULT hr = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
-            if (FAILED(hr) && hr != RPC_E_CHANGED_MODE)
-                return false;
-            did_com_init_ = SUCCEEDED(hr);
-
-            ComPtr<IMMDeviceEnumerator> enumerator;
-            if (FAILED(CoCreateInstance(__uuidof(MMDeviceEnumerator), nullptr, CLSCTX_ALL, IID_PPV_ARGS(&enumerator))))
-                return false;
-
-            if (!config_.preferred_device.empty())
-            {
-                // Select by friendly name.
-                ComPtr<IMMDeviceCollection> collection;
-                if (SUCCEEDED(enumerator->EnumAudioEndpoints(eRender, DEVICE_STATE_ACTIVE, &collection)) && collection)
-                {
-                    UINT count = 0;
-                    if (SUCCEEDED(collection->GetCount(&count)))
-                    {
-                        for (UINT i = 0; i < count; ++i)
-                        {
-                            ComPtr<IMMDevice> candidate;
-                            if (FAILED(collection->Item(i, &candidate)) || !candidate)
-                                continue;
-
-                            ComPtr<IPropertyStore> props;
-                            if (FAILED(candidate->OpenPropertyStore(STGM_READ, &props)) || !props)
-                                continue;
-
-                            PROPVARIANT pv;
-                            PropVariantInit(&pv);
-                            const bool ok = SUCCEEDED(props->GetValue(PKEY_Device_FriendlyName, &pv)) && pv.vt == VT_LPWSTR && pv.pwszVal;
-                            if (ok)
-                            {
-                                const auto name = wide_to_utf8(pv.pwszVal);
-                                if (name == config_.preferred_device)
-                                {
-                                    device_ = candidate;
-                                    PropVariantClear(&pv);
-                                    break;
-                                }
-                            }
-                            PropVariantClear(&pv);
-                        }
-                    }
-                }
-            }
-
-            if (!device_)
-            {
-                if (FAILED(enumerator->GetDefaultAudioEndpoint(eRender, eConsole, &device_)) || !device_)
-                    return false;
-            }
-
-            if (FAILED(device_->Activate(__uuidof(IAudioClient), CLSCTX_ALL, nullptr, reinterpret_cast<void **>(audio_client_.GetAddressOf()))) || !audio_client_)
-                return false;
-
-            WAVEFORMATEX *mix = nullptr;
-            if (FAILED(audio_client_->GetMixFormat(&mix)) || !mix)
-                return false;
-            mix_format_.reset(mix);
-
-            // Prefer requested float32 format if supported; otherwise fall back to mix format.
-            WAVEFORMATEX *closest = nullptr;
-            auto desired = make_desired_format(config_);
-            if (desired.get())
-            {
-                const HRESULT is_supported = audio_client_->IsFormatSupported(AUDCLNT_SHAREMODE_SHARED, desired.get(), &closest);
-                if (is_supported == S_OK)
-                {
-                    active_format_.reset(desired.release());
-                }
-                else if (is_supported == S_FALSE && closest)
-                {
-                    // Use closest only if it's float32.
-                    if (is_float32_format(closest))
-                        active_format_.reset(closest);
-                    else
-                        CoTaskMemFree(closest);
-                }
-            }
-
-            if (!active_format_)
-            {
-                // Fall back to mix format if it's float32.
-                if (!is_float32_format(mix_format_.get()))
-                    return false;
-
-                // Make a copy we own in active_format_.
-                const size_t bytes = sizeof(WAVEFORMATEX) + mix_format_->cbSize;
-                auto *copy = reinterpret_cast<WAVEFORMATEX *>(CoTaskMemAlloc(bytes));
-                if (!copy)
-                    return false;
-                std::memcpy(copy, mix_format_.get(), bytes);
-                active_format_.reset(copy);
-            }
-
-            const REFERENCE_TIME buffer_hns = hns_from_frames(config_.frames_per_buffer, active_format_->nSamplesPerSec);
-
-            DWORD flags = AUDCLNT_STREAMFLAGS_EVENTCALLBACK;
-
-            if (FAILED(audio_client_->Initialize(
-                    AUDCLNT_SHAREMODE_SHARED,
-                    flags,
-                    buffer_hns,
-                    0,
-                    active_format_.get(),
-                    nullptr)))
-            {
-                return false;
-            }
-
-            if (FAILED(audio_client_->GetBufferSize(&buffer_frames_)))
-                return false;
-
-            event_ = CreateEventW(nullptr, FALSE, FALSE, nullptr);
-            if (!event_)
-                return false;
-
-            if (FAILED(audio_client_->SetEventHandle(event_)))
-                return false;
-
-            if (FAILED(audio_client_->GetService(IID_PPV_ARGS(&render_client_))) || !render_client_)
-                return false;
-
-            initialized_ = true;
-            return true;
-        }
-
-        bool start() override
-        {
-            if (!initialized_ || running_)
-                return running_;
-
-            stopping_.store(false);
-
-            // Prime the buffer before starting.
-            if (!render_available_frames())
-                return false;
-
-            if (FAILED(audio_client_->Start()))
-                return false;
-
-            running_ = true;
-            thread_ = std::thread([this] {
-                const HRESULT thr_hr = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
-                const bool thr_com_init = SUCCEEDED(thr_hr);
-
-                while (!stopping_.load())
-                {
-                    const DWORD rc = WaitForSingleObject(event_, 2000);
-                    if (rc == WAIT_OBJECT_0)
-                    {
-                        (void)render_available_frames();
-                    }
-                }
-
-                if (thr_com_init)
-                    CoUninitialize();
-            });
-
-            return true;
-        }
-
-        void stop() noexcept override
-        {
-            if (!running_)
-                return;
-
-            stopping_.store(true);
-            if (event_)
-                SetEvent(event_);
-
-            if (thread_.joinable())
-                thread_.join();
-
-            if (audio_client_)
-                (void)audio_client_->Stop();
-
-            running_ = false;
-        }
-
-        bool is_running() const noexcept override
-        {
-            return running_;
-        }
-
-        void shutdown() noexcept override
-        {
-            stop();
-
-            render_client_.Reset();
-            audio_client_.Reset();
-            device_.Reset();
-
-            active_format_.reset();
-            mix_format_.reset();
-
-            if (event_)
-            {
-                CloseHandle(event_);
-                event_ = nullptr;
-            }
-
-            if (did_com_init_)
-            {
-                CoUninitialize();
-                did_com_init_ = false;
-            }
-
-            initialized_ = false;
-        }
-
-    private:
-        bool render_available_frames() noexcept
-        {
-            if (!audio_client_ || !render_client_ || !active_format_)
-                return false;
-
-            UINT32 padding = 0;
-            if (FAILED(audio_client_->GetCurrentPadding(&padding)))
-                return false;
-
-            if (padding >= buffer_frames_)
-                return true;
-
-            const UINT32 frames_available = buffer_frames_ - padding;
-            if (frames_available == 0)
-                return true;
-
-            BYTE *data = nullptr;
-            if (FAILED(render_client_->GetBuffer(frames_available, &data)) || !data)
-                return false;
-
-            const uint32_t channels = static_cast<uint32_t>(active_format_->nChannels);
-            float *out = reinterpret_cast<float *>(data);
-
-            if (config_.callback)
-                config_.callback(config_.user, out, frames_available, channels);
-            else
-                render_silence(out, frames_available, channels);
-
-            (void)render_client_->ReleaseBuffer(frames_available, 0);
-            return true;
-        }
-
-        engine_config config_{};
-
-        bool did_com_init_ = false;
-        bool initialized_ = false;
-        bool running_ = false;
-        std::atomic<bool> stopping_{false};
-
-        ComPtr<IMMDevice> device_;
-        ComPtr<IAudioClient> audio_client_;
-        ComPtr<IAudioRenderClient> render_client_;
+        using win32::error_from_hresult;
+        using win32::utf8_to_wide;
+        using win32::wide_to_utf8;
 
         struct co_taskmem_free
         {
@@ -497,16 +55,1100 @@ namespace catalyst::audio::detail
             }
         };
 
-        std::unique_ptr<WAVEFORMATEX, co_taskmem_free> mix_format_{nullptr};
-        std::unique_ptr<WAVEFORMATEX, co_taskmem_free> active_format_{nullptr};
+        using format_ptr = std::unique_ptr<WAVEFORMATEX, co_taskmem_free>;
 
-        UINT32 buffer_frames_ = 0;
-        HANDLE event_ = nullptr;
-        std::thread thread_;
+        /// Shared state between the backend and its COM notification object.
+        ///
+        /// Held by `shared_ptr` on both sides so a notification already in flight when the backend
+        /// tears down cannot dereference freed memory: teardown clears `active` and drops its
+        /// reference, and the notification object keeps the state alive for as long as it needs.
+        struct notify_state
+        {
+            std::atomic<bool> active{true};
+            device_change_callback callback = nullptr;
+            void *user = nullptr;
+            std::atomic<uint64_t> changes{0};
+            std::wstring watched_device_id;
 
-        mutable bool devices_cached_ = false;
-        mutable std::vector<std::string> device_names_utf8_;
-    };
+            void fire(device_change change, std::wstring_view device_id) noexcept
+            {
+                changes.fetch_add(1, std::memory_order_relaxed);
+
+                if (!active.load(std::memory_order_acquire) || !callback)
+                    return;
+
+                const std::string id = wide_to_utf8(device_id);
+                callback(change, id, user);
+            }
+        };
+
+        /// Minimal `IMMNotificationClient`. Talks only to `notify_state`, never to the backend.
+        class notification_client final : public IMMNotificationClient
+        {
+        public:
+            explicit notification_client(std::shared_ptr<notify_state> state)
+                : state_(std::move(state)) {}
+
+            ULONG STDMETHODCALLTYPE AddRef() override
+            {
+                return refs_.fetch_add(1, std::memory_order_relaxed) + 1;
+            }
+
+            ULONG STDMETHODCALLTYPE Release() override
+            {
+                const ULONG remaining = refs_.fetch_sub(1, std::memory_order_acq_rel) - 1;
+                if (remaining == 0)
+                    delete this;
+                return remaining;
+            }
+
+            HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void **object) override
+            {
+                if (!object)
+                    return E_POINTER;
+
+                if (riid == __uuidof(IUnknown) || riid == __uuidof(IMMNotificationClient))
+                {
+                    *object = static_cast<IMMNotificationClient *>(this);
+                    AddRef();
+                    return S_OK;
+                }
+
+                *object = nullptr;
+                return E_NOINTERFACE;
+            }
+
+            HRESULT STDMETHODCALLTYPE OnDefaultDeviceChanged(EDataFlow flow, ERole role, LPCWSTR device_id) override
+            {
+                (void)flow;
+                if (role == eConsole && state_)
+                    state_->fire(device_change::default_device_changed, device_id ? device_id : L"");
+                return S_OK;
+            }
+
+            HRESULT STDMETHODCALLTYPE OnDeviceAdded(LPCWSTR device_id) override
+            {
+                if (state_)
+                    state_->fire(device_change::device_added, device_id ? device_id : L"");
+                return S_OK;
+            }
+
+            HRESULT STDMETHODCALLTYPE OnDeviceRemoved(LPCWSTR device_id) override
+            {
+                if (state_)
+                    state_->fire(device_change::device_removed, device_id ? device_id : L"");
+                return S_OK;
+            }
+
+            HRESULT STDMETHODCALLTYPE OnDeviceStateChanged(LPCWSTR device_id, DWORD new_state) override
+            {
+                if (!state_)
+                    return S_OK;
+
+                const std::wstring id = device_id ? device_id : L"";
+                const bool is_active_stream = !state_->watched_device_id.empty() &&
+                                              id == state_->watched_device_id;
+
+                if (new_state != DEVICE_STATE_ACTIVE)
+                {
+                    state_->fire(
+                        is_active_stream ? device_change::device_lost : device_change::device_removed,
+                        id);
+                }
+                else
+                {
+                    state_->fire(device_change::device_added, id);
+                }
+
+                return S_OK;
+            }
+
+            HRESULT STDMETHODCALLTYPE OnPropertyValueChanged(LPCWSTR, const PROPERTYKEY) override
+            {
+                return S_OK;
+            }
+
+        private:
+            ~notification_client() = default;
+
+            std::atomic<ULONG> refs_{1};
+            std::shared_ptr<notify_state> state_;
+        };
+
+        DWORD channel_mask_for(uint32_t channels) noexcept
+        {
+            switch (channels)
+            {
+            case 1:
+                return SPEAKER_FRONT_CENTER;
+            case 2:
+                return SPEAKER_FRONT_LEFT | SPEAKER_FRONT_RIGHT;
+            case 4:
+                return SPEAKER_FRONT_LEFT | SPEAKER_FRONT_RIGHT |
+                       SPEAKER_BACK_LEFT | SPEAKER_BACK_RIGHT;
+            case 6:
+                return KSAUDIO_SPEAKER_5POINT1;
+            case 8:
+                return KSAUDIO_SPEAKER_7POINT1_SURROUND;
+            default:
+                // No standard layout; let the engine treat the channels as discrete.
+                return 0;
+            }
+        }
+
+        bool is_float32_format(const WAVEFORMATEX *format) noexcept
+        {
+            if (!format)
+                return false;
+
+            if (format->wFormatTag == WAVE_FORMAT_IEEE_FLOAT)
+                return format->wBitsPerSample == 32;
+
+            if (format->wFormatTag == WAVE_FORMAT_EXTENSIBLE &&
+                format->cbSize >= sizeof(WAVEFORMATEXTENSIBLE) - sizeof(WAVEFORMATEX))
+            {
+                const auto *ext = reinterpret_cast<const WAVEFORMATEXTENSIBLE *>(format);
+                return ext->Format.wBitsPerSample == 32 &&
+                       ext->SubFormat == KSDATAFORMAT_SUBTYPE_IEEE_FLOAT;
+            }
+
+            return false;
+        }
+
+        format_ptr clone_format(const WAVEFORMATEX *source)
+        {
+            if (!source)
+                return nullptr;
+
+            const size_t bytes = sizeof(WAVEFORMATEX) + source->cbSize;
+            auto *copy = static_cast<WAVEFORMATEX *>(CoTaskMemAlloc(bytes));
+            if (!copy)
+                return nullptr;
+
+            std::memcpy(copy, source, bytes);
+            return format_ptr(copy);
+        }
+
+        format_ptr make_float32_format(uint32_t sample_rate, uint32_t channels)
+        {
+            auto *ext = static_cast<WAVEFORMATEXTENSIBLE *>(CoTaskMemAlloc(sizeof(WAVEFORMATEXTENSIBLE)));
+            if (!ext)
+                return nullptr;
+
+            std::memset(ext, 0, sizeof(WAVEFORMATEXTENSIBLE));
+
+            ext->Format.wFormatTag = WAVE_FORMAT_EXTENSIBLE;
+            ext->Format.nChannels = static_cast<WORD>(channels);
+            ext->Format.nSamplesPerSec = sample_rate;
+            ext->Format.wBitsPerSample = 32;
+            ext->Format.nBlockAlign = static_cast<WORD>(channels * sizeof(float));
+            ext->Format.nAvgBytesPerSec = sample_rate * ext->Format.nBlockAlign;
+            ext->Format.cbSize = sizeof(WAVEFORMATEXTENSIBLE) - sizeof(WAVEFORMATEX);
+
+            ext->Samples.wValidBitsPerSample = 32;
+            ext->dwChannelMask = channel_mask_for(channels);
+            ext->SubFormat = KSDATAFORMAT_SUBTYPE_IEEE_FLOAT;
+
+            return format_ptr(reinterpret_cast<WAVEFORMATEX *>(ext));
+        }
+
+        REFERENCE_TIME hns_from_frames(uint32_t frames, uint32_t sample_rate) noexcept
+        {
+            if (sample_rate == 0 || frames == 0)
+                return 0;
+
+            const double seconds = static_cast<double>(frames) / static_cast<double>(sample_rate);
+            const auto hns = static_cast<REFERENCE_TIME>(seconds * 10000000.0 + 0.5);
+            return hns > 0 ? hns : 1;
+        }
+
+        uint32_t frames_from_hns(REFERENCE_TIME hns, uint32_t sample_rate) noexcept
+        {
+            if (hns <= 0 || sample_rate == 0)
+                return 0;
+
+            const double seconds = static_cast<double>(hns) / 10000000.0;
+            return static_cast<uint32_t>(seconds * static_cast<double>(sample_rate) + 0.5);
+        }
+
+        /// RAII for `CoInitializeEx`, which must be balanced on the exact thread that called it.
+        class com_scope
+        {
+        public:
+            com_scope() noexcept
+            {
+                const HRESULT hr = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
+                // RPC_E_CHANGED_MODE means COM is already up in another mode; usable, not ours.
+                owned_ = SUCCEEDED(hr);
+                ok_ = SUCCEEDED(hr) || hr == RPC_E_CHANGED_MODE;
+            }
+
+            ~com_scope()
+            {
+                if (owned_)
+                    CoUninitialize();
+            }
+
+            com_scope(const com_scope &) = delete;
+            com_scope &operator=(const com_scope &) = delete;
+
+            bool ok() const noexcept { return ok_; }
+
+        private:
+            bool owned_ = false;
+            bool ok_ = false;
+        };
+
+        class wasapi_backend_win32 final : public backend
+        {
+        public:
+            explicit wasapi_backend_win32(engine_config config)
+                : config_(std::move(config)), dispatcher_(config_.callback, config_.user, stats_) {}
+
+            ~wasapi_backend_win32() override { shutdown(); }
+
+            std::string_view name() const noexcept override { return "WASAPI"; }
+            engine_backend kind() const noexcept override { return engine_backend::wasapi; }
+
+            std::expected<std::vector<device_info>, audio_error> enumerate_devices() const override
+            {
+                com_scope com;
+                if (!com.ok())
+                    return std::unexpected(audio_error::platform_error);
+
+                ComPtr<IMMDeviceEnumerator> enumerator;
+                if (FAILED(CoCreateInstance(
+                        __uuidof(MMDeviceEnumerator), nullptr, CLSCTX_ALL, IID_PPV_ARGS(&enumerator))))
+                {
+                    return std::unexpected(audio_error::platform_error);
+                }
+
+                const EDataFlow flow = enumeration_flow();
+
+                ComPtr<IMMDeviceCollection> collection;
+                if (FAILED(enumerator->EnumAudioEndpoints(flow, DEVICE_STATE_ACTIVE, &collection)) ||
+                    !collection)
+                {
+                    return std::unexpected(audio_error::platform_error);
+                }
+
+                UINT count = 0;
+                if (FAILED(collection->GetCount(&count)))
+                    return std::unexpected(audio_error::platform_error);
+
+                const std::wstring default_render = default_device_id(enumerator.Get(), eRender);
+                const std::wstring default_capture = default_device_id(enumerator.Get(), eCapture);
+
+                std::vector<device_info> devices;
+                devices.reserve(count);
+
+                for (UINT i = 0; i < count; ++i)
+                {
+                    ComPtr<IMMDevice> device;
+                    if (FAILED(collection->Item(i, &device)) || !device)
+                        continue;
+
+                    device_info info;
+                    info.backend = engine_backend::wasapi;
+
+                    LPWSTR raw_id = nullptr;
+                    if (FAILED(device->GetId(&raw_id)) || !raw_id)
+                        continue;
+
+                    const std::wstring wide_id = raw_id;
+                    info.id = wide_to_utf8(wide_id);
+                    CoTaskMemFree(raw_id);
+
+                    info.name = friendly_name(device.Get());
+                    if (info.name.empty())
+                        info.name = info.id;
+
+                    const EDataFlow device_flow = flow_of(device.Get());
+                    info.is_default = (device_flow == eRender && wide_id == default_render) ||
+                                      (device_flow == eCapture && wide_id == default_capture);
+
+                    // Activating the client is the only reliable way to learn the endpoint's
+                    // channel count and rate. Enumeration is not a hot path.
+                    ComPtr<IAudioClient> client;
+                    if (SUCCEEDED(device->Activate(
+                            __uuidof(IAudioClient), CLSCTX_ALL, nullptr, &client)) &&
+                        client)
+                    {
+                        WAVEFORMATEX *mix = nullptr;
+                        if (SUCCEEDED(client->GetMixFormat(&mix)) && mix)
+                        {
+                            info.default_sample_rate = mix->nSamplesPerSec;
+                            if (device_flow == eCapture)
+                                info.max_input_channels = mix->nChannels;
+                            else
+                                info.max_output_channels = mix->nChannels;
+                            CoTaskMemFree(mix);
+                        }
+                    }
+
+                    devices.push_back(std::move(info));
+                }
+
+                return devices;
+            }
+
+            std::expected<void, audio_error> initialize() override
+            {
+                if (config_.direction == stream_direction::duplex)
+                    return std::unexpected(audio_error::unsupported_operation);
+
+                shutdown();
+
+                const HRESULT com_hr = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
+                if (FAILED(com_hr) && com_hr != RPC_E_CHANGED_MODE)
+                    return std::unexpected(audio_error::platform_error);
+                owns_com_ = SUCCEEDED(com_hr);
+
+                capture_ = config_.direction == stream_direction::input;
+
+                if (FAILED(CoCreateInstance(
+                        __uuidof(MMDeviceEnumerator), nullptr, CLSCTX_ALL, IID_PPV_ARGS(&enumerator_))))
+                {
+                    return std::unexpected(audio_error::platform_error);
+                }
+
+                if (const auto opened = open_device(); !opened)
+                    return std::unexpected(opened.error());
+
+                if (const auto negotiated = negotiate_format(); !negotiated)
+                    return std::unexpected(negotiated.error());
+
+                if (const auto services = create_services(); !services)
+                    return std::unexpected(services.error());
+
+                register_notifications();
+
+                dispatcher_.reset_time();
+                stats_.reset();
+                initialized_ = true;
+                return {};
+            }
+
+            std::expected<void, audio_error> start() override
+            {
+                if (!initialized_)
+                    return std::unexpected(audio_error::not_initialized);
+                if (running_)
+                    return {};
+
+                stopping_.store(false, std::memory_order_release);
+                stream_error_.store(audio_error::none, std::memory_order_relaxed);
+
+                // Fill the buffer before the clock starts, or the first period is silence.
+                if (!capture_)
+                {
+                    if (const auto primed = pump_output(); !primed)
+                        return std::unexpected(primed.error());
+                }
+
+                if (const HRESULT hr = client_->Start(); FAILED(hr))
+                    return std::unexpected(error_from_hresult(hr));
+
+                running_ = true;
+
+                try
+                {
+                    thread_ = std::thread([this] { run(); });
+                }
+                catch (...)
+                {
+                    (void)client_->Stop();
+                    running_ = false;
+                    return std::unexpected(audio_error::thread_failure);
+                }
+
+                return {};
+            }
+
+            void stop() noexcept override
+            {
+                if (!running_)
+                    return;
+
+                stopping_.store(true, std::memory_order_release);
+                if (event_)
+                    SetEvent(event_);
+
+                if (thread_.joinable())
+                {
+                    try
+                    {
+                        thread_.join();
+                    }
+                    catch (...)
+                    {
+                        // A thread that cannot be joined must not take the process down from a
+                        // noexcept teardown path; leaking it is the lesser failure.
+                    }
+                }
+
+                if (client_)
+                    (void)client_->Stop();
+
+                running_ = false;
+            }
+
+            void shutdown() noexcept override
+            {
+                stop();
+                unregister_notifications();
+
+                capture_client_.Reset();
+                render_client_.Reset();
+                client_.Reset();
+                device_.Reset();
+                enumerator_.Reset();
+
+                active_format_.reset();
+                silence_.clear();
+                silence_.shrink_to_fit();
+
+                if (event_)
+                {
+                    CloseHandle(event_);
+                    event_ = nullptr;
+                }
+
+                buffer_frames_ = 0;
+                period_frames_ = 0;
+                sample_rate_ = 0;
+                channels_ = 0;
+                device_id_.clear();
+                device_name_.clear();
+                initialized_ = false;
+
+                if (owns_com_)
+                {
+                    CoUninitialize();
+                    owns_com_ = false;
+                }
+            }
+
+            bool is_running() const noexcept override { return running_; }
+
+            stream_info info() const override
+            {
+                stream_info out;
+                out.backend = engine_backend::wasapi;
+                out.direction = config_.direction;
+                out.sample_rate = sample_rate_;
+                out.output_channels = capture_ ? 0 : channels_;
+                out.input_channels = capture_ ? channels_ : 0;
+                out.buffer_frames = period_frames_ ? period_frames_ : buffer_frames_;
+
+                const double latency = sample_rate_
+                                           ? static_cast<double>(buffer_frames_) / static_cast<double>(sample_rate_) +
+                                                 device_latency_seconds_
+                                           : 0.0;
+                out.output_latency_seconds = capture_ ? 0.0 : latency;
+                out.input_latency_seconds = capture_ ? latency : 0.0;
+
+                out.exclusive = exclusive_;
+                out.device_id = device_id_;
+                out.device_name = device_name_;
+                return out;
+            }
+
+            stream_stats stats() const noexcept override
+            {
+                stream_stats out = stats_.snapshot();
+                if (notify_)
+                    out.device_changes = notify_->changes.load(std::memory_order_relaxed);
+                return out;
+            }
+
+            void reset_stats() noexcept override { stats_.reset(); }
+
+        private:
+            EDataFlow enumeration_flow() const noexcept
+            {
+                switch (config_.direction)
+                {
+                case stream_direction::input:
+                    return eCapture;
+                case stream_direction::duplex:
+                    return eAll;
+                case stream_direction::output:
+                default:
+                    return eRender;
+                }
+            }
+
+            static EDataFlow flow_of(IMMDevice *device) noexcept
+            {
+                ComPtr<IMMEndpoint> endpoint;
+                if (device && SUCCEEDED(device->QueryInterface(IID_PPV_ARGS(&endpoint))) && endpoint)
+                {
+                    EDataFlow flow = eRender;
+                    if (SUCCEEDED(endpoint->GetDataFlow(&flow)))
+                        return flow;
+                }
+                return eRender;
+            }
+
+            static std::wstring default_device_id(IMMDeviceEnumerator *enumerator, EDataFlow flow)
+            {
+                ComPtr<IMMDevice> device;
+                if (!enumerator ||
+                    FAILED(enumerator->GetDefaultAudioEndpoint(flow, eConsole, &device)) || !device)
+                {
+                    return {};
+                }
+
+                LPWSTR raw = nullptr;
+                if (FAILED(device->GetId(&raw)) || !raw)
+                    return {};
+
+                std::wstring id = raw;
+                CoTaskMemFree(raw);
+                return id;
+            }
+
+            static std::string friendly_name(IMMDevice *device)
+            {
+                ComPtr<IPropertyStore> properties;
+                if (!device || FAILED(device->OpenPropertyStore(STGM_READ, &properties)) || !properties)
+                    return {};
+
+                PROPVARIANT value;
+                PropVariantInit(&value);
+
+                std::string name;
+                if (SUCCEEDED(properties->GetValue(PKEY_Device_FriendlyName, &value)) &&
+                    value.vt == VT_LPWSTR && value.pwszVal)
+                {
+                    name = wide_to_utf8(value.pwszVal);
+                }
+
+                PropVariantClear(&value);
+                return name;
+            }
+
+            /// Resolves `preferred_device` against endpoint IDs first, then friendly names.
+            ///
+            /// IDs are matched first because friendly names are not unique -- two identical
+            /// headsets produce the same name, and matching on it picks an arbitrary one.
+            std::expected<void, audio_error> open_device()
+            {
+                const EDataFlow flow = capture_ ? eCapture : eRender;
+
+                if (!config_.preferred_device.empty())
+                {
+                    const std::wstring wanted = utf8_to_wide(config_.preferred_device);
+
+                    ComPtr<IMMDeviceCollection> collection;
+                    if (SUCCEEDED(enumerator_->EnumAudioEndpoints(flow, DEVICE_STATE_ACTIVE, &collection)) &&
+                        collection)
+                    {
+                        UINT count = 0;
+                        if (SUCCEEDED(collection->GetCount(&count)))
+                        {
+                            ComPtr<IMMDevice> by_name;
+
+                            for (UINT i = 0; i < count && !device_; ++i)
+                            {
+                                ComPtr<IMMDevice> candidate;
+                                if (FAILED(collection->Item(i, &candidate)) || !candidate)
+                                    continue;
+
+                                LPWSTR raw_id = nullptr;
+                                if (FAILED(candidate->GetId(&raw_id)) || !raw_id)
+                                    continue;
+
+                                const std::wstring candidate_id = raw_id;
+                                CoTaskMemFree(raw_id);
+
+                                if (candidate_id == wanted)
+                                {
+                                    device_ = candidate;
+                                    break;
+                                }
+
+                                if (!by_name && friendly_name(candidate.Get()) == config_.preferred_device)
+                                    by_name = candidate;
+                            }
+
+                            if (!device_)
+                                device_ = by_name;
+                        }
+                    }
+
+                    // An explicit request that cannot be honoured is an error, not a silent
+                    // downgrade to the default endpoint.
+                    if (!device_)
+                        return std::unexpected(audio_error::no_device);
+                }
+
+                if (!device_)
+                {
+                    if (FAILED(enumerator_->GetDefaultAudioEndpoint(flow, eConsole, &device_)) || !device_)
+                        return std::unexpected(audio_error::no_device);
+                }
+
+                LPWSTR raw = nullptr;
+                if (SUCCEEDED(device_->GetId(&raw)) && raw)
+                {
+                    wide_device_id_ = raw;
+                    device_id_ = wide_to_utf8(wide_device_id_);
+                    CoTaskMemFree(raw);
+                }
+
+                device_name_ = friendly_name(device_.Get());
+                if (device_name_.empty())
+                    device_name_ = device_id_;
+
+                return {};
+            }
+
+            std::expected<void, audio_error> activate_client()
+            {
+                client_.Reset();
+                if (FAILED(device_->Activate(__uuidof(IAudioClient), CLSCTX_ALL, nullptr, &client_)) ||
+                    !client_)
+                {
+                    return std::unexpected(audio_error::platform_error);
+                }
+                return {};
+            }
+
+            /// Opens the stream and records what the device actually agreed to.
+            ///
+            /// In shared mode a rate or channel mismatch is resolved by asking the audio engine to
+            /// convert (`AUTOCONVERTPCM`), so the caller keeps the format it asked for rather than
+            /// silently receiving the device mix rate. Only if that is refused does the stream fall
+            /// back to the mix format, and only when `allow_format_fallback` permits it.
+            std::expected<void, audio_error> negotiate_format()
+            {
+                if (const auto activated = activate_client(); !activated)
+                    return std::unexpected(activated.error());
+
+                REFERENCE_TIME default_period = 0;
+                REFERENCE_TIME minimum_period = 0;
+                (void)client_->GetDevicePeriod(&default_period, &minimum_period);
+
+                exclusive_ = config_.exclusive;
+                const AUDCLNT_SHAREMODE share_mode =
+                    exclusive_ ? AUDCLNT_SHAREMODE_EXCLUSIVE : AUDCLNT_SHAREMODE_SHARED;
+
+                format_ptr desired = make_float32_format(config_.sample_rate, requested_channels());
+                if (!desired)
+                    return std::unexpected(audio_error::platform_error);
+
+                const REFERENCE_TIME requested_duration =
+                    config_.frames_per_buffer
+                        ? hns_from_frames(config_.frames_per_buffer, config_.sample_rate)
+                        : (exclusive_ ? minimum_period : default_period);
+
+                DWORD flags = AUDCLNT_STREAMFLAGS_EVENTCALLBACK;
+
+                HRESULT hr = try_initialize(share_mode, flags, requested_duration, desired.get());
+                if (SUCCEEDED(hr))
+                {
+                    active_format_ = std::move(desired);
+                    return finish_negotiation();
+                }
+
+                if (!config_.allow_format_fallback)
+                    return std::unexpected(error_from_hresult(hr));
+
+                if (!exclusive_)
+                {
+                    // Let the audio engine resample and remix on our behalf.
+                    const DWORD convert_flags = flags |
+                                                AUDCLNT_STREAMFLAGS_AUTOCONVERTPCM |
+                                                AUDCLNT_STREAMFLAGS_SRC_DEFAULT_QUALITY;
+
+                    hr = try_initialize(share_mode, convert_flags, requested_duration, desired.get());
+                    if (SUCCEEDED(hr))
+                    {
+                        active_format_ = std::move(desired);
+                        return finish_negotiation();
+                    }
+                }
+
+                // Last resort: take the format the device already wants.
+                format_ptr fallback = exclusive_ ? device_native_format() : mix_format();
+                if (!fallback || !is_float32_format(fallback.get()))
+                    return std::unexpected(audio_error::format_unsupported);
+
+                const REFERENCE_TIME fallback_duration =
+                    config_.frames_per_buffer
+                        ? hns_from_frames(config_.frames_per_buffer, fallback->nSamplesPerSec)
+                        : (exclusive_ ? minimum_period : default_period);
+
+                hr = try_initialize(share_mode, flags, fallback_duration, fallback.get());
+                if (FAILED(hr))
+                    return std::unexpected(error_from_hresult(hr));
+
+                active_format_ = std::move(fallback);
+                return finish_negotiation();
+            }
+
+            /// Runs `IAudioClient::Initialize`, retrying once on the exclusive-mode alignment
+            /// error with the buffer size the driver reports it actually wants.
+            HRESULT try_initialize(
+                AUDCLNT_SHAREMODE share_mode,
+                DWORD flags,
+                REFERENCE_TIME duration,
+                const WAVEFORMATEX *format)
+            {
+                const REFERENCE_TIME periodicity =
+                    share_mode == AUDCLNT_SHAREMODE_EXCLUSIVE ? duration : 0;
+
+                HRESULT hr = client_->Initialize(share_mode, flags, duration, periodicity, format, nullptr);
+
+                if (hr == AUDCLNT_E_BUFFER_SIZE_NOT_ALIGNED)
+                {
+                    UINT32 aligned = 0;
+                    if (SUCCEEDED(client_->GetBufferSize(&aligned)) && aligned > 0)
+                    {
+                        const REFERENCE_TIME aligned_duration =
+                            hns_from_frames(aligned, format->nSamplesPerSec);
+
+                        // The client is unusable after this error and must be recreated.
+                        if (activate_client())
+                        {
+                            hr = client_->Initialize(
+                                share_mode,
+                                flags,
+                                aligned_duration,
+                                share_mode == AUDCLNT_SHAREMODE_EXCLUSIVE ? aligned_duration : 0,
+                                format,
+                                nullptr);
+                        }
+                    }
+                }
+
+                if (FAILED(hr))
+                {
+                    // Leave a clean client behind for the next negotiation attempt.
+                    (void)activate_client();
+                }
+
+                return hr;
+            }
+
+            format_ptr mix_format()
+            {
+                WAVEFORMATEX *mix = nullptr;
+                if (FAILED(client_->GetMixFormat(&mix)) || !mix)
+                    return nullptr;
+                return format_ptr(mix);
+            }
+
+            /// In exclusive mode the engine performs no conversion, so the only formats that can
+            /// work are ones the driver reports as directly supported.
+            format_ptr device_native_format()
+            {
+                format_ptr candidate = mix_format();
+                if (candidate &&
+                    client_->IsFormatSupported(AUDCLNT_SHAREMODE_EXCLUSIVE, candidate.get(), nullptr) == S_OK)
+                {
+                    return candidate;
+                }
+
+                // Probe the common float32 layouts the caller might be able to use.
+                static constexpr uint32_t rates[] = {48000, 44100, 96000, 88200, 192000};
+                static constexpr uint32_t channel_counts[] = {2, 1, 4, 6, 8};
+
+                for (const uint32_t rate : rates)
+                {
+                    for (const uint32_t channels : channel_counts)
+                    {
+                        format_ptr probe = make_float32_format(rate, channels);
+                        if (probe &&
+                            client_->IsFormatSupported(AUDCLNT_SHAREMODE_EXCLUSIVE, probe.get(), nullptr) == S_OK)
+                        {
+                            return probe;
+                        }
+                    }
+                }
+
+                return nullptr;
+            }
+
+            std::expected<void, audio_error> finish_negotiation()
+            {
+                if (!is_float32_format(active_format_.get()))
+                    return std::unexpected(audio_error::format_unsupported);
+
+                sample_rate_ = active_format_->nSamplesPerSec;
+                channels_ = active_format_->nChannels;
+
+                if (FAILED(client_->GetBufferSize(&buffer_frames_)) || buffer_frames_ == 0)
+                    return std::unexpected(audio_error::platform_error);
+
+                REFERENCE_TIME default_period = 0;
+                REFERENCE_TIME minimum_period = 0;
+                if (SUCCEEDED(client_->GetDevicePeriod(&default_period, &minimum_period)))
+                    period_frames_ = frames_from_hns(default_period, sample_rate_);
+
+                if (period_frames_ == 0 || period_frames_ > buffer_frames_)
+                    period_frames_ = buffer_frames_;
+
+                REFERENCE_TIME latency = 0;
+                if (SUCCEEDED(client_->GetStreamLatency(&latency)) && latency > 0)
+                    device_latency_seconds_ = static_cast<double>(latency) / 10000000.0;
+
+                return {};
+            }
+
+            uint32_t requested_channels() const noexcept
+            {
+                const uint32_t channels = capture_ ? config_.input_channels : config_.output_channels;
+                return channels ? channels : 2;
+            }
+
+            std::expected<void, audio_error> create_services()
+            {
+                event_ = CreateEventW(nullptr, FALSE, FALSE, nullptr);
+                if (!event_)
+                    return std::unexpected(audio_error::platform_error);
+
+                if (const HRESULT hr = client_->SetEventHandle(event_); FAILED(hr))
+                    return std::unexpected(error_from_hresult(hr));
+
+                if (capture_)
+                {
+                    if (FAILED(client_->GetService(IID_PPV_ARGS(&capture_client_))) || !capture_client_)
+                        return std::unexpected(audio_error::platform_error);
+
+                    // Backing store for packets the device flags as silent.
+                    silence_.assign(static_cast<size_t>(buffer_frames_) * channels_, 0.0f);
+                }
+                else
+                {
+                    if (FAILED(client_->GetService(IID_PPV_ARGS(&render_client_))) || !render_client_)
+                        return std::unexpected(audio_error::platform_error);
+                }
+
+                return {};
+            }
+
+            void register_notifications()
+            {
+                notify_ = std::make_shared<notify_state>();
+                notify_->callback = config_.on_device_change;
+                notify_->user = config_.device_change_user;
+                notify_->watched_device_id = wide_device_id_;
+
+                notification_client *client = new (std::nothrow) notification_client(notify_);
+                if (!client)
+                    return;
+
+                if (SUCCEEDED(enumerator_->RegisterEndpointNotificationCallback(client)))
+                    notification_client_ = client;
+                else
+                    client->Release();
+            }
+
+            void unregister_notifications() noexcept
+            {
+                if (notify_)
+                    notify_->active.store(false, std::memory_order_release);
+
+                if (notification_client_)
+                {
+                    if (enumerator_)
+                        (void)enumerator_->UnregisterEndpointNotificationCallback(notification_client_);
+                    notification_client_->Release();
+                    notification_client_ = nullptr;
+                }
+
+                notify_.reset();
+            }
+
+            void run() noexcept
+            {
+                const HRESULT com_hr = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
+                const bool owns_com = SUCCEEDED(com_hr);
+
+                // MMCSS is what keeps the render thread ahead of ordinary work under load. Without
+                // it the stream glitches whenever the machine is busy.
+                DWORD task_index = 0;
+                HANDLE mmcss = AvSetMmThreadCharacteristicsW(L"Pro Audio", &task_index);
+
+                uint32_t consecutive_timeouts = 0;
+
+                while (!stopping_.load(std::memory_order_acquire))
+                {
+                    const DWORD wait = WaitForSingleObject(event_, 2000);
+
+                    if (stopping_.load(std::memory_order_acquire))
+                        break;
+
+                    if (wait == WAIT_OBJECT_0)
+                    {
+                        consecutive_timeouts = 0;
+
+                        const auto pumped = capture_ ? pump_capture() : pump_output();
+                        if (!pumped)
+                        {
+                            fail_stream(pumped.error());
+                            break;
+                        }
+
+                        continue;
+                    }
+
+                    if (wait == WAIT_TIMEOUT)
+                    {
+                        // The device stopped clocking us. Anything it should have played is gone.
+                        stats_.add_xrun();
+
+                        if (++consecutive_timeouts >= 2)
+                        {
+                            fail_stream(audio_error::device_lost);
+                            break;
+                        }
+
+                        continue;
+                    }
+
+                    fail_stream(audio_error::platform_error);
+                    break;
+                }
+
+                if (mmcss)
+                    AvRevertMmThreadCharacteristics(mmcss);
+
+                if (owns_com)
+                    CoUninitialize();
+            }
+
+            /// Records why the stream died and tells the application, once.
+            void fail_stream(audio_error error) noexcept
+            {
+                auto expected = audio_error::none;
+                if (!stream_error_.compare_exchange_strong(expected, error, std::memory_order_relaxed))
+                    return;
+
+                if (notify_ && error == audio_error::device_lost)
+                    notify_->fire(device_change::device_lost, wide_device_id_);
+            }
+
+            std::expected<void, audio_error> pump_output() noexcept
+            {
+                UINT32 padding = 0;
+                if (const HRESULT hr = client_->GetCurrentPadding(&padding); FAILED(hr))
+                    return std::unexpected(error_from_hresult(hr));
+
+                if (padding >= buffer_frames_)
+                    return {};
+
+                UINT32 remaining = buffer_frames_ - padding;
+
+                // Hand the callback consistent, period-sized blocks instead of whatever happens to
+                // be free, which can be a handful of frames and makes per-call overhead dominate.
+                while (remaining > 0)
+                {
+                    const UINT32 chunk = std::min<UINT32>(remaining, period_frames_);
+
+                    BYTE *data = nullptr;
+                    if (const HRESULT hr = render_client_->GetBuffer(chunk, &data); FAILED(hr))
+                        return std::unexpected(error_from_hresult(hr));
+
+                    if (!data)
+                        return std::unexpected(audio_error::platform_error);
+
+                    dispatcher_.dispatch(
+                        reinterpret_cast<float *>(data), nullptr, chunk, channels_, 0, sample_rate_);
+
+                    if (const HRESULT hr = render_client_->ReleaseBuffer(chunk, 0); FAILED(hr))
+                        return std::unexpected(error_from_hresult(hr));
+
+                    remaining -= chunk;
+                }
+
+                return {};
+            }
+
+            std::expected<void, audio_error> pump_capture() noexcept
+            {
+                for (;;)
+                {
+                    UINT32 packet = 0;
+                    if (const HRESULT hr = capture_client_->GetNextPacketSize(&packet); FAILED(hr))
+                        return std::unexpected(error_from_hresult(hr));
+
+                    if (packet == 0)
+                        return {};
+
+                    BYTE *data = nullptr;
+                    UINT32 frames = 0;
+                    DWORD flags = 0;
+
+                    const HRESULT hr = capture_client_->GetBuffer(&data, &frames, &flags, nullptr, nullptr);
+                    if (hr == AUDCLNT_S_BUFFER_EMPTY)
+                        return {};
+                    if (FAILED(hr))
+                        return std::unexpected(error_from_hresult(hr));
+
+                    if (flags & AUDCLNT_BUFFERFLAGS_DATA_DISCONTINUITY)
+                        stats_.add_xrun();
+
+                    const float *input = reinterpret_cast<const float *>(data);
+                    if ((flags & AUDCLNT_BUFFERFLAGS_SILENT) || !data)
+                    {
+                        const size_t needed = static_cast<size_t>(frames) * channels_;
+                        if (silence_.size() < needed)
+                            input = nullptr;
+                        else
+                            input = silence_.data();
+                    }
+
+                    if (input)
+                        dispatcher_.dispatch(nullptr, input, frames, 0, channels_, sample_rate_);
+
+                    if (const HRESULT release = capture_client_->ReleaseBuffer(frames); FAILED(release))
+                        return std::unexpected(error_from_hresult(release));
+                }
+            }
+
+            engine_config config_{};
+            stats_block stats_;
+            render_dispatcher dispatcher_;
+
+            bool owns_com_ = false;
+            bool initialized_ = false;
+            bool running_ = false;
+            bool capture_ = false;
+            bool exclusive_ = false;
+            std::atomic<bool> stopping_{false};
+            std::atomic<audio_error> stream_error_{audio_error::none};
+
+            ComPtr<IMMDeviceEnumerator> enumerator_;
+            ComPtr<IMMDevice> device_;
+            ComPtr<IAudioClient> client_;
+            ComPtr<IAudioRenderClient> render_client_;
+            ComPtr<IAudioCaptureClient> capture_client_;
+
+            notification_client *notification_client_ = nullptr;
+            std::shared_ptr<notify_state> notify_;
+
+            format_ptr active_format_;
+            std::vector<float> silence_;
+
+            UINT32 buffer_frames_ = 0;
+            UINT32 period_frames_ = 0;
+            uint32_t sample_rate_ = 0;
+            uint32_t channels_ = 0;
+            double device_latency_seconds_ = 0.0;
+
+            std::wstring wide_device_id_;
+            std::string device_id_;
+            std::string device_name_;
+
+            HANDLE event_ = nullptr;
+            std::thread thread_;
+        };
+
+    } // namespace
 
     std::unique_ptr<backend> create_wasapi_backend_win32(const engine_config &config) noexcept
     {
@@ -515,4 +1157,4 @@ namespace catalyst::audio::detail
 
 } // namespace catalyst::audio::detail
 
-#endif
+#endif // _WIN32

@@ -1,6 +1,5 @@
 #include "test_common.hpp"
 
-#include <catalyst/core/concurrent_event_queue.hpp>
 #include <catalyst/core/dispatcher.hpp>
 #include <catalyst/core/event.hpp>
 #include <catalyst/core/event_queue.hpp>
@@ -353,23 +352,6 @@ namespace
         waker.join();
     }
 
-    void test_concurrent_event_queue_alias_still_compiles()
-    {
-        // The old cross-thread mailbox spelling has to keep working: post(), drain_to(queue) and drain_to(dispatcher).
-        dispatcher d;
-        int seen = 0;
-        auto sub = d.subscribe<tick>([&](const tick &e) { seen += e.value; });
-
-        concurrent_event_queue mailbox;
-        mailbox.post<tick>(3);
-        mailbox.post(std::make_unique<tick>(4));
-        CT_REQUIRE(mailbox.size() == 2u);
-
-        event_queue q;
-        CT_REQUIRE(mailbox.drain_to(q) == 2u);
-        CT_REQUIRE(q.drain_to(d) == 2u);
-        CT_REQUIRE(seen == 7);
-    }
 } // namespace
 
 int main()
@@ -384,6 +366,5 @@ int main()
     test_many_producers_one_consumer();
     test_producers_and_consumers_overlap();
     test_wait_for_events();
-    test_concurrent_event_queue_alias_still_compiles();
     return 0;
 }

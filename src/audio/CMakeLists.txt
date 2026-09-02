@@ -1,5 +1,14 @@
+# The offline and null backends are always compiled, so the module builds, links and tests on
+# every platform. Platform backends are added conditionally and announce themselves to the
+# registry through CATALYST_AUDIO_HAS_* definitions. All backends live in one target: the
+# registry is the only definition of create_backend(), so there is nothing left to isolate and
+# a single target removes any link-order sensitivity between the registry and its factories.
 add_library(catalyst_audio STATIC
+  audio.cpp
   engine.cpp
+  backend_registry.cpp
+  null/audio_backend_null.cpp
+  offline/offline_backend.cpp
 )
 
 add_library(catalyst::audio ALIAS catalyst_audio)
@@ -8,6 +17,8 @@ target_include_directories(catalyst_audio
   PUBLIC
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>
+  PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
 set(CATALYST_AUDIO_BACKEND "auto" CACHE STRING "Audio backend (auto|win32|null)")
@@ -27,38 +38,23 @@ if(_catalyst_audio_backend STREQUAL "win32")
     message(FATAL_ERROR "CATALYST_AUDIO_BACKEND=win32 is only supported on Windows")
   endif()
 
-  add_library(catalyst_audio_backend_win32 STATIC
-    win32/audio_backend_win32.cpp
-  )
-
-  target_include_directories(catalyst_audio_backend_win32
-    PRIVATE
-      ${CMAKE_CURRENT_SOURCE_DIR}
-      ${PROJECT_SOURCE_DIR}/include
-  )
-
   # Win32 audio builds always include ASIO (SDK-free minimal loader).
-  target_sources(catalyst_audio_backend_win32 PRIVATE
-    asio/asio_loader.cpp
-    asio/asio_backend_win32.cpp
+  target_sources(catalyst_audio PRIVATE
     wasapi/wasapi_backend_win32.cpp
+    asio/asio_backend_win32.cpp
+    asio/asio_loader.cpp
   )
 
-  target_link_libraries(catalyst_audio_backend_win32 PRIVATE Ole32 Uuid)
-
-  target_link_libraries(catalyst_audio PRIVATE catalyst_audio_backend_win32)
-elseif(_catalyst_audio_backend STREQUAL "null")
-  add_library(catalyst_audio_backend_null STATIC
-    null/audio_backend_null.cpp
-  )
-
-  target_include_directories(catalyst_audio_backend_null
+  target_compile_definitions(catalyst_audio
     PRIVATE
-      ${CMAKE_CURRENT_SOURCE_DIR}
-      ${PROJECT_SOURCE_DIR}/include
+      CATALYST_AUDIO_HAS_WASAPI
+      CATALYST_AUDIO_HAS_ASIO
   )
 
-  target_link_libraries(catalyst_audio PRIVATE catalyst_audio_backend_null)
+  # Avrt provides MMCSS ("Pro Audio") scheduling for the WASAPI render thread.
+  target_link_libraries(catalyst_audio PRIVATE Ole32 Uuid Avrt)
+elseif(_catalyst_audio_backend STREQUAL "null")
+  # Nothing to add: the always-compiled null and offline backends cover this configuration.
 else()
   message(FATAL_ERROR "Unknown CATALYST_AUDIO_BACKEND: ${_catalyst_audio_backend}")
 endif()
