@@ -9,7 +9,7 @@
 
 #include <cstddef>
 
-namespace math
+namespace catalyst::math
 {
 
     // ---------------------------------------------------------------------
@@ -254,5 +254,5 @@ namespace math
         return orthographic(-width / F(2), width / F(2), -height / F(2), height / F(2), near, far);
     }
 
-} // namespace math
+} // namespace catalyst::math
 

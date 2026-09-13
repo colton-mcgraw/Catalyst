@@ -4,7 +4,7 @@
 #include "matrix.hpp"
 #include "vector_view.hpp"
 
-namespace math
+namespace catalyst::math
 {
 
     // ---------------------------------------------------------------------
@@ -127,14 +127,14 @@ namespace math
 
         constexpr line_view operator[](size_type index) const noexcept
         {
-            MATH_ASSERT(index < line_count, "math::matrix_view::operator[]: line index out of range");
+            MATH_ASSERT(index < line_count, "catalyst::math::matrix_view::operator[]: line index out of range");
             return line_view(ptr[index]);
         }
 
         constexpr line_view at(size_type index) const
         {
             if (index >= line_count)
-                throw std::out_of_range("math::matrix_view::at: index out of range");
+                throw std::out_of_range("catalyst::math::matrix_view::at: index out of range");
             return line_view(ptr[index]);
         }
 
@@ -151,7 +151,7 @@ namespace math
 
         constexpr reference operator()(size_type row, size_type col) const noexcept
         {
-            MATH_ASSERT(row < Rows && col < Cols, "math::matrix_view::operator(): index out of range");
+            MATH_ASSERT(row < Rows && col < Cols, "catalyst::math::matrix_view::operator(): index out of range");
             if constexpr (Order == matrix_order::row_major)
                 return ptr[row][col];
             else
@@ -161,7 +161,7 @@ namespace math
         constexpr reference at(size_type row, size_type col) const
         {
             if (row >= Rows || col >= Cols)
-                throw std::out_of_range("math::matrix_view::at: index out of range");
+                throw std::out_of_range("catalyst::math::matrix_view::at: index out of range");
             return (*this)(row, col);
         }
 
@@ -327,7 +327,7 @@ namespace math
     template <typename T, std::size_t R, std::size_t C>
     matrix_view(T (&)[R][C]) -> matrix_view<T, R, C, matrix_order::row_major>;
 
-} // namespace math
+} // namespace catalyst::math
 
 // -------------------------------------------------------------------------
 // std integration: structured bindings and std::format
@@ -339,25 +339,25 @@ namespace math
 
 namespace std
 {
-    template <typename T, std::size_t R, std::size_t C, math::matrix_order O>
-    struct tuple_size<math::matrix_view<T, R, C, O>>
-        : std::integral_constant<std::size_t, math::matrix_view<T, R, C, O>::line_count>
+    template <typename T, std::size_t R, std::size_t C, catalyst::math::matrix_order O>
+    struct tuple_size<catalyst::math::matrix_view<T, R, C, O>>
+        : std::integral_constant<std::size_t, catalyst::math::matrix_view<T, R, C, O>::line_count>
     {
     };
 
-    template <std::size_t I, typename T, std::size_t R, std::size_t C, math::matrix_order O>
-    struct tuple_element<I, math::matrix_view<T, R, C, O>>
+    template <std::size_t I, typename T, std::size_t R, std::size_t C, catalyst::math::matrix_order O>
+    struct tuple_element<I, catalyst::math::matrix_view<T, R, C, O>>
     {
-        using type = typename math::matrix_view<T, R, C, O>::line_view;
+        using type = typename catalyst::math::matrix_view<T, R, C, O>::line_view;
     };
 
-    template <typename T, std::size_t R, std::size_t C, math::matrix_order O, typename CharT>
-    struct formatter<math::matrix_view<T, R, C, O>, CharT> : formatter<math::matrix<std::remove_cv_t<T>, R, C, O>, CharT>
+    template <typename T, std::size_t R, std::size_t C, catalyst::math::matrix_order O, typename CharT>
+    struct formatter<catalyst::math::matrix_view<T, R, C, O>, CharT> : formatter<catalyst::math::matrix<std::remove_cv_t<T>, R, C, O>, CharT>
     {
         template <typename FormatContext>
-        auto format(const math::matrix_view<T, R, C, O> &v, FormatContext &ctx) const
+        auto format(const catalyst::math::matrix_view<T, R, C, O> &v, FormatContext &ctx) const
         {
-            return formatter<math::matrix<std::remove_cv_t<T>, R, C, O>, CharT>::format(v.to_matrix(), ctx);
+            return formatter<catalyst::math::matrix<std::remove_cv_t<T>, R, C, O>, CharT>::format(v.to_matrix(), ctx);
         }
     };
 } // namespace std

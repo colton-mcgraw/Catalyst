@@ -1,3 +1,8 @@
+# detail/middleware_entry.hpp stores the erased middleware in core::detail::move_only_function.
+# Required, not optional: see cmake/CatalystModuleDeps.cmake.
+include(CatalystModuleDeps)
+catalyst_require_modules(logging core)
+
 add_library(catalyst_logging STATIC
   logging.cpp
   format.cpp
@@ -23,6 +28,12 @@ target_include_directories(catalyst_logging
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>
 )
+
+# The generated <catalyst/config.hpp>.
+target_link_libraries(catalyst_logging PUBLIC catalyst::config)
+
+# detail/middleware_entry.hpp stores the erased middleware in core::detail::move_only_function.
+target_link_libraries(catalyst_logging PUBLIC catalyst::core)
 
 # The floor below which log calls are compiled out. It is defined on the public interface because
 # the level functions are templates: two translation units that disagree about the floor would be

@@ -16,7 +16,7 @@
 // about any particular container; the container headers add their own
 // partial specializations of detail::element on top.
 
-namespace math
+namespace catalyst::math
 {
 
     // ---------------------------------------------------------------------
@@ -118,4 +118,4 @@ namespace math
         using accumulator_t = std::conditional_t<std::is_void_v<Accumulator>, Default, Accumulator>;
     } // namespace detail
 
-} // namespace math
+} // namespace catalyst::math

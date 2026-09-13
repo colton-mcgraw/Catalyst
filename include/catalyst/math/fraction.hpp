@@ -14,7 +14,7 @@
 #include <type_traits>
 #include <utility>
 
-namespace math
+namespace catalyst::math
 {
 
     // ---------------------------------------------------------------------
@@ -362,7 +362,7 @@ namespace math
         }
     };
 
-} // namespace math
+} // namespace catalyst::math
 
 // -------------------------------------------------------------------------
 // std integration: hashing, std::format
@@ -371,20 +371,20 @@ namespace math
 namespace std
 {
     template <typename Integer>
-    struct hash<math::fraction<Integer>>
+    struct hash<catalyst::math::fraction<Integer>>
     {
-        std::size_t operator()(const math::fraction<Integer> &f) const noexcept
+        std::size_t operator()(const catalyst::math::fraction<Integer> &f) const noexcept
         {
             std::size_t seed = 0;
-            math::detail::hash_combine(seed, f.numerator);
-            math::detail::hash_combine(seed, f.denominator);
+            catalyst::math::detail::hash_combine(seed, f.numerator);
+            catalyst::math::detail::hash_combine(seed, f.denominator);
             return seed;
         }
     };
 
     // Formats as "3/4"; an integer value prints without the denominator.
     template <typename Integer, typename CharT>
-    struct formatter<math::fraction<Integer>, CharT>
+    struct formatter<catalyst::math::fraction<Integer>, CharT>
     {
         constexpr auto parse(basic_format_parse_context<CharT> &ctx)
         {
@@ -395,7 +395,7 @@ namespace std
         }
 
         template <typename FormatContext>
-        auto format(const math::fraction<Integer> &f, FormatContext &ctx) const
+        auto format(const catalyst::math::fraction<Integer> &f, FormatContext &ctx) const
         {
             auto out = ctx.out();
             ctx.advance_to(out);

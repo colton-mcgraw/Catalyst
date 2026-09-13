@@ -6,7 +6,7 @@
 #include <numbers>
 #include <type_traits>
 
-namespace math
+namespace catalyst::math
 {
 
     // ---------------------------------------------------------------------
@@ -52,4 +52,4 @@ namespace math
         return radians * (F(180) / std::numbers::pi_v<F>);
     }
 
-} // namespace math
+} // namespace catalyst::math

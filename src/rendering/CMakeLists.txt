@@ -1,3 +1,8 @@
+# rendering/events.hpp publishes device and swapchain events to a catalyst::events::bus.
+# Required, not optional: see cmake/CatalystModuleDeps.cmake.
+include(CatalystModuleDeps)
+catalyst_require_modules(rendering events)
+
 add_library(catalyst_rendering STATIC
   rendering.cpp
   error.cpp
@@ -21,6 +26,12 @@ target_include_directories(catalyst_rendering
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>
 )
+
+# The generated <catalyst/config.hpp>.
+target_link_libraries(catalyst_rendering PUBLIC catalyst::config)
+
+# rendering/events.hpp publishes device and swapchain events to a catalyst::events::bus.
+target_link_libraries(catalyst_rendering PUBLIC catalyst::events)
 
 # Diagnostics go through catalyst::logging rather than to stderr (src/rendering/detail_log.hpp).
 # PRIVATE: no public rendering header includes a logging one.
@@ -57,6 +68,10 @@ if(_catalyst_rendering_backend STREQUAL "auto")
       "-DCATALYST_RENDERING_BACKEND=vulkan to make a missing SDK an error.")
   endif()
 endif()
+
+# Published to the parent scope so the generated <catalyst/config.hpp> can record which backend this
+# build actually selected -- resolved, never "auto".
+set(_catalyst_rendering_backend_resolved "${_catalyst_rendering_backend}" PARENT_SCOPE)
 
 # CPU-side bookkeeping implementation of the resource contract (src/rendering/detail_backend.hpp).
 # It is the resource layer of the null backend and stands in for backends whose GPU resource layer

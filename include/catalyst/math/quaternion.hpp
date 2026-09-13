@@ -13,7 +13,7 @@
 #include <format>
 #include <functional>
 
-namespace math
+namespace catalyst::math
 {
 
     // ---------------------------------------------------------------------
@@ -76,7 +76,7 @@ namespace math
         static constexpr quaternion from_axis_angle(const V &axis, T angle) noexcept
         {
             // Qualified: the unqualified name would find the member.
-            const vector_type k = math::normalized(axis.template cast<T>());
+            const vector_type k = catalyst::math::normalized(axis.template cast<T>());
             const T half = angle / T(2);
             const T s = detail::sin_value(half);
             return {k.x() * s, k.y() * s, k.z() * s, detail::cos_value(half)};
@@ -338,7 +338,7 @@ namespace math
         return a * wa + target * wb;
     }
 
-} // namespace math
+} // namespace catalyst::math
 
 // -------------------------------------------------------------------------
 // std integration: hashing and std::format
@@ -347,15 +347,15 @@ namespace math
 namespace std
 {
     template <typename T>
-    struct hash<math::quaternion<T>>
+    struct hash<catalyst::math::quaternion<T>>
     {
-        std::size_t operator()(const math::quaternion<T> &q) const noexcept
+        std::size_t operator()(const catalyst::math::quaternion<T> &q) const noexcept
         {
             std::size_t seed = 0;
-            math::detail::hash_combine(seed, q.x);
-            math::detail::hash_combine(seed, q.y);
-            math::detail::hash_combine(seed, q.z);
-            math::detail::hash_combine(seed, q.w);
+            catalyst::math::detail::hash_combine(seed, q.x);
+            catalyst::math::detail::hash_combine(seed, q.y);
+            catalyst::math::detail::hash_combine(seed, q.z);
+            catalyst::math::detail::hash_combine(seed, q.w);
             return seed;
         }
     };
@@ -363,10 +363,10 @@ namespace std
     // Formats as "(x, y, z; w)": the vector part, then the scalar. The
     // format spec applies to every component.
     template <typename T, typename CharT>
-    struct formatter<math::quaternion<T>, CharT> : formatter<T, CharT>
+    struct formatter<catalyst::math::quaternion<T>, CharT> : formatter<T, CharT>
     {
         template <typename FormatContext>
-        auto format(const math::quaternion<T> &q, FormatContext &ctx) const
+        auto format(const catalyst::math::quaternion<T> &q, FormatContext &ctx) const
         {
             auto out = ctx.out();
             *out++ = CharT('(');

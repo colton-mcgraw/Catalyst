@@ -3,7 +3,7 @@
 #include "detail/config.hpp"
 #include "vector.hpp"
 
-namespace math
+namespace catalyst::math
 {
 
     // ---------------------------------------------------------------------
@@ -105,14 +105,14 @@ namespace math
 
         constexpr reference operator[](size_type index) const noexcept
         {
-            MATH_ASSERT(index < N, "math::vector_view::operator[]: index out of range");
+            MATH_ASSERT(index < N, "catalyst::math::vector_view::operator[]: index out of range");
             return ptr[index];
         }
 
         constexpr reference at(size_type index) const
         {
             if (index >= N)
-                throw std::out_of_range("math::vector_view::at: index out of range");
+                throw std::out_of_range("catalyst::math::vector_view::at: index out of range");
             return ptr[index];
         }
 
@@ -274,7 +274,7 @@ namespace math
     template <typename T, std::size_t N>
     vector_view(const vector<T, N> &) -> vector_view<const T, N>;
 
-} // namespace math
+} // namespace catalyst::math
 
 // -------------------------------------------------------------------------
 // std integration: structured bindings and std::format
@@ -287,23 +287,23 @@ namespace math
 namespace std
 {
     template <typename T, std::size_t N>
-    struct tuple_size<math::vector_view<T, N>> : std::integral_constant<std::size_t, N>
+    struct tuple_size<catalyst::math::vector_view<T, N>> : std::integral_constant<std::size_t, N>
     {
     };
 
     template <std::size_t I, typename T, std::size_t N>
-    struct tuple_element<I, math::vector_view<T, N>>
+    struct tuple_element<I, catalyst::math::vector_view<T, N>>
     {
         using type = T;
     };
 
     template <typename T, std::size_t N, typename CharT>
-    struct formatter<math::vector_view<T, N>, CharT> : formatter<math::vector<std::remove_cv_t<T>, N>, CharT>
+    struct formatter<catalyst::math::vector_view<T, N>, CharT> : formatter<catalyst::math::vector<std::remove_cv_t<T>, N>, CharT>
     {
         template <typename FormatContext>
-        auto format(const math::vector_view<T, N> &v, FormatContext &ctx) const
+        auto format(const catalyst::math::vector_view<T, N> &v, FormatContext &ctx) const
         {
-            return formatter<math::vector<std::remove_cv_t<T>, N>, CharT>::format(v.to_vector(), ctx);
+            return formatter<catalyst::math::vector<std::remove_cv_t<T>, N>, CharT>::format(v.to_vector(), ctx);
         }
     };
 } // namespace std

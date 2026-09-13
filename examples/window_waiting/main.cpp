@@ -27,7 +27,7 @@ namespace
 
 int main()
 {
-  catalyst::catalyst_version_anchor();
+  (void)catalyst::version();
 
   using namespace catalyst::platform;
 

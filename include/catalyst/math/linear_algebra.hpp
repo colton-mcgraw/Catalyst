@@ -11,7 +11,7 @@
 #include <optional>
 #include <stdexcept>
 
-namespace math
+namespace catalyst::math
 {
 
     // ---------------------------------------------------------------------
@@ -271,4 +271,4 @@ namespace math
         return is_identity(transpose(m) * m, tolerance);
     }
 
-} // namespace math
+} // namespace catalyst::math

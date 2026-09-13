@@ -9,7 +9,7 @@
 //
 // The one step every std::hash specialization in this library is built from.
 
-namespace math
+namespace catalyst::math
 {
     namespace detail
     {
@@ -23,4 +23,4 @@ namespace math
         }
     } // namespace detail
 
-} // namespace math
+} // namespace catalyst::math

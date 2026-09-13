@@ -1,3 +1,8 @@
+# The window backends buffer events in a catalyst::events::bus, and the Win32 backend converts key names with catalyst::text.
+# Required, not optional: see cmake/CatalystModuleDeps.cmake.
+include(CatalystModuleDeps)
+catalyst_require_modules(platform events text)
+
 # This module used to require catalyst::core, on the grounds that the window backends buffered
 # events in a core event_queue and window.hpp exposed core event types. Neither is true any more:
 # nothing under include/catalyst/platform or src/platform includes a core header, and the events
@@ -17,6 +22,13 @@ target_include_directories(catalyst_platform
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>
 )
+
+# The generated <catalyst/config.hpp>.
+target_link_libraries(catalyst_platform PUBLIC catalyst::config)
+
+# The window backends buffer events in a catalyst::events::bus and the Win32 backend converts key
+# names with catalyst::text. Both are used only from .cpp here, so neither reaches a consumer.
+target_link_libraries(catalyst_platform PRIVATE catalyst::events catalyst::text)
 
 set(CATALYST_PLATFORM_BACKEND "auto" CACHE STRING "Platform backend (auto|win32|null)")
 set_property(CACHE CATALYST_PLATFORM_BACKEND PROPERTY STRINGS auto win32 null)

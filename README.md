@@ -178,23 +178,20 @@ Catalyst is modular: you can link individual modules, or link the monolithic umb
 
 - **Monolithic**: `CATALYST_BUILD_ALL` (default: `ON`)
   - Builds the `catalyst` target (aliases: `catalyst::catalyst`, `catalyst::all`) which links all enabled modules.
-- **Modules** (all default to `ON`):
-  - `CATALYST_BUILD_ANIMATION`
-  - `CATALYST_BUILD_AUDIO`
-  - `CATALYST_BUILD_CORE`
-  - `CATALYST_BUILD_INPUT`
-  - `CATALYST_BUILD_MATH`
-  - `CATALYST_BUILD_NET`
-  - `CATALYST_BUILD_PHYSICS`
-  - `CATALYST_BUILD_PLATFORM`
-  - `CATALYST_BUILD_RENDERING`
-  - `CATALYST_BUILD_RESOURCE`
-  - `CATALYST_BUILD_SCENE`
-  - `CATALYST_BUILD_UI`
-  - `CATALYST_BUILD_UTILS`
+- **Modules** (all default to `ON`): `CATALYST_BUILD_ANIMATION`, `CATALYST_BUILD_AUDIO`,
+  `CATALYST_BUILD_CORE`, `CATALYST_BUILD_EVENTS`, `CATALYST_BUILD_INPUT`, `CATALYST_BUILD_LOGGING`,
+  `CATALYST_BUILD_MATH`, `CATALYST_BUILD_NET`, `CATALYST_BUILD_PHYSICS`, `CATALYST_BUILD_PLATFORM`,
+  `CATALYST_BUILD_RENDERING`, `CATALYST_BUILD_RESOURCE`, `CATALYST_BUILD_SCENE`,
+  `CATALYST_BUILD_TEXT`, `CATALYST_BUILD_UI`, `CATALYST_BUILD_UTILS`
 - **Extras**:
   - `CATALYST_BUILD_EXAMPLES` (default: `ON`)
-  - `CATALYST_BUILD_TESTS` (default: `OFF`)
+  - `CATALYST_BUILD_TESTS` (default: `ON`)
+  - `CATALYST_BUILD_BENCHMARKS` (default: `ON`)
+  - `CATALYST_RESOURCE_STB` (default: `ON`) — fetches stb_image at a pinned commit for the source-format
+    image decoders. `OFF` makes the resource module dependency-free; `load_image` then reports
+    `unsupported_format` for PNG, JPEG and friends but still reads cooked KTX2 and DDS containers.
+  - `CATALYST_LOG_COMPILED_LEVEL` (default: `trace`) — the floor below which `catalyst::logging` calls are
+    compiled out entirely. One of `trace`, `debug`, `info`, `warn`, `error`, `fatal`, `critical`.
 
 - **Backend selection**:
   - `CATALYST_INPUT_BACKEND` (default: `auto`) values: `auto`, `win32`, `null`
@@ -240,13 +237,69 @@ cmake -S . -B build \
 cmake --build build --config Release
 ```
 
+## Installing and consuming
+
+Catalyst installs, and exports a CMake package, so it does not have to be an `add_subdirectory` of
+your tree:
+
+```bash
+cmake -S . -B build -DCMAKE_INSTALL_PREFIX=/where/you/want/it
+cmake --build build
+cmake --install build
+```
+
+Then, from another project — every module is a component:
+
+```cmake
+find_package(Catalyst 0.1 REQUIRED COMPONENTS audio rendering math)
+
+target_link_libraries(my_app PRIVATE catalyst::audio catalyst::rendering catalyst::math)
+```
+
+Asking for a module the install was not built with is an error naming what is missing and what the
+install does contain, rather than a link failure later. `find_package` also sets `CATALYST_MODULES`
+and `CATALYST_RENDERING_BACKEND_NAME` so a build can branch on either.
+
 ## Includes
 
-- Include everything (umbrella header):
+- Include everything this build contains (umbrella header):
   - `#include <catalyst/catalyst.hpp>`
 - Include only a module:
-  - `#include <catalyst/physics/physics.hpp>`
   - `#include <catalyst/rendering/rendering.hpp>`
+  - `#include <catalyst/audio/audio.hpp>`
+
+### `<catalyst/config.hpp>`
+
+Generated at configure time, and the way to ask what a given build of Catalyst contains:
+
+```cpp
+#include <catalyst/config.hpp>
+
+#if CATALYST_HAS_AUDIO
+#  include <catalyst/audio/audio.hpp>
+#endif
+
+static_assert(CATALYST_VERSION >= CATALYST_VERSION_ENCODE(0, 1, 0));
+```
+
+It defines `CATALYST_HAS_<MODULE>` for all sixteen modules, `CATALYST_VERSION_MAJOR` / `_MINOR` /
+`_PATCH` / `_STRING`, the comparable `CATALYST_VERSION` with `CATALYST_VERSION_ENCODE`,
+`CATALYST_RENDERING_BACKEND_NAME` (resolved, never `"auto"`) and `CATALYST_HAS_STB_IMAGE`. The
+umbrella header uses these to include only what was actually built.
+
+### Namespaces
+
+Everything lives under `catalyst::`, including the math library — `catalyst::math::vec3f`. If you
+want the shorter spelling in a translation unit dense with vector maths, ask for it explicitly:
+
+```cpp
+#include <catalyst/math/alias.hpp>   // namespace math = catalyst::math;
+
+math::vec3f up{0.0f, 1.0f, 0.0f};
+```
+
+Never include that header from a public header of your own: a namespace alias at global scope
+reaches everything that includes it, transitively.
 
 ## Components
 

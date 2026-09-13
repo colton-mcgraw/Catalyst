@@ -1,3 +1,8 @@
+# loader.hpp and vfs.hpp publish to a catalyst::events::bus; json/scan.hpp and csv/parser.hpp are built on catalyst::text.
+# Required, not optional: see cmake/CatalystModuleDeps.cmake.
+include(CatalystModuleDeps)
+catalyst_require_modules(resource events text)
+
 add_library(catalyst_resource STATIC
   resource.cpp
 
@@ -43,6 +48,13 @@ target_include_directories(catalyst_resource
     $<INSTALL_INTERFACE:include>
 )
 
+# The generated <catalyst/config.hpp>.
+target_link_libraries(catalyst_resource PUBLIC catalyst::config)
+
+# loader.hpp and vfs.hpp publish to a catalyst::events::bus; json/scan.hpp and csv/parser.hpp are
+# built on catalyst::text's UTF-8 scanner. Both are header-only, and both are public dependencies.
+target_link_libraries(catalyst_resource PUBLIC catalyst::events catalyst::text)
+
 # The asset system reuses catalyst::rendering's `format`, `resource_handle` and `extent3d` rather
 # than defining its own. <catalyst/rendering/types.hpp> is constexpr enums and templates with no
 # external linkage, so this is an include-path dependency and NOT a link dependency: a build with
@@ -70,7 +82,12 @@ if(CATALYST_RESOURCE_STB)
   include(${PROJECT_SOURCE_DIR}/cmake/stb.cmake)
 
   target_sources(catalyst_resource PRIVATE detail/stb_image_impl.cpp)
-  target_link_libraries(catalyst_resource PRIVATE catalyst::stb)
+  # $<BUILD_INTERFACE:> so stb stays out of the install export. A static library's PRIVATE link
+  # still lands in INTERFACE_LINK_LIBRARIES as $<LINK_ONLY:...>, and catalyst_stb points at a
+  # FetchContent source directory that does not exist after install -- nor should it, since nothing
+  # in <catalyst/resource/image.hpp> mentions stb. This keeps the dependency where it belongs: in
+  # the build, and nowhere else.
+  target_link_libraries(catalyst_resource PRIVATE $<BUILD_INTERFACE:catalyst::stb>)
   target_compile_definitions(catalyst_resource PRIVATE CATALYST_RESOURCE_HAS_STB=1)
 
   # Third-party code compiled verbatim at a pinned commit. Its warnings are not ours to fix and a

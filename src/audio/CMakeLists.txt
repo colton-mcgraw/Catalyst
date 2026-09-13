@@ -1,3 +1,8 @@
+# Device and stream events are published to a catalyst::events::bus.
+# Required, not optional: see cmake/CatalystModuleDeps.cmake.
+include(CatalystModuleDeps)
+catalyst_require_modules(audio events)
+
 # The null backend is always compiled, so the module builds, links and tests on every platform, and
 # the offline renderer needs no backend at all. Platform backends are added conditionally and
 # announce themselves to the registry through CATALYST_AUDIO_HAS_* definitions. All backends live in
@@ -24,8 +29,13 @@ target_include_directories(catalyst_audio
     ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
-# Device and stream events are published to a catalyst::events::bus, which is header-only, so this
-# is an include dependency rather than a link one - it comes in with the include directory above.
+# The generated <catalyst/config.hpp>.
+target_link_libraries(catalyst_audio PUBLIC catalyst::config)
+
+# Device and stream events are published to a catalyst::events::bus. It is header-only, so linking
+# it costs nothing at link time -- but it is a real dependency of a public header, and saying so is
+# what puts it in the build graph and in the install export.
+target_link_libraries(catalyst_audio PUBLIC catalyst::events)
 
 set(CATALYST_AUDIO_BACKEND "auto" CACHE STRING "Audio backend (auto|win32|null)")
 set_property(CACHE CATALYST_AUDIO_BACKEND PROPERTY STRINGS auto win32 null)

@@ -3,6 +3,11 @@
 #include <catalyst/math/transform.hpp>
 #include <catalyst/math/vector.hpp>
 
+// The short `math::` spelling below comes from this header, and only from this
+// header -- the types live in catalyst::math. Including it here also keeps the
+// alias itself covered by the suite.
+#include <catalyst/math/alias.hpp>
+
 #include "test_common.hpp"
 
 namespace

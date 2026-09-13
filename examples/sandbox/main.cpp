@@ -22,7 +22,7 @@ namespace
 
 int main()
 {
-  catalyst::catalyst_version_anchor();
+  (void)catalyst::version();
 
   // One console sink is all it takes for the calls below to reach the terminal, and colour turns
   // itself on when the stream turns out to be one.

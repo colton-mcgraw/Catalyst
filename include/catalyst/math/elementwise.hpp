@@ -10,7 +10,7 @@
 #include <cmath>
 #include <cstddef>
 
-namespace math
+namespace catalyst::math
 {
 
     // ---------------------------------------------------------------------
@@ -299,4 +299,4 @@ namespace math
         return true;
     }
 
-} // namespace math
+} // namespace catalyst::math

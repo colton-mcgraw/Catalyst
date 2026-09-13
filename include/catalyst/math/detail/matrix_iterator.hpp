@@ -22,7 +22,7 @@
 // never crosses a subobject boundary and stays valid in constant
 // evaluation.
 
-namespace math
+namespace catalyst::math
 {
 
     template <typename T, std::size_t N>
@@ -103,4 +103,4 @@ namespace math
         constexpr auto operator<=>(const matrix_iterator &) const noexcept = default;
     };
 
-} // namespace math
+} // namespace catalyst::math

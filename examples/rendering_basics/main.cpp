@@ -99,7 +99,7 @@ namespace
 int main()
 {
     using namespace catalyst;
-    catalyst_version_anchor();
+    (void)catalyst::version();
 
     // One console sink, and every line below reaches the terminal, coloured when the terminal
     // understands colour. Sending the same log to a file is one more add_sink, and no change here.

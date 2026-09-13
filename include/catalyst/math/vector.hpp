@@ -24,7 +24,7 @@
 // *on* vectors live elsewhere -- geometry.hpp for dot, cross, magnitude and
 // friends, elementwise.hpp for the scalar functions applied per element.
 
-namespace math
+namespace catalyst::math
 {
 
     // ---------------------------------------------------------------------
@@ -129,14 +129,14 @@ namespace math
 
         constexpr decltype(auto) operator[](this auto &&self, size_type index) noexcept
         {
-            MATH_ASSERT(index < N, "math::vector::operator[]: index out of range");
+            MATH_ASSERT(index < N, "catalyst::math::vector::operator[]: index out of range");
             return detail::forward_like<decltype(self)>(self.values[index]);
         }
 
         constexpr decltype(auto) at(this auto &&self, size_type index)
         {
             if (index >= N)
-                throw std::out_of_range("math::vector::at: index out of range");
+                throw std::out_of_range("catalyst::math::vector::at: index out of range");
             return detail::forward_like<decltype(self)>(self.values[index]);
         }
 
@@ -518,7 +518,7 @@ namespace math
         return detail::zip(s, v, std::divides<>{});
     }
 
-} // namespace math
+} // namespace catalyst::math
 
 // -------------------------------------------------------------------------
 // std integration: structured bindings, hashing, std::format
@@ -527,24 +527,24 @@ namespace math
 namespace std
 {
     template <typename T, std::size_t N>
-    struct tuple_size<math::vector<T, N>> : std::integral_constant<std::size_t, N>
+    struct tuple_size<catalyst::math::vector<T, N>> : std::integral_constant<std::size_t, N>
     {
     };
 
     template <std::size_t I, typename T, std::size_t N>
-    struct tuple_element<I, math::vector<T, N>>
+    struct tuple_element<I, catalyst::math::vector<T, N>>
     {
         using type = T;
     };
 
     template <typename T, std::size_t N>
-    struct hash<math::vector<T, N>>
+    struct hash<catalyst::math::vector<T, N>>
     {
-        std::size_t operator()(const math::vector<T, N> &v) const noexcept
+        std::size_t operator()(const catalyst::math::vector<T, N> &v) const noexcept
         {
             std::size_t seed = 0;
             for (const auto &e : v)
-                math::detail::hash_combine(seed, e);
+                catalyst::math::detail::hash_combine(seed, e);
             return seed;
         }
     };
@@ -552,10 +552,10 @@ namespace std
     // Formats as "(x, y, z)". The format spec applies to every element, so
     // std::format("{:.2f}", v) works.
     template <typename T, std::size_t N, typename CharT>
-    struct formatter<math::vector<T, N>, CharT> : formatter<T, CharT>
+    struct formatter<catalyst::math::vector<T, N>, CharT> : formatter<T, CharT>
     {
         template <typename FormatContext>
-        auto format(const math::vector<T, N> &v, FormatContext &ctx) const
+        auto format(const catalyst::math::vector<T, N> &v, FormatContext &ctx) const
         {
             auto out = ctx.out();
             *out++ = CharT('(');

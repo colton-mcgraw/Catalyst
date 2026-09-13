@@ -8,7 +8,7 @@
 #include <cmath>
 #include <cstddef>
 
-namespace math
+namespace catalyst::math
 {
 
     // ---------------------------------------------------------------------
@@ -223,4 +223,4 @@ namespace math
         return result;
     }
 
-} // namespace math
+} // namespace catalyst::math

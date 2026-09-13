@@ -2,12 +2,23 @@
 #include <catalyst/math/geometry.hpp>
 #include <catalyst/math/vector.hpp>
 
+// The short `math::` spelling below comes from this header, and only from this
+// header -- the types live in catalyst::math. Including it here also keeps the
+// alias itself covered by the suite.
+#include <catalyst/math/alias.hpp>
+
 #include "test_common.hpp"
+
+#include <type_traits>
 
 namespace
 {
 
 using catalyst::tests::nearly_equal;
+
+// The alias is an alias, not a second set of types.
+static_assert(std::is_same_v<math::vec3f, catalyst::math::vec3f>);
+static_assert(std::is_same_v<math::vector<float, 4>, catalyst::math::vector<float, 4>>);
 
 void test_vec2f_basics()
 {

@@ -16,7 +16,7 @@
 // a distinct type from const T*, which keeps overloads and diagnostics
 // honest.
 
-namespace math
+namespace catalyst::math
 {
 
     template <typename T>
@@ -97,4 +97,4 @@ namespace math
         constexpr auto operator<=>(const vector_iterator &) const noexcept = default;
     };
 
-} // namespace math
+} // namespace catalyst::math

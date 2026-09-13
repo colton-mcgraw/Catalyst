@@ -27,7 +27,7 @@
 // linear_algebra.hpp, and the per-element scalar functions in
 // elementwise.hpp.
 
-namespace math
+namespace catalyst::math
 {
 
     enum class matrix_order
@@ -272,14 +272,14 @@ namespace math
       public:
         constexpr auto operator[](this auto &&self, size_type index) noexcept
         {
-            MATH_ASSERT(index < line_count, "math::matrix::operator[]: line index out of range");
+            MATH_ASSERT(index < line_count, "catalyst::math::matrix::operator[]: line index out of range");
             return line(std::forward<decltype(self)>(self), index);
         }
 
         constexpr auto at(this auto &&self, size_type index)
         {
             if (index >= line_count)
-                throw std::out_of_range("math::matrix::at: index out of range");
+                throw std::out_of_range("catalyst::math::matrix::at: index out of range");
             return line(std::forward<decltype(self)>(self), index);
         }
 
@@ -313,7 +313,7 @@ namespace math
 
         constexpr decltype(auto) operator()(this auto &&self, size_type row, size_type col) noexcept
         {
-            MATH_ASSERT(row < Rows && col < Cols, "math::matrix::operator(): index out of range");
+            MATH_ASSERT(row < Rows && col < Cols, "catalyst::math::matrix::operator(): index out of range");
             if constexpr (Order == matrix_order::row_major)
                 return detail::forward_like<decltype(self)>(self.elements[row][col]);
             else
@@ -323,7 +323,7 @@ namespace math
         constexpr decltype(auto) at(this auto &&self, size_type row, size_type col)
         {
             if (row >= Rows || col >= Cols)
-                throw std::out_of_range("math::matrix::at: index out of range");
+                throw std::out_of_range("catalyst::math::matrix::at: index out of range");
             return std::forward<decltype(self)>(self)(row, col);
         }
 
@@ -696,7 +696,7 @@ namespace math
         return true;
     }
 
-} // namespace math
+} // namespace catalyst::math
 
 // -------------------------------------------------------------------------
 // std integration: structured bindings, hashing, std::format
@@ -712,44 +712,44 @@ namespace math
 
 namespace std
 {
-    template <typename T, std::size_t R, std::size_t C, math::matrix_order Order>
-    struct tuple_size<math::matrix<T, R, C, Order>>
-        : std::integral_constant<std::size_t, math::matrix<T, R, C, Order>::line_count>
+    template <typename T, std::size_t R, std::size_t C, catalyst::math::matrix_order Order>
+    struct tuple_size<catalyst::math::matrix<T, R, C, Order>>
+        : std::integral_constant<std::size_t, catalyst::math::matrix<T, R, C, Order>::line_count>
     {
     };
 
-    template <std::size_t I, typename T, std::size_t R, std::size_t C, math::matrix_order Order>
-    struct tuple_element<I, math::matrix<T, R, C, Order>>
+    template <std::size_t I, typename T, std::size_t R, std::size_t C, catalyst::math::matrix_order Order>
+    struct tuple_element<I, catalyst::math::matrix<T, R, C, Order>>
     {
-        using type = typename math::matrix<T, R, C, Order>::line_view;
+        using type = typename catalyst::math::matrix<T, R, C, Order>::line_view;
     };
 
-    template <std::size_t I, typename T, std::size_t R, std::size_t C, math::matrix_order Order>
-    struct tuple_element<I, const math::matrix<T, R, C, Order>>
+    template <std::size_t I, typename T, std::size_t R, std::size_t C, catalyst::math::matrix_order Order>
+    struct tuple_element<I, const catalyst::math::matrix<T, R, C, Order>>
     {
-        using type = typename math::matrix<T, R, C, Order>::const_line_view;
+        using type = typename catalyst::math::matrix<T, R, C, Order>::const_line_view;
     };
 
-    template <typename T, std::size_t R, std::size_t C, math::matrix_order Order>
-    struct hash<math::matrix<T, R, C, Order>>
+    template <typename T, std::size_t R, std::size_t C, catalyst::math::matrix_order Order>
+    struct hash<catalyst::math::matrix<T, R, C, Order>>
     {
-        std::size_t operator()(const math::matrix<T, R, C, Order> &m) const noexcept
+        std::size_t operator()(const catalyst::math::matrix<T, R, C, Order> &m) const noexcept
         {
             std::size_t seed = 0;
             for (std::size_t i = 0; i < R; ++i)
                 for (std::size_t j = 0; j < C; ++j)
-                    math::detail::hash_combine(seed, m(i, j));
+                    catalyst::math::detail::hash_combine(seed, m(i, j));
             return seed;
         }
     };
 
     // Formats as "[a, b; c, d]": rows separated by "; ", in (row, column)
     // order whatever the storage. The format spec applies to every element.
-    template <typename T, std::size_t R, std::size_t C, math::matrix_order Order, typename CharT>
-    struct formatter<math::matrix<T, R, C, Order>, CharT> : formatter<T, CharT>
+    template <typename T, std::size_t R, std::size_t C, catalyst::math::matrix_order Order, typename CharT>
+    struct formatter<catalyst::math::matrix<T, R, C, Order>, CharT> : formatter<T, CharT>
     {
         template <typename FormatContext>
-        auto format(const math::matrix<T, R, C, Order> &m, FormatContext &ctx) const
+        auto format(const catalyst::math::matrix<T, R, C, Order> &m, FormatContext &ctx) const
         {
             auto out = ctx.out();
             *out++ = CharT('[');

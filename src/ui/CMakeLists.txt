@@ -1,3 +1,8 @@
+# Geometry and layout are expressed with the vector and rectangle types from catalyst::math.
+# Required, not optional: see cmake/CatalystModuleDeps.cmake.
+include(CatalystModuleDeps)
+catalyst_require_modules(ui math)
+
 add_library(catalyst_ui STATIC
   ui.cpp
   tree.cpp
@@ -12,7 +17,8 @@ target_include_directories(catalyst_ui
     $<INSTALL_INTERFACE:include>
 )
 
+# The generated <catalyst/config.hpp>.
+target_link_libraries(catalyst_ui PUBLIC catalyst::config)
+
 # Geometry and layout are expressed with the vector and rectangle types from catalyst::math.
-if(TARGET catalyst_math)
-  target_link_libraries(catalyst_ui PUBLIC catalyst_math)
-endif()
+target_link_libraries(catalyst_ui PUBLIC catalyst::math)

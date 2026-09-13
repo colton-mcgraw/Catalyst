@@ -18,7 +18,7 @@
 // toolchain (P0533), and forwards to the standard function at run time.
 // Everything here takes and returns a single scalar.
 
-namespace math
+namespace catalyst::math
 {
     namespace detail
     {
@@ -240,4 +240,4 @@ namespace math
         }
     } // namespace detail
 
-} // namespace math
+} // namespace catalyst::math

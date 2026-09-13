@@ -3,7 +3,7 @@
  * SPDX-FileCopyrightText: 2026-Current Catalyst
  *
  * @file
- * @brief `math::detail::forward_like`, a local stand-in for `std::forward_like` (P2445).
+ * @brief `catalyst::math::detail::forward_like`, a local stand-in for `std::forward_like` (P2445).
  * @details It computes the same type and performs the same cast the standard specifies, and exists
  * only because `std::forward_like` is unusable on Clang: every Clang from 18 through 20 rejects
  * libstdc++'s implementation with "function with deduced return type cannot be used before it is
@@ -19,7 +19,7 @@
 
 #include <type_traits>
 
-namespace math::detail
+namespace catalyst::math::detail
 {
 
     /** @brief `const B` when `A` is const, plain `B` otherwise. The standard's `COPY_CONST`. */
@@ -53,4 +53,4 @@ namespace math::detail
         return static_cast<forward_like_t<T, U>>(value);
     }
 
-} // namespace math::detail
+} // namespace catalyst::math::detail

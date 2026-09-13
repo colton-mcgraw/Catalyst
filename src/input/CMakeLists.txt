@@ -1,3 +1,8 @@
+# The module publishes to a catalyst::events::bus and describes positions with catalyst::math vectors.
+# Required, not optional: see cmake/CatalystModuleDeps.cmake.
+include(CatalystModuleDeps)
+catalyst_require_modules(input events math)
+
 add_library(catalyst_input STATIC
   action.cpp
   action_map.cpp
@@ -20,12 +25,13 @@ target_include_directories(catalyst_input
     $<INSTALL_INTERFACE:include>
 )
 
-# The module publishes to a catalyst::events::bus and describes positions with catalyst::math vectors. Both are
-# header-only, so this is an include dependency rather than a link one - but math has a compiled target, and linking it
-# when it is being built keeps the dependency visible to consumers.
-if(TARGET catalyst_math)
-  target_link_libraries(catalyst_input PUBLIC catalyst_math)
-endif()
+# The generated <catalyst/config.hpp>.
+target_link_libraries(catalyst_input PUBLIC catalyst::config)
+
+# The module publishes to a catalyst::events::bus and describes positions with catalyst::math
+# vectors. Both are header-only INTERFACE targets: no link cost, and both appear where they belong
+# in the build graph.
+target_link_libraries(catalyst_input PUBLIC catalyst::events catalyst::math)
 
 set(CATALYST_INPUT_BACKEND "auto" CACHE STRING "Input backend (auto|win32|null)")
 set_property(CACHE CATALYST_INPUT_BACKEND PROPERTY STRINGS auto win32 null)

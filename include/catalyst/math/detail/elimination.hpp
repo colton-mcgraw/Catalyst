@@ -17,7 +17,7 @@
 // return owning matrices, and none of them throws: gauss_jordan reports a
 // singular input by returning false.
 
-namespace math
+namespace catalyst::math
 {
     namespace detail
     {
@@ -137,4 +137,4 @@ namespace math
         }
     } // namespace detail
 
-} // namespace math
+} // namespace catalyst::math
