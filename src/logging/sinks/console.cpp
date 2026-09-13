@@ -11,7 +11,14 @@
 #include <catalyst/logging/sinks/console.hpp>
 
 #include <iostream>
-#include <syncstream>
+// <syncstream> is C++20, and libc++ does not implement it -- __cpp_lib_syncbuf is how the
+// standard lets us ask. Where it is missing, one mutex gives the guarantee that actually matters
+// here; see console_sink::write.
+#if defined(__cpp_lib_syncbuf)
+#  include <syncstream>
+#else
+#  include <mutex>
+#endif
 
 namespace catalyst::logging
 {
@@ -34,9 +41,21 @@ namespace catalyst::logging
 
     void console_sink::write(const log_event &event, line_cache &cache) const
     {
+        const std::string &line = cache.line(format, colored() ? style : plain);
+
+#if defined(__cpp_lib_syncbuf)
         // osyncstream so that lines from different threads do not interleave.
         std::osyncstream output(*stream);
-        output << cache.line(format, colored() ? style : plain) << '\n';
+        output << line << '\n';
+#else
+        // No <syncstream>. Every console write goes through here, so one mutex held across the
+        // whole line gives the same property osyncstream was bought for: a line is emitted whole
+        // rather than interleaved with another thread's. Neither version synchronises against code
+        // that writes to the same stream without going through this sink.
+        static std::mutex write_mutex;
+        const std::scoped_lock lock{write_mutex};
+        *stream << line << '\n';
+#endif
     }
 
     void console_sink::flush() const

@@ -379,7 +379,12 @@ namespace
         bool resumed = false;
         std::vector<std::uint32_t> seen;
 
-        auto task = [&]() -> events::task<void> {
+        // The lambda is named and then called, rather than invoked as a temporary. A lambda
+        // coroutine's closure is not owned by its coroutine frame, so a temporary closure is
+        // destroyed at the end of the full-expression while the body is still suspended, and
+        // resuming then reads a dead object. GCC happened to tolerate it; Clang segfaults, and
+        // -fsanitize=address calls it what it is: stack-use-after-scope.
+        auto body = [&]() -> events::task<void> {
             auto rb = download(dev, target, 0, count * sizeof(std::uint32_t));
             CT_REQUIRE(rb);
 
@@ -390,7 +395,8 @@ namespace
             std::memcpy(seen.data(), bytes->data(), bytes->size());
             resumed = true;
             co_return;
-        }();
+        };
+        auto task = body();
 
         // `events::task` is lazy, so nothing has happened yet - the download has not even been
         // issued.
@@ -429,12 +435,14 @@ namespace
 
         bool resumed = false;
         {
-            auto task = [&]() -> events::task<void> {
+            // Named, then called -- see the note in test_co_await_readback.
+            auto body = [&]() -> events::task<void> {
                 auto rb = download(dev, target, 0, count * sizeof(std::uint32_t));
                 CT_REQUIRE(rb);
                 (void)co_await *rb;
                 resumed = true;
-            }();
+            };
+            auto task = body();
 
             task.start();
 

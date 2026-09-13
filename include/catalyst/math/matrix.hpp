@@ -2,6 +2,7 @@
 
 #include "detail/concepts.hpp"
 #include "detail/config.hpp"
+#include "detail/forward_like.hpp"
 #include "detail/hash.hpp"
 #include "detail/matrix_iterator.hpp"
 #include "vector.hpp"
@@ -307,16 +308,16 @@ namespace math
         // ---- element access ----------------------------------------------
         //
         // Always (row, column), whatever the storage order, so callers never
-        // have to know how the matrix is laid out. std::forward_like keeps
-        // the value category of the matrix, as vector::operator[] does.
+        // have to know how the matrix is laid out. detail::forward_like
+        // keeps the value category of the matrix, as vector::operator[] does.
 
         constexpr decltype(auto) operator()(this auto &&self, size_type row, size_type col) noexcept
         {
             MATH_ASSERT(row < Rows && col < Cols, "math::matrix::operator(): index out of range");
             if constexpr (Order == matrix_order::row_major)
-                return std::forward_like<decltype(self)>(self.elements[row][col]);
+                return detail::forward_like<decltype(self)>(self.elements[row][col]);
             else
-                return std::forward_like<decltype(self)>(self.elements[col][row]);
+                return detail::forward_like<decltype(self)>(self.elements[col][row]);
         }
 
         constexpr decltype(auto) at(this auto &&self, size_type row, size_type col)

@@ -2,6 +2,7 @@
 
 #include "detail/concepts.hpp"
 #include "detail/config.hpp"
+#include "detail/forward_like.hpp"
 #include "detail/hash.hpp"
 #include "detail/vector_iterator.hpp"
 
@@ -121,71 +122,73 @@ namespace math
 
         // ---- element access ----------------------------------------------
         //
-        // std::forward_like keeps the value category of the vector: an
+        // detail::forward_like keeps the value category of the vector: an
         // lvalue vector yields T&, a const one const T&, a temporary T&&.
+        // It stands in for std::forward_like, which no Clang can compile
+        // against libstdc++; see detail/forward_like.hpp.
 
         constexpr decltype(auto) operator[](this auto &&self, size_type index) noexcept
         {
             MATH_ASSERT(index < N, "math::vector::operator[]: index out of range");
-            return std::forward_like<decltype(self)>(self.values[index]);
+            return detail::forward_like<decltype(self)>(self.values[index]);
         }
 
         constexpr decltype(auto) at(this auto &&self, size_type index)
         {
             if (index >= N)
                 throw std::out_of_range("math::vector::at: index out of range");
-            return std::forward_like<decltype(self)>(self.values[index]);
+            return detail::forward_like<decltype(self)>(self.values[index]);
         }
 
         template <std::size_t I>
             requires(I < N)
         constexpr decltype(auto) get(this auto &&self) noexcept
         {
-            return std::forward_like<decltype(self)>(self.values[I]);
+            return detail::forward_like<decltype(self)>(self.values[I]);
         }
 
         constexpr decltype(auto) x(this auto &&self) noexcept
             requires(N > 0)
         {
-            return std::forward_like<decltype(self)>(self.values[0]);
+            return detail::forward_like<decltype(self)>(self.values[0]);
         }
         constexpr decltype(auto) r(this auto &&self) noexcept
             requires(N > 0)
         {
-            return std::forward_like<decltype(self)>(self.values[0]);
+            return detail::forward_like<decltype(self)>(self.values[0]);
         }
 
         constexpr decltype(auto) y(this auto &&self) noexcept
             requires(N > 1)
         {
-            return std::forward_like<decltype(self)>(self.values[1]);
+            return detail::forward_like<decltype(self)>(self.values[1]);
         }
         constexpr decltype(auto) g(this auto &&self) noexcept
             requires(N > 1)
         {
-            return std::forward_like<decltype(self)>(self.values[1]);
+            return detail::forward_like<decltype(self)>(self.values[1]);
         }
 
         constexpr decltype(auto) z(this auto &&self) noexcept
             requires(N > 2)
         {
-            return std::forward_like<decltype(self)>(self.values[2]);
+            return detail::forward_like<decltype(self)>(self.values[2]);
         }
         constexpr decltype(auto) b(this auto &&self) noexcept
             requires(N > 2)
         {
-            return std::forward_like<decltype(self)>(self.values[2]);
+            return detail::forward_like<decltype(self)>(self.values[2]);
         }
 
         constexpr decltype(auto) w(this auto &&self) noexcept
             requires(N > 3)
         {
-            return std::forward_like<decltype(self)>(self.values[3]);
+            return detail::forward_like<decltype(self)>(self.values[3]);
         }
         constexpr decltype(auto) a(this auto &&self) noexcept
             requires(N > 3)
         {
-            return std::forward_like<decltype(self)>(self.values[3]);
+            return detail::forward_like<decltype(self)>(self.values[3]);
         }
 
         // ---- swizzles (return copies) ------------------------------------

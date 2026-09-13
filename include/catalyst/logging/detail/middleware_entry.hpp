@@ -22,6 +22,8 @@
 #include <catalyst/logging/middleware.hpp>
 
 #include <atomic>
+#include <catalyst/core/detail/move_only_function.hpp>
+
 #include <functional>
 #include <memory>
 #include <vector>
@@ -33,7 +35,9 @@ namespace catalyst::logging::detail
     using resume_fn = void (*)(void *, log_event &);
 
     /// The erased middleware, in the one shape both registration forms are wrapped into.
-    using middleware_fn = std::move_only_function<void(log_event &, void *, resume_fn)>;
+    /// core::detail::move_only_function stands in for std::move_only_function, which libc++ does
+    /// not implement; see <catalyst/core/detail/move_only_function.hpp>.
+    using middleware_fn = core::detail::move_only_function<void(log_event &, void *, resume_fn)>;
 
     /**
      * @struct middleware_entry

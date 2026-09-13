@@ -14,18 +14,19 @@ The goal of Catalyst is to offer developers a powerful yet easy-to-use toolkit f
 
 ## Requirements
 
-Catalyst is written against C++23 and uses four features that are only just becoming available:
-deducing this, `std::expected`, `std::forward_like` and `std::move_only_function`. Very few
-toolchains implement all four, so the supported list is short:
+Catalyst is written against C++23 and needs two features that are only just becoming widely
+available: deducing this and `std::expected`.
 
 | Toolchain | Status |
 | --- | --- |
 | GCC 14 or newer | Supported |
+| Clang 19 or newer, with libstdc++ 14+ | Supported |
 | MSVC 19.40 or newer (Visual Studio 2022 17.10+) | Supported |
-| Clang 18 / 19 / 20 | **Does not build.** Against libstdc++, `std::forward_like` fails to compile; against libc++, there is no `std::move_only_function`. |
-| Apple Clang | **Does not build**, for the same reason as Clang with libc++. |
+| GCC 13 | No deducing this. |
+| Clang 18 | libstdc++ gates `<expected>` on `__cpp_concepts >= 202002L`, which Clang only reports from 19. |
+| libc++ / Apple Clang / macOS | **Not yet.** libc++ leaves the floating-point `std::from_chars` overloads deleted, and the JSON and CSV parsers need them. |
 
-CMake checks for all four at configure time and stops with a readable message rather than letting
+CMake checks both features at configure time and stops with a readable message rather than letting
 the build fail hundreds of template errors later. On Ubuntu 24.04 the default `g++` is 13 and will
 not work — install `g++-14` and point CMake at it:
 

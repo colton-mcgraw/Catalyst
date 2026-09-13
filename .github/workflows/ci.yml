@@ -1,11 +1,12 @@
 # Catalyst CI.
 #
-# Catalyst needs a C++23 toolchain that implements deducing this, std::expected, std::forward_like
-# and std::move_only_function (see cmake/CatalystCompilerSupport.cmake). Very little clears that bar
-# today: GCC 14+ and MSVC 19.40+ do, and Clang does not, with either standard library. So the matrix
-# names its compilers explicitly rather than taking the runner image's default, and the two jobs
-# that are expected to fail are marked non-blocking and kept anyway -- their result is the honest
-# status of that platform, and the day one goes green it should be promoted to required.
+# Catalyst needs a C++23 toolchain that implements deducing this and std::expected (see
+# cmake/CatalystCompilerSupport.cmake). GCC 14+, Clang 19+ against libstdc++ 14+, and MSVC 19.40+
+# all clear that bar; distribution defaults often do not, so the matrix names its compilers
+# explicitly rather than taking the runner image's.
+#
+# macOS is the one entry still expected to fail, and it is kept non-blocking rather than deleted
+# because its result is the honest status of macOS support. See the comment on that entry.
 #
 # Tests run against the `null` rendering backend. It is the one configuration that builds and runs
 # everywhere, and the runners have no GPU. The Vulkan backend is compiled but not run, in its own
@@ -27,7 +28,7 @@ jobs:
   build:
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
-    # Two entries are informational rather than blocking; see the comments on them below.
+    # macOS is informational rather than blocking; see the comment on that matrix entry.
     continue-on-error: ${{ matrix.experimental == true }}
 
     strategy:
@@ -42,24 +43,26 @@ jobs:
 
           - name: Linux / Clang 20 + libstdc++ 14
             os: ubuntu-24.04
-            # Expected to fail the configure-time check, and kept to track when that stops being
-            # true. Clang 18, 19 and 20 all reject libstdc++'s std::forward_like ("function with
-            # deduced return type cannot be used before it is defined"), and -stdlib=libc++ is not
-            # a way out: libc++ has no std::move_only_function. g++-14 is installed for its
-            # standard library headers, not its compiler.
+            # g++-14 is installed for its standard library headers, not its compiler: Clang uses the
+            # newest libstdc++ on the box, and 24.04's default 13 is too old for <expected>. Clang 18
+            # would not work either, whatever libstdc++ it is given -- libstdc++ gates <expected> on
+            # __cpp_concepts >= 202002L, which Clang only reports from 19.
             packages: clang-20 g++-14
             cc: clang-20
             cxx: clang++-20
-            experimental: true
 
           - name: Windows / MSVC
             os: windows-2022
 
           - name: macOS / Apple Clang
             os: macos-15
-            # Same expectation as the Clang job above, for the same reasons: Apple Clang ships
-            # libc++ (no std::move_only_function), and pointing it at libstdc++ is not an option on
-            # macOS. Non-blocking, and kept because it is the honest status of macOS support.
+            # Still expected to fail, and kept non-blocking to track when that changes. Apple Clang
+            # ships libc++ and there is no swapping it out on macOS. Catalyst now carries its own
+            # move_only_function and guards the tz-database and <syncstream> paths, so the one
+            # remaining blocker is that libc++ leaves the floating-point std::from_chars overloads
+            # deleted, which catalyst::resource's JSON and CSV number parsing needs. That wants a
+            # real float parser rather than a shim. Promote this to required (drop the line below)
+            # once it passes.
             experimental: true
 
     steps:

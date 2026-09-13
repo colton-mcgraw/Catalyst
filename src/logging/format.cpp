@@ -65,6 +65,16 @@ namespace catalyst::logging
     {
         using namespace std::chrono;
         const auto ms = floor<milliseconds>(tp);
+
+        // __cpp_lib_chrono >= 201907L is the standard's way of asking "does this library have the
+        // tz database?". libc++ answers no -- it reports 201611L and does not declare `time_zone`
+        // or `current_zone` at all -- so this cannot be a runtime check there; naming the types
+        // would not compile. libstdc++ and the MSVC STL answer yes.
+        //
+        // The fallback is the same one the catch below already provided for a machine with no tz
+        // data installed: UTC. A timestamp in UTC is a usable timestamp, and losing the local
+        // offset in a log line is a far smaller cost than losing the platform.
+#if defined(__cpp_lib_chrono) && __cpp_lib_chrono >= 201907L
         try
         {
             // Looked up once: current_zone() is a lookup in the tz database, not a cheap call.
@@ -77,6 +87,9 @@ namespace catalyst::logging
             // No tz database on this machine. UTC is still a usable timestamp.
             return std::format("{:%H:%M:%S}", ms - floor<days>(ms));
         }
+#else
+        return std::format("{:%H:%M:%S}", ms - floor<days>(ms));
+#endif
     }
 
     std::string format_location(const std::source_location &loc)

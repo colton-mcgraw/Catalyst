@@ -1,5 +1,7 @@
 #pragma once
 
+#include <catalyst/core/detail/move_only_function.hpp>
+
 #include "../tag.hpp"
 #include "../task.hpp"
 
@@ -30,10 +32,16 @@ namespace catalyst::events::detail
         async_middleware
     };
 
-    using sync_listener_fn = std::move_only_function<void(const void *)>;
-    using async_listener_fn = std::move_only_function<task<void>(const void *)>;
-    using sync_middleware_fn = std::move_only_function<void(void *, void *, void (*)(void *, void *))>;
-    using async_middleware_fn = std::move_only_function<task<void>(void *, void *, task<void> (*)(void *, void *))>;
+    // core::detail::move_only_function rather than std::move_only_function: libc++ does not
+    // implement the standard one, and that single gap is what kept Catalyst off Clang and macOS.
+    // See <catalyst/core/detail/move_only_function.hpp>.
+    template <typename Signature>
+    using erased_fn = core::detail::move_only_function<Signature>;
+
+    using sync_listener_fn = erased_fn<void(const void *)>;
+    using async_listener_fn = erased_fn<task<void>(const void *)>;
+    using sync_middleware_fn = erased_fn<void(void *, void *, void (*)(void *, void *))>;
+    using async_middleware_fn = erased_fn<task<void>(void *, void *, task<void> (*)(void *, void *))>;
 
     /**
      * @struct slot_base
