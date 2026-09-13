@@ -14,3 +14,4 @@ else()
 endif()
 
 target_include_directories(catalyst_rendering_basics PRIVATE ${PROJECT_SOURCE_DIR}/include)
+target_link_libraries(catalyst_rendering_basics PRIVATE catalyst::config)

@@ -1,11 +1,25 @@
 # CMakeLists.txt for the Catalyst example applications.
-# This CMakeLists.txt file sets up the build configuration for the example applications included with the Catalyst project. It adds subdirectories for each example, which contain their own CMakeLists.txt files that define the specific build instructions for those examples. This structure allows for easy organization and modularity of the example applications, making it straightforward to build and run them as needed. Each example demonstrates different aspects of using the Catalyst libraries, such as window management, event handling, and audio playback.
+#
+# Each example is guarded on the modules it actually links, so a subset build skips the ones it
+# cannot build instead of failing at link time. A skipped example says so at configure time rather
+# than disappearing silently.
 # License: MIT (see LICENSE).
 
-add_subdirectory(sandbox)
-add_subdirectory(window_polling)
-add_subdirectory(window_waiting)
-add_subdirectory(input_events)
-add_subdirectory(input_actions)
-add_subdirectory(rendering_basics)
-add_subdirectory(audio_playback)
+function(catalyst_example directory)
+  foreach(_module ${ARGN})
+    if(NOT TARGET catalyst::${_module})
+      message(STATUS "Catalyst example '${directory}' skipped: needs catalyst::${_module}")
+      return()
+    endif()
+  endforeach()
+
+  add_subdirectory(${directory})
+endfunction()
+
+catalyst_example(sandbox core logging resource)
+catalyst_example(window_polling platform logging events)
+catalyst_example(window_waiting platform logging events)
+catalyst_example(input_events input platform logging events text)
+catalyst_example(input_actions input platform logging events)
+catalyst_example(rendering_basics rendering platform logging)
+catalyst_example(audio_playback audio logging)

@@ -25,6 +25,23 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  format:
+    name: Format
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Pinned to a major version on purpose: clang-format's output shifts between releases, and a
+      # job that reformats differently from the contributor who ran it locally is worse than no job.
+      - name: Install clang-format
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends clang-format-18
+
+      - name: Check formatting
+        run: clang-format-18 --dry-run --Werror $(git ls-files '*.hpp' '*.cpp')
+
   build:
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
@@ -127,7 +144,7 @@ jobs:
         run: cmake --build build --parallel
 
   configurations:
-    name: Module subsets (configure only)
+    name: Module subsets
     runs-on: ubuntu-24.04
 
     steps:
@@ -139,21 +156,58 @@ jobs:
           sudo apt-get install -y --no-install-recommends ninja-build g++-14
 
       # The module switches are the library's advertised feature, so something has to exercise them.
-      # Configure only for now: examples, tests and benchmarks are still added unconditionally, so a
-      # subset build links against modules that were switched off. Turn these into full builds once
-      # those trees are guarded.
-      - name: Configure subsets
+      # These build rather than just configure: the tests, examples and benchmarks are guarded on
+      # the modules they link, so a subset that configures is a subset that should also link.
+      - name: Build subsets
         env:
           CC: gcc-14
           CXX: g++-14
         run: |
           set -eux
-          cmake -S . -B build-default -G Ninja
-          cmake -S . -B build-no-core -G Ninja -DCATALYST_BUILD_CORE=OFF
-          cmake -S . -B build-no-audio -G Ninja -DCATALYST_BUILD_AUDIO=OFF
-          cmake -S . -B build-no-stb -G Ninja -DCATALYST_RESOURCE_STB=OFF
-          cmake -S . -B build-subset -G Ninja \
-            -DCATALYST_BUILD_ALL=OFF \
-            -DCATALYST_BUILD_RENDERING=ON \
-            -DCATALYST_BUILD_UI=OFF \
-            -DCATALYST_BUILD_CORE=ON
+          subset() {
+            local name="$1"; shift
+            cmake -S . -B "build-$name" -G Ninja -DCATALYST_RENDERING_BACKEND=null "$@"
+            cmake --build "build-$name" --parallel
+          }
+          subset default
+          subset no-audio    -DCATALYST_BUILD_AUDIO=OFF
+          subset no-stb      -DCATALYST_RESOURCE_STB=OFF
+          subset no-monolith -DCATALYST_BUILD_ALL=OFF
+          subset headless    -DCATALYST_BUILD_PLATFORM=OFF -DCATALYST_BUILD_RENDERING=OFF -DCATALYST_BUILD_UI=OFF -DCATALYST_BUILD_INPUT=OFF
+          subset parsers-only -DCATALYST_BUILD_ALL=OFF -DCATALYST_BUILD_AUDIO=OFF -DCATALYST_BUILD_INPUT=OFF \
+                              -DCATALYST_BUILD_PLATFORM=OFF -DCATALYST_BUILD_RENDERING=OFF -DCATALYST_BUILD_UI=OFF
+
+      # The install and the package config are part of the public surface now, so something has to
+      # prove a separate project can actually consume them.
+      - name: Install and consume
+        env:
+          CC: gcc-14
+          CXX: g++-14
+        run: |
+          set -eux
+          cmake -S . -B build-install -G Ninja -DCMAKE_BUILD_TYPE=Release \
+            -DCATALYST_RENDERING_BACKEND=null -DCMAKE_INSTALL_PREFIX="$PWD/install-prefix"
+          cmake --build build-install --parallel
+          cmake --install build-install
+
+          mkdir -p consumer && cd consumer
+          cat > CMakeLists.txt <<'CMAKE'
+          cmake_minimum_required(VERSION 3.16)
+          project(CatalystConsumer LANGUAGES CXX)
+          set(CMAKE_CXX_STANDARD 23)
+          set(CMAKE_CXX_STANDARD_REQUIRED ON)
+          find_package(Catalyst 0.1 REQUIRED COMPONENTS audio rendering math events)
+          add_executable(consumer main.cpp)
+          target_link_libraries(consumer PRIVATE catalyst::audio catalyst::rendering catalyst::math catalyst::events)
+          CMAKE
+          cat > main.cpp <<'CPP'
+          #include <catalyst/config.hpp>
+          #include <catalyst/math/geometry.hpp>
+          #include <catalyst/math/vector.hpp>
+          static_assert(CATALYST_HAS_AUDIO && CATALYST_HAS_EVENTS);
+          static_assert(CATALYST_VERSION >= CATALYST_VERSION_ENCODE(0, 1, 0));
+          int main() { return catalyst::math::magnitude(catalyst::math::vec3f{0.0f, 1.0f, 0.0f}) == 1.0f ? 0 : 1; }
+          CPP
+          cmake -S . -B build -G Ninja -DCMAKE_PREFIX_PATH="$GITHUB_WORKSPACE/install-prefix"
+          cmake --build build
+          ./build/consumer

@@ -18,3 +18,19 @@ namespace catalyst::core
     const char *module_name();
 
 } // namespace catalyst::core
+
+namespace catalyst
+{
+
+    /**
+     * @fn version
+     * @brief The version of Catalyst this was built from, as a string -- the same value as
+     * @ref CATALYST_VERSION_STRING in the generated <catalyst/config.hpp>.
+     * @details Here rather than in the monolithic library's translation unit, where it used to
+     * live: a build with CATALYST_BUILD_ALL=OFF has a version too, and asking for it should not
+     * require linking every module.
+     * @return A string literal, e.g. `"0.1.0"`.
+     */
+    [[nodiscard]] const char *version() noexcept;
+
+} // namespace catalyst
