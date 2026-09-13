@@ -6,10 +6,10 @@
 
 #pragma once
 
-#include "document.hpp"
-#include "scan.hpp"
-#include "tape.hpp"
-#include "value.hpp"
+#include <catalyst/resource/json/document.hpp>
+#include <catalyst/resource/json/scan.hpp>
+#include <catalyst/resource/json/tape.hpp>
+#include <catalyst/resource/json/value.hpp>
 
 #include <cstddef>
 #include <cstdint>

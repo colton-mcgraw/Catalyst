@@ -8,10 +8,10 @@
 
 #pragma once
 
-#include "document.hpp"
-#include "error.hpp"
-#include "scan.hpp"
-#include "value.hpp"
+#include <catalyst/resource/json/document.hpp>
+#include <catalyst/resource/json/error.hpp>
+#include <catalyst/resource/json/scan.hpp>
+#include <catalyst/resource/json/value.hpp>
 
 #include <cstddef>
 #include <cstdint>

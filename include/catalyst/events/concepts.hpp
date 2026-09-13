@@ -1,7 +1,7 @@
 #pragma once
 
-#include "next.hpp"
-#include "task.hpp"
+#include <catalyst/events/next.hpp>
+#include <catalyst/events/task.hpp>
 
 #include <concepts>
 

@@ -1,8 +1,8 @@
 #pragma once
 
-#include "../matrix.hpp"
-#include "concepts.hpp"
-#include "scalar_math.hpp"
+#include <catalyst/math/detail/concepts.hpp>
+#include <catalyst/math/detail/scalar_math.hpp>
+#include <catalyst/math/matrix.hpp>
 
 #include <cstddef>
 

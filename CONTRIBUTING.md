@@ -71,13 +71,23 @@ reading a destroyed closure — tolerated by GCC, a segfault under Clang — was
 indent, indented namespace bodies, 120 columns, `const char *name` with the pointer bound to the
 name, `<catalyst/...>` includes before the standard library.
 
+Public headers include each other with angle brackets — `#include <catalyst/math/vector.hpp>`, never
+`#include "vector.hpp"`. Angle brackets are what an installed header needs, since a consumer reaches
+it through the include path rather than from the directory next to it, and it is also the only
+spelling that resolves unambiguously where several modules have a `win32/` subdirectory of their own.
+Quotes stay for headers that are private to `src/` and for test helpers: those are genuinely relative
+to the file including them and are not installed.
+
 Beyond formatting, the convention that matters most here is **comments explain why, not what**. The
 code is readable; what it cannot tell you is which alternative was rejected and what went wrong last
 time. Comments in this codebase carry that, and a patch is more likely to be merged quickly if it
 does the same.
 
-Public headers get Doxygen (`@brief`, `@details`, `@param`, `@return`). Every file starts with the
-SPDX header:
+Public headers get Doxygen (`@brief`, `@details`, `@param`, `@return`). New files start with the
+SPDX header below. The tree is not there yet — it currently has three states: 99 files with this
+block, 161 with an older one-line `License: MIT (see LICENSE).` inside the doc comment, and 92 (most
+of `math/`, plus the examples and benchmarks) with no marker at all. Bringing them to one form is
+worth doing; until then, follow this for anything new rather than matching the file next to it:
 
 ```cpp
 /**

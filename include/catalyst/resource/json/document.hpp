@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include "tape.hpp"
+#include <catalyst/resource/json/tape.hpp>
 
 #include <bit>
 #include <cstddef>

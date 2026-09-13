@@ -13,7 +13,7 @@
 
 #pragma once
 
-#include "reference.hpp"
+#include <catalyst/resource/uri/reference.hpp>
 
 #include <string>
 #include <string_view>

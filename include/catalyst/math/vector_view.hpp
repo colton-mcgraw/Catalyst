@@ -1,7 +1,7 @@
 #pragma once
 
-#include "detail/config.hpp"
-#include "vector.hpp"
+#include <catalyst/math/detail/config.hpp>
+#include <catalyst/math/vector.hpp>
 
 namespace catalyst::math
 {

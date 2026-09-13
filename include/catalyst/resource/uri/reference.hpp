@@ -12,8 +12,8 @@
 
 #pragma once
 
-#include "error.hpp"
-#include "percent.hpp"
+#include <catalyst/resource/uri/error.hpp>
+#include <catalyst/resource/uri/percent.hpp>
 
 #include <compare>
 #include <cstddef>

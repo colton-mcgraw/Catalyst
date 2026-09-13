@@ -1,6 +1,6 @@
 #pragma once
 
-#include "task.hpp"
+#include <catalyst/events/task.hpp>
 
 namespace catalyst::events
 {

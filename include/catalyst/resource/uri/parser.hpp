@@ -17,8 +17,8 @@
 
 #pragma once
 
-#include "charset.hpp"
-#include "error.hpp"
+#include <catalyst/resource/uri/charset.hpp>
+#include <catalyst/resource/uri/error.hpp>
 
 #include <cstddef>
 #include <expected>

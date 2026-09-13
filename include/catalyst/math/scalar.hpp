@@ -1,7 +1,7 @@
 #pragma once
 
-#include "detail/concepts.hpp"
-#include "detail/scalar_math.hpp"
+#include <catalyst/math/detail/concepts.hpp>
+#include <catalyst/math/detail/scalar_math.hpp>
 
 #include <numbers>
 #include <type_traits>

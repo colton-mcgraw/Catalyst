@@ -10,9 +10,9 @@
 
 #pragma once
 
-#include "dialect.hpp"
-#include "table.hpp"
-#include "tape.hpp"
+#include <catalyst/resource/csv/dialect.hpp>
+#include <catalyst/resource/csv/table.hpp>
+#include <catalyst/resource/csv/tape.hpp>
 
 #include <cstddef>
 #include <string>

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "concepts.hpp"
+#include <catalyst/math/detail/concepts.hpp>
 
 #include <cmath>
 #include <limits>

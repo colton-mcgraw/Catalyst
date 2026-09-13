@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../vector_view.hpp"
-#include "concepts.hpp"
+#include <catalyst/math/detail/concepts.hpp>
+#include <catalyst/math/vector_view.hpp>
 
 #include <compare>
 #include <cstddef>

@@ -1,12 +1,12 @@
 #pragma once
 
-#include "concepts.hpp"
-#include "detail/chain.hpp"
-#include "detail/registry.hpp"
-#include "next.hpp"
-#include "tag.hpp"
-#include "task.hpp"
-#include "token.hpp"
+#include <catalyst/events/concepts.hpp>
+#include <catalyst/events/detail/chain.hpp>
+#include <catalyst/events/detail/registry.hpp>
+#include <catalyst/events/next.hpp>
+#include <catalyst/events/tag.hpp>
+#include <catalyst/events/task.hpp>
+#include <catalyst/events/token.hpp>
 
 #include <memory>
 #include <mutex>

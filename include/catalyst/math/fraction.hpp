@@ -1,8 +1,8 @@
 #pragma once
 
-#include "detail/concepts.hpp"
-#include "detail/hash.hpp"
-#include "detail/scalar_math.hpp"
+#include <catalyst/math/detail/concepts.hpp>
+#include <catalyst/math/detail/hash.hpp>
+#include <catalyst/math/detail/scalar_math.hpp>
 
 #include <compare>
 #include <cstddef>

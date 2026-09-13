@@ -7,7 +7,7 @@
 
 #pragma once
 
-#include "error.hpp"
+#include <catalyst/resource/json/error.hpp>
 
 #include <cstddef>
 #include <cstdint>

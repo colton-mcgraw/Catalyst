@@ -11,7 +11,7 @@
 
 #pragma once
 
-#include "error.hpp"
+#include <catalyst/resource/uri/error.hpp>
 
 #include <expected>
 #include <string>

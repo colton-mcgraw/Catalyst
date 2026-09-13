@@ -7,8 +7,8 @@
 
 #pragma once
 
-#include "dialect.hpp"
-#include "tape.hpp"
+#include <catalyst/resource/csv/dialect.hpp>
+#include <catalyst/resource/csv/tape.hpp>
 
 #include <cstddef>
 #include <cstdint>

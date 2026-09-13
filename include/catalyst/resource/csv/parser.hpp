@@ -15,12 +15,11 @@
 
 #pragma once
 
+#include <catalyst/resource/csv/dialect.hpp>
+#include <catalyst/resource/csv/error.hpp>
+#include <catalyst/resource/csv/table.hpp>
+#include <catalyst/resource/csv/tape.hpp>
 #include <catalyst/text/scan.hpp>
-
-#include "dialect.hpp"
-#include "error.hpp"
-#include "table.hpp"
-#include "tape.hpp"
 
 #include <cstddef>
 #include <expected>

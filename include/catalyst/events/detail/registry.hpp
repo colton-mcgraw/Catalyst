@@ -1,9 +1,8 @@
 #pragma once
 
 #include <catalyst/core/detail/move_only_function.hpp>
-
-#include "../tag.hpp"
-#include "../task.hpp"
+#include <catalyst/events/tag.hpp>
+#include <catalyst/events/task.hpp>
 
 #include <algorithm>
 #include <atomic>

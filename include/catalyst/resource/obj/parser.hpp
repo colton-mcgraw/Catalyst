@@ -24,8 +24,7 @@
 #pragma once
 
 #include <catalyst/resource/error.hpp>
-
-#include "obj.hpp"
+#include <catalyst/resource/obj/obj.hpp>
 
 #include <expected>
 #include <string_view>

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "registry.hpp"
+#include <catalyst/events/detail/registry.hpp>
 
 #include <cstddef>
 

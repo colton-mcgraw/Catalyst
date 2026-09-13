@@ -1,12 +1,12 @@
 #pragma once
 
-#include "detail/concepts.hpp"
-#include "detail/config.hpp"
-#include "detail/forward_like.hpp"
-#include "detail/hash.hpp"
-#include "detail/matrix_iterator.hpp"
-#include "vector.hpp"
-#include "vector_view.hpp"
+#include <catalyst/math/detail/concepts.hpp>
+#include <catalyst/math/detail/config.hpp>
+#include <catalyst/math/detail/forward_like.hpp>
+#include <catalyst/math/detail/hash.hpp>
+#include <catalyst/math/detail/matrix_iterator.hpp>
+#include <catalyst/math/vector.hpp>
+#include <catalyst/math/vector_view.hpp>
 
 #include <cstddef>
 #include <format>

@@ -1,8 +1,8 @@
 #pragma once
 
-#include "detail/config.hpp"
-#include "matrix.hpp"
-#include "vector_view.hpp"
+#include <catalyst/math/detail/config.hpp>
+#include <catalyst/math/matrix.hpp>
+#include <catalyst/math/vector_view.hpp>
 
 namespace catalyst::math
 {

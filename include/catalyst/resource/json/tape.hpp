@@ -6,8 +6,8 @@
 
 #pragma once
 
-#include "error.hpp"
-#include "value.hpp"
+#include <catalyst/resource/json/error.hpp>
+#include <catalyst/resource/json/value.hpp>
 
 #include <bit>
 #include <cstddef>

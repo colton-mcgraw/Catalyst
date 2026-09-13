@@ -1,7 +1,7 @@
 #pragma once
 
-#include "detail/registry.hpp"
-#include "tag.hpp"
+#include <catalyst/events/detail/registry.hpp>
+#include <catalyst/events/tag.hpp>
 
 #include <cstddef>
 #include <memory>
