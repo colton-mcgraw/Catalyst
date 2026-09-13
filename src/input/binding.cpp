@@ -359,8 +359,7 @@ namespace catalyst::input
 
         binding_builder touch_position(std::size_t index)
         {
-            return binding_builder{two_axis(device_kind::touchscreen,
-                                            touch_control_of(index, touch_control::x),
+            return binding_builder{two_axis(device_kind::touchscreen, touch_control_of(index, touch_control::x),
                                             touch_control_of(index, touch_control::y))};
         }
 
@@ -434,8 +433,14 @@ namespace catalyst::input
             return *this;
         }
 
-        axis1d_builder::operator binding() const { return m_binding; }
-        binding_builder axis1d_builder::done() const { return binding_builder{m_binding}; }
+        axis1d_builder::operator binding() const
+        {
+            return m_binding;
+        }
+        binding_builder axis1d_builder::done() const
+        {
+            return binding_builder{m_binding};
+        }
 
         // Part order for a composite is (negative, positive) per dimension, which read_binding() relies on to compute
         // each axis as positive - negative. For 2D that is x's left and right first, then y's down and up.
@@ -516,7 +521,10 @@ namespace catalyst::input
 
         axis2d_builder &axis2d_builder::arrows()
         {
-            return up(key_code::up_arrow).down(key_code::down_arrow).left(key_code::left_arrow).right(key_code::right_arrow);
+            return up(key_code::up_arrow)
+                .down(key_code::down_arrow)
+                .left(key_code::left_arrow)
+                .right(key_code::right_arrow);
         }
 
         axis2d_builder &axis2d_builder::wasd()
@@ -524,11 +532,23 @@ namespace catalyst::input
             return up(key_code::w).down(key_code::s).left(key_code::a).right(key_code::d);
         }
 
-        axis2d_builder::operator binding() const { return m_binding; }
-        binding_builder axis2d_builder::done() const { return binding_builder{m_binding}; }
+        axis2d_builder::operator binding() const
+        {
+            return m_binding;
+        }
+        binding_builder axis2d_builder::done() const
+        {
+            return binding_builder{m_binding};
+        }
 
-        axis1d_builder compose1d() { return axis1d_builder{}; }
-        axis2d_builder compose2d() { return axis2d_builder{}; }
+        axis1d_builder compose1d()
+        {
+            return axis1d_builder{};
+        }
+        axis2d_builder compose2d()
+        {
+            return axis2d_builder{};
+        }
 
     } // namespace bind
 

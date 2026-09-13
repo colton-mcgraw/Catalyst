@@ -130,8 +130,8 @@ namespace catalyst::rendering::detail::vulkan
             }
 
             VkWin32SurfaceCreateInfoKHR info{VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR};
-            info.hinstance = sc.desc.window.extra ? static_cast<HINSTANCE>(sc.desc.window.extra)
-                                                  : GetModuleHandleW(nullptr);
+            info.hinstance =
+                sc.desc.window.extra ? static_cast<HINSTANCE>(sc.desc.window.extra) : GetModuleHandleW(nullptr);
             info.hwnd = static_cast<HWND>(sc.desc.window.handle);
 
             const VkResult result = vkCreateWin32SurfaceKHR(dev.instance, &info, nullptr, &sc.surface);
@@ -169,7 +169,8 @@ namespace catalyst::rendering::detail::vulkan
                 return false;
 
             const VkFormat wanted = to_vk_format(sc.desc.pixel_format);
-            auto pick = [&](const VkSurfaceFormatKHR &f) {
+            auto pick = [&](const VkSurfaceFormatKHR &f)
+            {
                 sc.vk_format = f.format;
                 sc.color_space = f.colorSpace;
                 sc.desc.pixel_format = from_vk_format(f.format);
@@ -189,8 +190,7 @@ namespace catalyst::rendering::detail::vulkan
                 {
                     logging::warn<detail::render_log>(
                         "create_swapchain: requested format {} is not presentable here; using {} instead",
-                        static_cast<unsigned>(sc.desc.pixel_format),
-                        static_cast<unsigned>(from_vk_format(f.format)));
+                        static_cast<unsigned>(sc.desc.pixel_format), static_cast<unsigned>(from_vk_format(f.format)));
                     pick(f);
                     return true;
                 }
@@ -226,8 +226,7 @@ namespace catalyst::rendering::detail::vulkan
             if (result != VK_SUCCESS)
             {
                 logging::error<detail::render_log>(
-                    "create_swapchain: vkGetPhysicalDeviceSurfaceCapabilitiesKHR failed ({})",
-                    result_string(result));
+                    "create_swapchain: vkGetPhysicalDeviceSurfaceCapabilitiesKHR failed ({})", result_string(result));
                 return false;
             }
 

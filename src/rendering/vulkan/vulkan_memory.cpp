@@ -52,8 +52,8 @@ namespace catalyst::rendering::detail::vulkan
             const VkResult result = vkAllocateMemory(dev.device, &info, nullptr, &out_memory);
             if (result != VK_SUCCESS)
             {
-                logging::error<detail::render_log>("vkAllocateMemory({} bytes, type {}) failed ({})",
-                                                   req.size, index, result_string(result));
+                logging::error<detail::render_log>("vkAllocateMemory({} bytes, type {}) failed ({})", req.size, index,
+                                                   result_string(result));
                 return false;
             }
             out_flags = dev.memory_properties.memoryTypes[index].propertyFlags;

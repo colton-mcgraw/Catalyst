@@ -12,6 +12,9 @@
 
 #pragma once
 
+#include "error.hpp"
+#include "percent.hpp"
+
 #include <compare>
 #include <cstddef>
 #include <cstdint>
@@ -23,9 +26,6 @@
 #include <string_view>
 #include <utility>
 #include <vector>
-
-#include "error.hpp"
-#include "percent.hpp"
 
 namespace catalyst::resource
 {

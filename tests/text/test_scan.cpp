@@ -9,9 +9,9 @@
  * License: MIT (see LICENSE).
  */
 
-#include "../test_common.hpp"
-
 #include <catalyst/text/scan.hpp>
+
+#include "../test_common.hpp"
 
 #include <cstdint>
 #include <string>

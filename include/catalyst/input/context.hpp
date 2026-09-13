@@ -92,7 +92,8 @@ namespace catalyst::input
          */
         void poll();
 
-        /** @brief Evaluates every enabled action map against the current device state, stamped with the current time. */
+        /** @brief Evaluates every enabled action map against the current device state, stamped with the current time.
+         */
         void update();
 
         /**

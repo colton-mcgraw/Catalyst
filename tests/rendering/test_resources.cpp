@@ -10,10 +10,10 @@
  * is meaningful on the bookkeeping null backend and on a real Vulkan device.
  */
 
+#include <catalyst/rendering/rendering.hpp>
+
 #include "../test_common.hpp"
 #include "test_shaders.hpp"
-
-#include <catalyst/rendering/rendering.hpp>
 
 #include <array>
 #include <cstddef>
@@ -35,9 +35,12 @@ namespace
     {
         switch (stage)
         {
-        case shader_stage::vertex:   return spirv::minimal_vertex_bytes();
-        case shader_stage::fragment: return spirv::minimal_fragment_bytes();
-        case shader_stage::compute:  return spirv::fill_compute_bytes();
+        case shader_stage::vertex:
+            return spirv::minimal_vertex_bytes();
+        case shader_stage::fragment:
+            return spirv::minimal_fragment_bytes();
+        case shader_stage::compute:
+            return spirv::fill_compute_bytes();
         }
         return {};
     }

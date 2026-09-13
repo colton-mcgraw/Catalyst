@@ -17,14 +17,14 @@
 
 #include <catalyst/text/scan.hpp>
 
-#include <cstddef>
-#include <expected>
-#include <string_view>
-
 #include "dialect.hpp"
 #include "error.hpp"
 #include "table.hpp"
 #include "tape.hpp"
+
+#include <cstddef>
+#include <expected>
+#include <string_view>
 
 namespace catalyst::resource::csv::detail
 {
@@ -138,7 +138,6 @@ namespace catalyst::resource::csv
      * @param d The flavour to read; see @ref dialect. Defaults to RFC 4180 with a header row.
      * @return The table, or the first @ref parse_error found.
      */
-    [[nodiscard]] std::expected<table, parse_error> parse_table(std::string_view text,
-                                                                const dialect &d = dialect{});
+    [[nodiscard]] std::expected<table, parse_error> parse_table(std::string_view text, const dialect &d = dialect{});
 
 } // namespace catalyst::resource::csv

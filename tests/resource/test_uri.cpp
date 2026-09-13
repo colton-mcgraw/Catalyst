@@ -1,6 +1,6 @@
-#include "../test_common.hpp"
-
 #include <catalyst/resource/uri/uri.hpp>
+
+#include "../test_common.hpp"
 
 #include <format>
 #include <optional>
@@ -302,8 +302,7 @@ namespace
 
     void test_from_parts()
     {
-        auto full = uri::from_parts(
-            make_parts("foo", "user@example.com:8042", "/over/there", "name=ferret", "nose"));
+        auto full = uri::from_parts(make_parts("foo", "user@example.com:8042", "/over/there", "name=ferret", "nose"));
         CT_REQUIRE(full.has_value());
         CT_REQUIRE(full->view() == "foo://user@example.com:8042/over/there?name=ferret#nose");
 
@@ -428,8 +427,7 @@ namespace
     void test_normalized()
     {
         // Scheme and host lowercase; userinfo and path keep their case.
-        CT_REQUIRE(must_parse("HTTP://User@Example.COM/Path").normalized().view() ==
-                   "http://User@example.com/Path");
+        CT_REQUIRE(must_parse("HTTP://User@Example.COM/Path").normalized().view() == "http://User@example.com/Path");
 
         // Escapes uppercase; escapes of unreserved bytes decode.
         CT_REQUIRE(must_parse("s:/%7ea/%2f").normalized().view() == "s:/~a/%2F");

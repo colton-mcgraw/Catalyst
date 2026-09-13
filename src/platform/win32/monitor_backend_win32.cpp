@@ -1,13 +1,13 @@
 #include "../detail_backend.hpp"
 
 // For EnumDisplayMonitors, GetMonitorInfoW, CreateDCW, GetDeviceCaps, EnumDisplaySettingsW, etc.
+#include "win32_helpers.hpp"
+
 #include <win32/windows_lean.hpp>
 
 #include <algorithm>
 #include <string>
 #include <vector>
-
-#include "win32_helpers.hpp"
 
 namespace catalyst::platform::detail
 {
@@ -98,15 +98,17 @@ namespace catalyst::platform::detail
             EnumDisplayMonitors(nullptr, nullptr, &enum_monitors_proc, reinterpret_cast<LPARAM>(&ctx));
 
             // Ensure a stable ordering (primary first, then by id) for deterministic tests/logs.
-            std::stable_sort(out.begin(), out.end(), [](const monitor_desc &a, const monitor_desc &b) {
-                if (a.primary != b.primary)
-                    return a.primary;
-                return a.id < b.id;
-            });
+            std::stable_sort(out.begin(), out.end(),
+                             [](const monitor_desc &a, const monitor_desc &b)
+                             {
+                                 if (a.primary != b.primary)
+                                     return a.primary;
+                                 return a.id < b.id;
+                             });
 
             return out;
         }
-    }
+    } // namespace
 
     std::size_t get_monitor_count() noexcept
     {

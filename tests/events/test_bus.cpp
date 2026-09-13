@@ -1,6 +1,6 @@
-#include "../test_common.hpp"
-
 #include <catalyst/events/bus.hpp>
+
+#include "../test_common.hpp"
 
 #include <atomic>
 #include <barrier>
@@ -34,7 +34,10 @@ namespace
     };
 
     int g_free_function_calls = 0;
-    void free_handler(const ping &) { ++g_free_function_calls; }
+    void free_handler(const ping &)
+    {
+        ++g_free_function_calls;
+    }
 
     // ---------------------------------------------------------------------
     // Listeners
@@ -46,11 +49,12 @@ namespace
         int calls = 0;
         int last = 0;
 
-        token t = b.add_listener<ping>([&](const ping &e)
-                                       {
-                                           ++calls;
-                                           last = e.value;
-                                       });
+        token t = b.add_listener<ping>(
+            [&](const ping &e)
+            {
+                ++calls;
+                last = e.value;
+            });
 
         CT_REQUIRE(t.valid());
 
@@ -147,12 +151,13 @@ namespace
         int added = 0;
         scoped_token inner;
 
-        auto t = b.add_listener<ping>([&](const ping &)
-                                      {
-                                          ++outer;
-                                          if (!inner.valid())
-                                              inner = b.add_listener<ping>([&](const ping &) { ++added; });
-                                      });
+        auto t = b.add_listener<ping>(
+            [&](const ping &)
+            {
+                ++outer;
+                if (!inner.valid())
+                    inner = b.add_listener<ping>([&](const ping &) { ++added; });
+            });
 
         // A dispatch works on the snapshot it took when it started, so the
         // listener registered here does not run until the next one.
@@ -176,12 +181,13 @@ namespace
         // Runs first, and removes the one that would have run after it. A
         // removal takes effect even later in the dispatch that is already
         // running.
-        auto high = b.add_listener<ping>([&](const ping &)
-                                         {
-                                             ++high_calls;
-                                             low.remove();
-                                         },
-                                         10);
+        auto high = b.add_listener<ping>(
+            [&](const ping &)
+            {
+                ++high_calls;
+                low.remove();
+            },
+            10);
 
         b.dispatch(ping{});
         CT_REQUIRE(high_calls == 1);
@@ -196,17 +202,19 @@ namespace
         int pings = 0;
         int pongs = 0;
 
-        auto t1 = b.add_listener<ping>([&](const ping &)
-                                       {
-                                           ++pings;
-                                           if (pings < 3)
-                                               b.dispatch(pong{});
-                                       });
-        auto t2 = b.add_listener<pong>([&](const pong &)
-                                       {
-                                           ++pongs;
-                                           b.dispatch(ping{});
-                                       });
+        auto t1 = b.add_listener<ping>(
+            [&](const ping &)
+            {
+                ++pings;
+                if (pings < 3)
+                    b.dispatch(pong{});
+            });
+        auto t2 = b.add_listener<pong>(
+            [&](const pong &)
+            {
+                ++pongs;
+                b.dispatch(ping{});
+            });
 
         b.dispatch(ping{});
         CT_REQUIRE(pings == 3);
@@ -218,9 +226,7 @@ namespace
         bus b;
         int calls = 0;
 
-        auto thrower = b.add_listener<ping>([](const ping &) -> void
-                                            { throw std::runtime_error("listener"); },
-                                            10);
+        auto thrower = b.add_listener<ping>([](const ping &) -> void { throw std::runtime_error("listener"); }, 10);
         auto counter = b.add_listener<ping>([&](const ping &) { ++calls; }, 0);
 
         bool caught = false;
@@ -314,11 +320,12 @@ namespace
         int calls = 0;
         int seen = 0;
 
-        auto listener = b.add_listener<ping>([&](const ping &e)
-                                             {
-                                                 ++calls;
-                                                 seen = e.value;
-                                             });
+        auto listener = b.add_listener<ping>(
+            [&](const ping &e)
+            {
+                ++calls;
+                seen = e.value;
+            });
 
         // Returning false stops the event from reaching the listeners.
         auto filter = b.add_middleware<ping>([](ping &e) { return e.value >= 0; });
@@ -343,11 +350,12 @@ namespace
         int seen = 0;
 
         auto listener = b.add_listener<ping>([&](const ping &e) { seen = e.value; });
-        auto doubler = b.add_middleware<ping>([](ping &e)
-                                             {
-                                                 e.value *= 2;
-                                                 return true;
-                                             });
+        auto doubler = b.add_middleware<ping>(
+            [](ping &e)
+            {
+                e.value *= 2;
+                return true;
+            });
 
         b.dispatch(ping{21});
         CT_REQUIRE(seen == 42);
@@ -360,21 +368,23 @@ namespace
 
         auto listener = b.add_listener<ping>([&](const ping &) { order.push_back("listener"); });
 
-        auto outer = b.add_middleware<ping>([&](ping &e, const next<ping> &n)
-                                            {
-                                                order.push_back("outer-before");
-                                                n(e);
-                                                order.push_back("outer-after");
-                                            },
-                                            10);
+        auto outer = b.add_middleware<ping>(
+            [&](ping &e, const next<ping> &n)
+            {
+                order.push_back("outer-before");
+                n(e);
+                order.push_back("outer-after");
+            },
+            10);
 
-        auto inner = b.add_middleware<ping>([&](ping &e, const next<ping> &n)
-                                            {
-                                                order.push_back("inner-before");
-                                                n(e);
-                                                order.push_back("inner-after");
-                                            },
-                                            0);
+        auto inner = b.add_middleware<ping>(
+            [&](ping &e, const next<ping> &n)
+            {
+                order.push_back("inner-before");
+                n(e);
+                order.push_back("inner-after");
+            },
+            0);
 
         b.dispatch(ping{});
 
@@ -395,12 +405,13 @@ namespace
         int inner_runs = 0;
 
         auto listener = b.add_listener<ping>([&](const ping &) { ++calls; });
-        auto inner = b.add_middleware<ping>([&](ping &e, const next<ping> &n)
-                                            {
-                                                ++inner_runs;
-                                                n(e);
-                                            },
-                                            0);
+        auto inner = b.add_middleware<ping>(
+            [&](ping &e, const next<ping> &n)
+            {
+                ++inner_runs;
+                n(e);
+            },
+            0);
 
         // Swallows the event: it never calls next, so nothing below it runs.
         auto blocker = b.add_middleware<ping>([](ping &, const next<ping> &) {}, 10);
@@ -421,11 +432,12 @@ namespace
         int calls = 0;
 
         auto listener = b.add_listener<ping>([&](const ping &) { ++calls; });
-        auto repeater = b.add_middleware<ping>([](ping &e, const next<ping> &n)
-                                               {
-                                                   n(e);
-                                                   n(e);
-                                               });
+        auto repeater = b.add_middleware<ping>(
+            [](ping &e, const next<ping> &n)
+            {
+                n(e);
+                n(e);
+            });
 
         b.dispatch(ping{});
         CT_REQUIRE(calls == 2);
@@ -441,12 +453,13 @@ namespace
         int calls = 0;
         int seen = 0;
 
-        auto t = b.add_listener<ping>([&](const ping &e) -> task<void>
-                                      {
-                                          ++calls;
-                                          seen = e.value;
-                                          co_return;
-                                      });
+        auto t = b.add_listener<ping>(
+            [&](const ping &e) -> task<void>
+            {
+                ++calls;
+                seen = e.value;
+                co_return;
+            });
 
         b.dispatch_async(ping{11}).get();
         CT_REQUIRE(calls == 1);
@@ -460,11 +473,12 @@ namespace
         int async_calls = 0;
 
         auto s = b.add_listener<ping>([&](const ping &) { ++sync_calls; });
-        auto a = b.add_listener<ping>([&](const ping &) -> task<void>
-                                      {
-                                          ++async_calls;
-                                          co_return;
-                                      });
+        auto a = b.add_listener<ping>(
+            [&](const ping &) -> task<void>
+            {
+                ++async_calls;
+                co_return;
+            });
 
         b.dispatch(ping{});
         CT_REQUIRE(sync_calls == 1);
@@ -480,14 +494,14 @@ namespace
         bus b;
         int calls = 0;
 
-        auto listener = b.add_listener<ping>([&](const ping &) -> task<void>
-                                             {
-                                                 ++calls;
-                                                 co_return;
-                                             });
+        auto listener = b.add_listener<ping>(
+            [&](const ping &) -> task<void>
+            {
+                ++calls;
+                co_return;
+            });
 
-        auto filter = b.add_async_middleware<ping>([](ping &e) -> task<bool>
-                                                   { co_return e.value >= 0; });
+        auto filter = b.add_async_middleware<ping>([](ping &e) -> task<bool> { co_return e.value >= 0; });
 
         b.dispatch_async(ping{1}).get();
         CT_REQUIRE(calls == 1);
@@ -516,12 +530,13 @@ namespace
 
         for (int i = 0; i < k_threads; ++i)
         {
-            threads.emplace_back([&]
-                                 {
-                                     start.arrive_and_wait();
-                                     for (int n = 0; n < k_per_thread; ++n)
-                                         b.dispatch(ping{n});
-                                 });
+            threads.emplace_back(
+                [&]
+                {
+                    start.arrive_and_wait();
+                    for (int n = 0; n < k_per_thread; ++n)
+                        b.dispatch(ping{n});
+                });
         }
 
         for (auto &th : threads)

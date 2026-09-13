@@ -55,9 +55,9 @@ namespace catalyst::logging::detail
         /// Held around `write` and `flush` for a sink that declared `serialized`.
         std::mutex serialize;
 
-        std::atomic<std::uint64_t> written{0};    ///< Events handed to the sink.
-        std::atomic<std::uint64_t> filtered{0};   ///< Events the registration's filter turned away.
-        std::atomic<std::uint64_t> exceptions{0}; ///< Calls that threw, and were swallowed.
+        std::atomic<std::uint64_t> written{0};         ///< Events handed to the sink.
+        std::atomic<std::uint64_t> filtered{0};        ///< Events the registration's filter turned away.
+        std::atomic<std::uint64_t> exceptions{0};      ///< Calls that threw, and were swallowed.
         std::atomic<std::uint64_t> nanoseconds{0};     ///< Total time in the sink, when timing is on.
         std::atomic<std::uint64_t> max_nanoseconds{0}; ///< The worst single call, when timing is on.
 

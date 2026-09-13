@@ -48,10 +48,10 @@
 #endif
 #endif
 
-#include <vulkan/vulkan.h>
-
 #include "../detail_backend.hpp"
 #include "../detail_log.hpp"
+
+#include <vulkan/vulkan.h>
 
 #include <array>
 #include <chrono>
@@ -670,7 +670,8 @@ namespace catalyst::rendering::detail::vulkan
     /** Allocates and binds device-local memory for `image`. */
     bool allocate_image_memory(device_state &dev, VkImage image, VkDeviceMemory &out_memory) noexcept;
 
-    /** Flush / invalidate the whole mapped range of a non-coherent allocation (no-ops are cheap enough to skip checks). */
+    /** Flush / invalidate the whole mapped range of a non-coherent allocation (no-ops are cheap enough to skip checks).
+     */
     void flush_host_writes(device_state &dev, VkDeviceMemory memory) noexcept;
     void invalidate_host_reads(device_state &dev, VkDeviceMemory memory) noexcept;
 
@@ -720,9 +721,10 @@ namespace catalyst::rendering::detail::vulkan
      * destination's creation marks, which decide whether the submission has to be ordered after
      * work that might still be reading it - see the file comment in vulkan_transfer.cpp.
      */
-    std::expected<std::uint64_t, error> transfer_once(
-        device_state &dev, resource_id device_id, std::span<const std::byte> data, const creation_marks &created,
-        const std::function<void(VkCommandBuffer, VkBuffer, VkDeviceSize)> &record) noexcept;
+    std::expected<std::uint64_t, error>
+    transfer_once(device_state &dev, resource_id device_id, std::span<const std::byte> data,
+                  const creation_marks &created,
+                  const std::function<void(VkCommandBuffer, VkBuffer, VkDeviceSize)> &record) noexcept;
 
     /**
      * Fills in `sharingMode` and the family list. Concurrent across every distinct family the

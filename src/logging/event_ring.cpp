@@ -15,9 +15,7 @@
 namespace catalyst::logging::detail
 {
 
-    event_ring::event_ring(std::size_t capacity) : slots_(std::max<std::size_t>(capacity, 1))
-    {
-    }
+    event_ring::event_ring(std::size_t capacity) : slots_(std::max<std::size_t>(capacity, 1)) {}
 
     void event_ring::push(const log_event &event)
     {

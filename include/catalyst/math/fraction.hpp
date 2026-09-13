@@ -180,10 +180,7 @@ namespace catalyst::math
             denominator /= g;
         }
 
-        constexpr bool is_reduced() const noexcept
-        {
-            return denominator > 0 && std::gcd(numerator, denominator) == 1;
-        }
+        constexpr bool is_reduced() const noexcept { return denominator > 0 && std::gcd(numerator, denominator) == 1; }
 
         // -----------------------------------------------------------------
         // Observers
@@ -287,7 +284,8 @@ namespace catalyst::math
         constexpr fraction &operator+=(const fraction &other)
         {
             const Integer g = static_cast<Integer>(std::gcd(denominator, other.denominator));
-            const Integer num = static_cast<Integer>(numerator * (other.denominator / g) + other.numerator * (denominator / g));
+            const Integer num =
+                static_cast<Integer>(numerator * (other.denominator / g) + other.numerator * (denominator / g));
             const Integer den = static_cast<Integer>((denominator / g) * other.denominator);
             return *this = fraction(num, den);
         }
@@ -295,7 +293,8 @@ namespace catalyst::math
         constexpr fraction &operator-=(const fraction &other)
         {
             const Integer g = static_cast<Integer>(std::gcd(denominator, other.denominator));
-            const Integer num = static_cast<Integer>(numerator * (other.denominator / g) - other.numerator * (denominator / g));
+            const Integer num =
+                static_cast<Integer>(numerator * (other.denominator / g) - other.numerator * (denominator / g));
             const Integer den = static_cast<Integer>((denominator / g) * other.denominator);
             return *this = fraction(num, den);
         }

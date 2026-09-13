@@ -8,11 +8,11 @@
  * License: MIT (see LICENSE).
  */
 
-#include "detail_backend.hpp"
-
 #include <catalyst/audio/events.hpp>
 #include <catalyst/audio/stream.hpp>
 #include <catalyst/events/bus.hpp>
+
+#include "detail_backend.hpp"
 
 #include <utility>
 

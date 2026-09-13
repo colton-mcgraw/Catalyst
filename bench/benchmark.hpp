@@ -10,7 +10,7 @@
 namespace catalyst::bench
 {
     template <typename Operation>
-    void run(std::string_view name, std::size_t iterations, Operation&& operation)
+    void run(std::string_view name, std::size_t iterations, Operation &&operation)
     {
         using clock = std::chrono::steady_clock;
 
@@ -28,8 +28,7 @@ namespace catalyst::bench
 
         std::cout << name << '\n'
                   << "  iterations: " << iterations << '\n'
-                  << "  total:      " << std::fixed << std::setprecision(3)
-                  << (elapsed_seconds * 1'000.0) << " ms\n"
+                  << "  total:      " << std::fixed << std::setprecision(3) << (elapsed_seconds * 1'000.0) << " ms\n"
                   << "  average:    " << nanoseconds_per_operation << " ns/op\n"
                   << "  throughput: " << operations_per_second << " op/s\n";
     }

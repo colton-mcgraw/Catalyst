@@ -124,7 +124,8 @@ namespace catalyst::logging
     void async_sink::run()
     {
         // A sink that throws must not take the process down from a thread nobody is watching.
-        const auto deliver = [this](const log_event &event) noexcept {
+        const auto deliver = [this](const log_event &event) noexcept
+        {
             try
             {
                 line_cache cache(event);
@@ -138,8 +139,7 @@ namespace catalyst::logging
         std::unique_lock lock(mutex_);
         for (;;)
         {
-            to_worker_.wait(lock,
-                            [this] { return !queue_.empty() || stopping_ || flushes_done_ < flush_requests_; });
+            to_worker_.wait(lock, [this] { return !queue_.empty() || stopping_ || flushes_done_ < flush_requests_; });
 
             if (!queue_.empty())
             {

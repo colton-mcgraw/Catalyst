@@ -27,9 +27,9 @@
 
 #if defined(_WIN32)
 
-#  include "windows_lean.hpp"
+#include "windows_lean.hpp"
 
-#  include <type_traits>
+#include <type_traits>
 
 namespace catalyst::detail::win32
 {

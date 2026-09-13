@@ -62,16 +62,26 @@ namespace catalyst::input
     {
         switch (kind)
         {
-        case device_kind::any: return "any";
-        case device_kind::keyboard: return "keyboard";
-        case device_kind::mouse: return "mouse";
-        case device_kind::gamepad: return "gamepad";
-        case device_kind::joystick: return "joystick";
-        case device_kind::touchscreen: return "touchscreen";
-        case device_kind::pen: return "pen";
-        case device_kind::midi: return "midi";
-        case device_kind::sensor: return "sensor";
-        case device_kind::simulated: return "simulated";
+        case device_kind::any:
+            return "any";
+        case device_kind::keyboard:
+            return "keyboard";
+        case device_kind::mouse:
+            return "mouse";
+        case device_kind::gamepad:
+            return "gamepad";
+        case device_kind::joystick:
+            return "joystick";
+        case device_kind::touchscreen:
+            return "touchscreen";
+        case device_kind::pen:
+            return "pen";
+        case device_kind::midi:
+            return "midi";
+        case device_kind::sensor:
+            return "sensor";
+        case device_kind::simulated:
+            return "simulated";
         }
         return "unknown";
     }
@@ -126,7 +136,8 @@ namespace catalyst::input
                 controls[i].name = key_name(code);
                 controls[i].usage = to_usb_hid(code);
             }
-            // Slot 0 is key_code::unknown and is never actuated; naming it keeps the array dense and the indexing trivial.
+            // Slot 0 is key_code::unknown and is never actuated; naming it keeps the array dense and the indexing
+            // trivial.
             return make_layout(device_kind::keyboard, std::move(controls));
         }();
         return layout;
@@ -181,21 +192,31 @@ namespace catalyst::input
         {
             std::vector<control_info> controls(gamepad_control_count);
 
-            static constexpr std::array<std::string_view, gamepad_button_count> button_names{
-                "A", "B", "X", "Y", "Back", "Guide", "Start",
-                "Left Stick", "Right Stick", "Left Shoulder", "Right Shoulder",
-                "D-Pad Up", "D-Pad Down", "D-Pad Left", "D-Pad Right"};
+            static constexpr std::array<std::string_view, gamepad_button_count> button_names{"A",
+                                                                                             "B",
+                                                                                             "X",
+                                                                                             "Y",
+                                                                                             "Back",
+                                                                                             "Guide",
+                                                                                             "Start",
+                                                                                             "Left Stick",
+                                                                                             "Right Stick",
+                                                                                             "Left Shoulder",
+                                                                                             "Right Shoulder",
+                                                                                             "D-Pad Up",
+                                                                                             "D-Pad Down",
+                                                                                             "D-Pad Left",
+                                                                                             "D-Pad Right"};
             for (std::size_t i = 0; i < gamepad_button_count; ++i)
                 controls[gamepad_button_control_base + i] = {control_kind::button, button_names[i], usb_hid_unknown};
 
             static constexpr std::array<std::string_view, gamepad_axis_count> axis_names{
-                "Left Stick X", "Left Stick Y", "Right Stick X", "Right Stick Y",
-                "Left Trigger", "Right Trigger"};
+                "Left Stick X", "Left Stick Y", "Right Stick X", "Right Stick Y", "Left Trigger", "Right Trigger"};
             for (std::size_t i = 0; i < gamepad_axis_count; ++i)
             {
                 const auto a = static_cast<gamepad_axis>(i);
-                controls[gamepad_axis_control_base + i] = {
-                    is_stick_axis(a) ? control_kind::axis : control_kind::ratio, axis_names[i], usb_hid_unknown};
+                controls[gamepad_axis_control_base + i] = {is_stick_axis(a) ? control_kind::axis : control_kind::ratio,
+                                                           axis_names[i], usb_hid_unknown};
             }
 
             return make_layout(device_kind::gamepad, std::move(controls));
@@ -215,17 +236,21 @@ namespace catalyst::input
             std::vector<control_info> controls(joystick_control_count);
 
             for (std::size_t i = 0; i < max_joystick_buttons; ++i)
-                controls[joystick_button_control_base + i] = {control_kind::button, numbered("Button ", i + 1), usb_hid_unknown};
+                controls[joystick_button_control_base + i] = {control_kind::button, numbered("Button ", i + 1),
+                                                              usb_hid_unknown};
 
             // Centred by default: an axis that rests at an end is re-kinded by the backend when the descriptor says so.
             for (std::size_t i = 0; i < max_joystick_axes; ++i)
-                controls[joystick_axis_control_base + i] = {control_kind::axis, numbered("Axis ", i + 1), usb_hid_unknown};
+                controls[joystick_axis_control_base + i] = {control_kind::axis, numbered("Axis ", i + 1),
+                                                            usb_hid_unknown};
 
             for (std::size_t i = 0; i < max_joystick_hats; ++i)
             {
                 const std::string label = "Hat " + std::to_string(i + 1);
-                controls[joystick_hat_control_base + i * 2] = {control_kind::axis, intern(label + " X"), usb_hid_unknown};
-                controls[joystick_hat_control_base + i * 2 + 1] = {control_kind::axis, intern(label + " Y"), usb_hid_unknown};
+                controls[joystick_hat_control_base + i * 2] = {control_kind::axis, intern(label + " X"),
+                                                               usb_hid_unknown};
+                controls[joystick_hat_control_base + i * 2 + 1] = {control_kind::axis, intern(label + " Y"),
+                                                                   usb_hid_unknown};
             }
 
             return controls;
@@ -322,8 +347,8 @@ namespace catalyst::input
         {
             std::vector<control_info> controls(pen_control_count);
 
-            static constexpr std::array<std::string_view, pen_button_count> button_names{
-                "Tip", "Barrel Button", "Secondary Button", "Eraser"};
+            static constexpr std::array<std::string_view, pen_button_count> button_names{"Tip", "Barrel Button",
+                                                                                         "Secondary Button", "Eraser"};
             for (std::size_t i = 0; i < pen_button_count; ++i)
                 controls[pen_button_control_base + i] = {control_kind::button, button_names[i], usb_hid_unknown};
 
@@ -358,14 +383,22 @@ namespace catalyst::input
     {
         switch (status)
         {
-        case midi_status::note_off: return "note off";
-        case midi_status::note_on: return "note on";
-        case midi_status::poly_pressure: return "poly pressure";
-        case midi_status::control_change: return "control change";
-        case midi_status::program_change: return "program change";
-        case midi_status::channel_pressure: return "channel pressure";
-        case midi_status::pitch_bend: return "pitch bend";
-        case midi_status::system: return "system";
+        case midi_status::note_off:
+            return "note off";
+        case midi_status::note_on:
+            return "note on";
+        case midi_status::poly_pressure:
+            return "poly pressure";
+        case midi_status::control_change:
+            return "control change";
+        case midi_status::program_change:
+            return "program change";
+        case midi_status::channel_pressure:
+            return "channel pressure";
+        case midi_status::pitch_bend:
+            return "pitch bend";
+        case midi_status::system:
+            return "system";
         }
         return "unknown";
     }
@@ -376,8 +409,8 @@ namespace catalyst::input
         // the layout below can point straight at it.
         static const std::array<std::string, midi_note_count> names = []
         {
-            static constexpr std::array<const char *, 12> pitches{
-                "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
+            static constexpr std::array<const char *, 12> pitches{"C",  "C#", "D",  "D#", "E",  "F",
+                                                                  "F#", "G",  "G#", "A",  "A#", "B"};
             std::array<std::string, midi_note_count> out{};
             for (std::size_t i = 0; i < midi_note_count; ++i)
             {
@@ -398,7 +431,8 @@ namespace catalyst::input
             std::vector<control_info> controls(midi_control_count);
 
             for (std::size_t i = 0; i < midi_note_count; ++i)
-                controls[midi_note_control_base + i] = {control_kind::ratio, midi_note_name(static_cast<std::uint8_t>(i)), usb_hid_unknown};
+                controls[midi_note_control_base + i] = {control_kind::ratio,
+                                                        midi_note_name(static_cast<std::uint8_t>(i)), usb_hid_unknown};
 
             for (std::size_t i = 0; i < midi_controller_count; ++i)
                 controls[midi_controller_control_base + i] = {control_kind::ratio, numbered("CC ", i), usb_hid_unknown};

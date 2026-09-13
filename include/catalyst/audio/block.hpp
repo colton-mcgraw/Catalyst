@@ -90,16 +90,10 @@ namespace catalyst::audio
         frame_count position = 0;
 
         /** @brief Where this block starts, as a duration since the stream opened. */
-        [[nodiscard]] constexpr seconds time() const noexcept
-        {
-            return frames_to_time(position, sample_rate);
-        }
+        [[nodiscard]] constexpr seconds time() const noexcept { return frames_to_time(position, sample_rate); }
 
         /** @brief How long this block lasts. */
-        [[nodiscard]] constexpr seconds duration() const noexcept
-        {
-            return frames_to_time(frames, sample_rate);
-        }
+        [[nodiscard]] constexpr seconds duration() const noexcept { return frames_to_time(frames, sample_rate); }
 
         /**
          * @brief The output samples of one frame, one per channel.
@@ -177,8 +171,7 @@ namespace catalyst::audio
             requires renderable<F> && (!std::same_as<std::remove_cv_t<F>, renderer>)
         renderer(F &callable) noexcept
             : object_(const_cast<void *>(static_cast<const void *>(std::addressof(callable)))),
-              invoke_([](void *object, render_block &block) noexcept
-                      { (*static_cast<F *>(object))(block); })
+              invoke_([](void *object, render_block &block) noexcept { (*static_cast<F *>(object))(block); })
         {
         }
 
@@ -196,8 +189,7 @@ namespace catalyst::audio
          * @param function The render function, or null for an empty renderer.
          */
         renderer(function_type function) noexcept
-            : object_(reinterpret_cast<void *>(function)),
-              invoke_(function ? &invoke_function : nullptr)
+            : object_(reinterpret_cast<void *>(function)), invoke_(function ? &invoke_function : nullptr)
         {
         }
 

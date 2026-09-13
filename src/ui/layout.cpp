@@ -9,12 +9,12 @@
  * License: MIT (see LICENSE).
  */
 
+#include <catalyst/ui/layout.hpp>
+
 #include <algorithm>
 #include <cmath>
 #include <limits>
 #include <vector>
-
-#include <catalyst/ui/layout.hpp>
 
 namespace catalyst::ui
 {
@@ -42,10 +42,19 @@ namespace catalyst::ui
             return d == flex_direction::row_reverse || d == flex_direction::column_reverse;
         }
 
-        [[nodiscard]] axis main_axis_of(flex_direction d) noexcept { return is_row(d) ? axis::x : axis::y; }
-        [[nodiscard]] axis cross_axis_of(flex_direction d) noexcept { return is_row(d) ? axis::y : axis::x; }
+        [[nodiscard]] axis main_axis_of(flex_direction d) noexcept
+        {
+            return is_row(d) ? axis::x : axis::y;
+        }
+        [[nodiscard]] axis cross_axis_of(flex_direction d) noexcept
+        {
+            return is_row(d) ? axis::y : axis::x;
+        }
 
-        [[nodiscard]] float get_axis(const extent &e, axis a) noexcept { return (a == axis::x) ? e.x() : e.y(); }
+        [[nodiscard]] float get_axis(const extent &e, axis a) noexcept
+        {
+            return (a == axis::x) ? e.x() : e.y();
+        }
 
         void set_axis(extent &e, axis a, float v) noexcept
         {
@@ -70,8 +79,14 @@ namespace catalyst::ui
             float max_h = k_no_max;
         };
 
-        [[nodiscard]] float min_along(const measured &m, axis a) noexcept { return (a == axis::x) ? m.min_w : m.min_h; }
-        [[nodiscard]] float max_along(const measured &m, axis a) noexcept { return (a == axis::x) ? m.max_w : m.max_h; }
+        [[nodiscard]] float min_along(const measured &m, axis a) noexcept
+        {
+            return (a == axis::x) ? m.min_w : m.min_h;
+        }
+        [[nodiscard]] float max_along(const measured &m, axis a) noexcept
+        {
+            return (a == axis::x) ? m.max_w : m.max_h;
+        }
 
         /**
          * @brief The space a parent offers a child, plus any border-box size it forces on it.
@@ -143,7 +158,8 @@ namespace catalyst::ui
          * @param inner_h_def Whether `inner_h` is the container's final content height rather than an offer.
          * @param inner_w_bounded Whether `inner_w` is a known upper bound at all.
          * @param inner_h_bounded Whether `inner_h` is a known upper bound at all.
-         * @param padding The container's resolved padding, added to child positions so they end up relative to the padding box.
+         * @param padding The container's resolved padding, added to child positions so they end up relative to the
+         * padding box.
          * @return The container's used content size.
          */
         extent layout_children(tree &t, node parent, const resolve_context &ctx, float inner_w, float inner_h,
@@ -441,7 +457,8 @@ namespace catalyst::ui
                 if (self == align::end)
                     pos_cross = line_cross - it.m.margin.end(cross) - item_cross;
                 else if (self == align::center)
-                    pos_cross = (line_cross - (item_cross + it.m.margin.along(cross))) * 0.5f + it.m.margin.start(cross);
+                    pos_cross =
+                        (line_cross - (item_cross + it.m.margin.along(cross))) * 0.5f + it.m.margin.start(cross);
 
                 point p{};
                 if (main == axis::x)
@@ -567,7 +584,8 @@ namespace catalyst::ui
             const bool content_box = (s.sizing == box_sizing::content_box);
             const auto to_border = [&](float v, axis a) noexcept { return content_box ? v + surround.along(a) : v; };
 
-            const auto bound = [&](const length &l, axis a, float fallback) noexcept {
+            const auto bound = [&](const length &l, axis a, float fallback) noexcept
+            {
                 if (l.is_auto)
                     return fallback;
                 return std::max(0.0f, to_border(resolve_or(l, a, ctx, 0.0f), a));
@@ -607,10 +625,10 @@ namespace catalyst::ui
                 spec_h_def = true;
             }
 
-            const float inner_w =
-                std::max(0.0f, spec_w_def ? spec_w - surround.horizontal() : oc.avail_w - margin.horizontal() - surround.horizontal());
-            const float inner_h =
-                std::max(0.0f, spec_h_def ? spec_h - surround.vertical() : oc.avail_h - margin.vertical() - surround.vertical());
+            const float inner_w = std::max(0.0f, spec_w_def ? spec_w - surround.horizontal()
+                                                            : oc.avail_w - margin.horizontal() - surround.horizontal());
+            const float inner_h = std::max(0.0f, spec_h_def ? spec_h - surround.vertical()
+                                                            : oc.avail_h - margin.vertical() - surround.vertical());
 
             const bool inner_w_bounded = spec_w_def || oc.avail_w_bounded;
             const bool inner_h_bounded = spec_h_def || oc.avail_h_bounded;

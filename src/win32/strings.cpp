@@ -27,8 +27,7 @@ namespace catalyst::detail::win32
 
             std::wstring out(static_cast<size_t>(needed), L'\0');
 
-            const int written =
-                MultiByteToWideChar(codepage, flags, text.data(), length, out.data(), needed);
+            const int written = MultiByteToWideChar(codepage, flags, text.data(), length, out.data(), needed);
             if (written <= 0)
                 return {};
 
@@ -44,15 +43,13 @@ namespace catalyst::detail::win32
 
         const int length = static_cast<int>(text.size());
 
-        const int needed =
-            WideCharToMultiByte(CP_UTF8, 0, text.data(), length, nullptr, 0, nullptr, nullptr);
+        const int needed = WideCharToMultiByte(CP_UTF8, 0, text.data(), length, nullptr, 0, nullptr, nullptr);
         if (needed <= 0)
             return {};
 
         std::string out(static_cast<size_t>(needed), '\0');
 
-        const int written =
-            WideCharToMultiByte(CP_UTF8, 0, text.data(), length, out.data(), needed, nullptr, nullptr);
+        const int written = WideCharToMultiByte(CP_UTF8, 0, text.data(), length, out.data(), needed, nullptr, nullptr);
         if (written <= 0)
             return {};
 

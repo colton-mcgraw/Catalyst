@@ -1,9 +1,9 @@
-#include "../test_common.hpp"
-
+#include <catalyst/input/hid.hpp>
 #include <catalyst/input/keyboard.hpp>
 #include <catalyst/input/mouse.hpp>
-#include <catalyst/input/hid.hpp>
 #include <catalyst/input/text.hpp>
+
+#include "../test_common.hpp"
 
 #include <string_view>
 #include <type_traits>
@@ -179,7 +179,8 @@ namespace
         CT_REQUIRE(has_button(set, mouse_button::middle));
 
         // ~ never sets bits outside the five buttons.
-        CT_REQUIRE((~mouse_buttons::none) == (mouse_buttons::left | mouse_buttons::right | mouse_buttons::middle | mouse_buttons::x1 | mouse_buttons::x2));
+        CT_REQUIRE((~mouse_buttons::none) == (mouse_buttons::left | mouse_buttons::right | mouse_buttons::middle |
+                                              mouse_buttons::x1 | mouse_buttons::x2));
     }
 } // namespace
 

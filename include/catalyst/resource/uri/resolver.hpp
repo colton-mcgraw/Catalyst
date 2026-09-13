@@ -13,10 +13,10 @@
 
 #pragma once
 
+#include "reference.hpp"
+
 #include <string>
 #include <string_view>
-
-#include "reference.hpp"
 
 namespace catalyst::resource
 {

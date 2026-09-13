@@ -63,17 +63,28 @@ namespace catalyst::resource
         {
             switch (f)
             {
-            case format::r8_unorm:         return filter_desc{1, false, false};
-            case format::rg8_unorm:        return filter_desc{2, false, false};
-            case format::rgba8_unorm:      return filter_desc{4, false, false};
-            case format::rgba8_unorm_srgb: return filter_desc{4, false, true};
-            case format::bgra8_unorm:      return filter_desc{4, false, false};
-            case format::bgra8_unorm_srgb: return filter_desc{4, false, true};
-            case format::r32_float:        return filter_desc{1, true, false};
-            case format::rg32_float:       return filter_desc{2, true, false};
-            case format::rgb32_float:      return filter_desc{3, true, false};
-            case format::rgba32_float:     return filter_desc{4, true, false};
-            default:                       return std::nullopt;
+            case format::r8_unorm:
+                return filter_desc{1, false, false};
+            case format::rg8_unorm:
+                return filter_desc{2, false, false};
+            case format::rgba8_unorm:
+                return filter_desc{4, false, false};
+            case format::rgba8_unorm_srgb:
+                return filter_desc{4, false, true};
+            case format::bgra8_unorm:
+                return filter_desc{4, false, false};
+            case format::bgra8_unorm_srgb:
+                return filter_desc{4, false, true};
+            case format::r32_float:
+                return filter_desc{1, true, false};
+            case format::rg32_float:
+                return filter_desc{2, true, false};
+            case format::rgb32_float:
+                return filter_desc{3, true, false};
+            case format::rgba32_float:
+                return filter_desc{4, true, false};
+            default:
+                return std::nullopt;
             }
         }
 
@@ -86,13 +97,14 @@ namespace catalyst::resource
          */
         const std::array<float, 256> &srgb_to_linear_table() noexcept
         {
-            static const std::array<float, 256> table = [] {
+            static const std::array<float, 256> table = []
+            {
                 std::array<float, 256> values{};
                 for (std::size_t i = 0; i < values.size(); ++i)
                 {
                     const float encoded = static_cast<float>(i) / 255.0f;
-                    values[i] = (encoded <= 0.04045f) ? (encoded / 12.92f)
-                                                      : std::pow((encoded + 0.055f) / 1.055f, 2.4f);
+                    values[i] =
+                        (encoded <= 0.04045f) ? (encoded / 12.92f) : std::pow((encoded + 0.055f) / 1.055f, 2.4f);
                 }
                 return values;
             }();
@@ -128,7 +140,8 @@ namespace catalyst::resource
             const std::size_t stride = texel_stride(desc);
             const std::array<float, 256> &to_linear = srgb_to_linear_table();
 
-            const auto read = [&](const std::byte *texel, std::uint32_t channel) noexcept -> float {
+            const auto read = [&](const std::byte *texel, std::uint32_t channel) noexcept -> float
+            {
                 if constexpr (Floating)
                 {
                     float value = 0.0f;
@@ -147,7 +160,8 @@ namespace catalyst::resource
                 }
             };
 
-            const auto write = [&](std::byte *texel, std::uint32_t channel, float value) noexcept {
+            const auto write = [&](std::byte *texel, std::uint32_t channel, float value) noexcept
+            {
                 if constexpr (Floating)
                 {
                     std::memcpy(texel + channel * sizeof(float), &value, sizeof(float));
@@ -212,10 +226,10 @@ namespace catalyst::resource
                         }
 
                         std::byte *out =
-                            destination.data() +
-                            ((static_cast<std::uint64_t>(z) * destination_extent.height + y) * destination_extent.width +
-                             x) *
-                                stride;
+                            destination.data() + ((static_cast<std::uint64_t>(z) * destination_extent.height + y) *
+                                                      destination_extent.width +
+                                                  x) *
+                                                     stride;
 
                         for (std::uint32_t c = 0; c < desc.channels; ++c)
                         {

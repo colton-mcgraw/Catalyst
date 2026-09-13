@@ -8,9 +8,8 @@
  * License: MIT (see LICENSE).
  */
 
-#include <catalyst/resource/uri/reference.hpp>
-
 #include <catalyst/resource/uri/percent.hpp>
+#include <catalyst/resource/uri/reference.hpp>
 
 #include <cstddef>
 #include <cstdint>

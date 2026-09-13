@@ -11,7 +11,6 @@
  */
 
 #include <catalyst/rendering/frame.hpp>
-
 #include <catalyst/rendering/queue.hpp>
 
 #include "detail_log.hpp"
@@ -164,8 +163,8 @@ namespace catalyst::rendering
     {
         if (slot >= frames_in_flight_ || worker >= workers_)
             return {};
-        const std::size_t index = ((static_cast<std::size_t>(slot) * workers_) + worker) * kinds +
-                                  static_cast<std::size_t>(kind);
+        const std::size_t index =
+            ((static_cast<std::size_t>(slot) * workers_) + worker) * kinds + static_cast<std::size_t>(kind);
         return index < pools_.size() ? pools_[index] : command_pool{};
     }
 
@@ -200,8 +199,7 @@ namespace catalyst::rendering
             // submitted is always safe - it can only wait for more than it had to - and is a great
             // deal safer than resetting pools whose lists may still be executing.
             logging::warn<detail::render_log>(
-                "frame_ring: frame {} was never ended; closing it against all outstanding work",
-                next_index_ - 1);
+                "frame_ring: frame {} was never ended; closing it against all outstanding work", next_index_ - 1);
             timeline_point all[queue_kind_count];
             for (std::size_t k = 0; k < kinds; ++k)
                 all[k] = last_submitted(get_queue(device_, static_cast<queue_kind>(k)));

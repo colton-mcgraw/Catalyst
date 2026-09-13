@@ -1,9 +1,9 @@
 #pragma once
 
-#include <cstddef>
-#include <variant>
-#include <typeindex>
 #include <concepts>
+#include <cstddef>
+#include <typeindex>
+#include <variant>
 
 namespace catalyst::events
 {
@@ -37,7 +37,9 @@ namespace catalyst::events
      * @tparam Event The event type to check.
      */
     template <typename Event>
-    concept has_tag = requires { { Event::tag } -> std::convertible_to<event_type_t>; };
+    concept has_tag = requires {
+        { Event::tag } -> std::convertible_to<event_type_t>;
+    };
 
     /**
      * @struct has_static_tag
@@ -57,11 +59,12 @@ namespace catalyst::events
      * @tparam Event The event type to query.
      */
     template <typename Event>
-        struct has_static_tag
-        : std::bool_constant < requires
+        struct has_static_tag : std::bool_constant < requires
     {
-        {static_event_tag<Event>::value}->std::convertible_to<event_type_t>;
-    }>{};
+        {
+            static_event_tag<Event>::value
+        } -> std::convertible_to<event_type_t>;
+    } > {};
 
     /**
      * @variable has_static_tag_v
@@ -81,9 +84,7 @@ namespace catalyst::events
      * @variable invalid_event_key
      * @brief A constant representing an invalid event key.
      */
-    constexpr event_key invalid_event_key = event_key{
-        std::in_place_index<0>,
-        static_cast<event_type_t>(-1)};
+    constexpr event_key invalid_event_key = event_key{std::in_place_index<0>, static_cast<event_type_t>(-1)};
 
     /**
      * @brief Retrieves the event key for a given event type.
@@ -94,13 +95,9 @@ namespace catalyst::events
     constexpr event_key event_id()
     {
         if constexpr (has_static_tag_v<Event>) // If the event has a static tag, use it as the event key.
-            return event_key{
-                std::in_place_index<0>,
-                static_event_tag<Event>::value};
+            return event_key{std::in_place_index<0>, static_event_tag<Event>::value};
         else // If the event does not have a static tag, use its type index as the event key.
-            return event_key{
-                std::in_place_index<1>,
-                typeid(Event)};
+            return event_key{std::in_place_index<1>, typeid(Event)};
     }
 
 } // namespace catalyst::events

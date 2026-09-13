@@ -45,12 +45,18 @@ namespace
         using input::key_modifiers;
 
         std::string s;
-        if (has_modifier(m, key_modifiers::shift)) s += "shift ";
-        if (has_modifier(m, key_modifiers::control)) s += "ctrl ";
-        if (has_modifier(m, key_modifiers::alt)) s += "alt ";
-        if (has_modifier(m, key_modifiers::super)) s += "super ";
-        if (has_modifier(m, key_modifiers::caps_lock)) s += "caps ";
-        if (has_modifier(m, key_modifiers::num_lock)) s += "num ";
+        if (has_modifier(m, key_modifiers::shift))
+            s += "shift ";
+        if (has_modifier(m, key_modifiers::control))
+            s += "ctrl ";
+        if (has_modifier(m, key_modifiers::alt))
+            s += "alt ";
+        if (has_modifier(m, key_modifiers::super))
+            s += "super ";
+        if (has_modifier(m, key_modifiers::caps_lock))
+            s += "caps ";
+        if (has_modifier(m, key_modifiers::num_lock))
+            s += "num ";
         if (!s.empty())
             s.pop_back();
         return s.empty() ? "-" : s;
@@ -60,12 +66,18 @@ namespace
     {
         switch (b)
         {
-        case input::mouse_button::left: return "left";
-        case input::mouse_button::right: return "right";
-        case input::mouse_button::middle: return "middle";
-        case input::mouse_button::x1: return "x1";
-        case input::mouse_button::x2: return "x2";
-        default: return "unknown";
+        case input::mouse_button::left:
+            return "left";
+        case input::mouse_button::right:
+            return "right";
+        case input::mouse_button::middle:
+            return "middle";
+        case input::mouse_button::x1:
+            return "x1";
+        case input::mouse_button::x2:
+            return "x2";
+        default:
+            return "unknown";
         }
     }
 
@@ -74,9 +86,12 @@ namespace
     {
         switch (a)
         {
-        case input::button_action::press: return "press";
-        case input::button_action::release: return "release";
-        case input::button_action::repeat: return "repeat";
+        case input::button_action::press:
+            return "press";
+        case input::button_action::release:
+            return "release";
+        case input::button_action::repeat:
+            return "repeat";
         }
         return "?";
     }
@@ -125,7 +140,8 @@ int main()
     logging::info<example_log>("  Tab     toggle cursor capture (raw mouse motion)");
     logging::info<example_log>("  H       toggle hidden cursor");
     logging::info<example_log>("  Space   rumble gamepad 0 while held");
-    logging::info<example_log>("  C       calibrate gamepad 0's dead zone (then leave the controller alone for a second)");
+    logging::info<example_log>(
+        "  C       calibrate gamepad 0's dead zone (then leave the controller alone for a second)");
     logging::info<example_log>("  WASD / left stick moves; mouse / right stick looks.");
     logging::info<example_log>("  Type, click, scroll and move to see events.");
 
@@ -141,22 +157,26 @@ int main()
         [](const platform::window_focus_event &e)
         { logging::info<example_log>("focus   {}", e.focused ? "gained" : "lost"); });
 
-    const auto sub_key = bus.add_listener<input::key_event>([](const input::key_event &e)
+    const auto sub_key = bus.add_listener<input::key_event>(
+        [](const input::key_event &e)
         {
             logging::info<example_log>("key     {:<7} {:<18} scancode=0x{:03X} mods={}", action_name(e.action),
                                        input::key_name(e.code), e.scancode, modifiers_to_string(e.modifiers));
         });
 
-    const auto sub_text = bus.add_listener<input::text_input_event>([](const input::text_input_event &e)
+    const auto sub_text = bus.add_listener<input::text_input_event>(
+        [](const input::text_input_event &e)
         { logging::info<example_log>("text    \"{}\"", text::utf8::encode(e.text())); });
 
-    const auto sub_click = bus.add_listener<input::mouse_button_event>([](const input::mouse_button_event &e)
+    const auto sub_click = bus.add_listener<input::mouse_button_event>(
+        [](const input::mouse_button_event &e)
         {
             logging::info<example_log>("mouse   {:<7} {:<7} clicks={} at ({}, {})", action_name(e.action),
                                        button_name(e.button), e.clicks, e.position_px[0], e.position_px[1]);
         });
 
-    const auto sub_wheel = bus.add_listener<input::mouse_wheel_event>([](const input::mouse_wheel_event &e)
+    const auto sub_wheel = bus.add_listener<input::mouse_wheel_event>(
+        [](const input::mouse_wheel_event &e)
         { logging::info<example_log>("wheel   ({:+.2f}, {:+.2f})", e.delta[0], e.delta[1]); });
 
     // Devices announce themselves generically, so this one listener covers pads, sticks, MIDI - anything.
@@ -165,8 +185,7 @@ int main()
         { logging::info<example_log>("device  + {} ({})", e.info.name, input::device_kind_name(e.info.kind)); });
 
     const auto sub_gone = bus.add_listener<input::device_disconnected_event>(
-        [](const input::device_disconnected_event &e)
-        { logging::info<example_log>("device  - {}", e.info.name); });
+        [](const input::device_disconnected_event &e) { logging::info<example_log>("device  - {}", e.info.name); });
 
     bool captured = false;
     bool hidden = false;

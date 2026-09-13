@@ -41,7 +41,8 @@ namespace catalyst::rendering::detail::vulkan
                                 std::span<const std::byte> data, const creation_marks &created) noexcept
         {
             const auto point = transfer_once(dev, device_id, data, created,
-                                             [&](VkCommandBuffer cmd, VkBuffer source, VkDeviceSize source_offset) {
+                                             [&](VkCommandBuffer cmd, VkBuffer source, VkDeviceSize source_offset)
+                                             {
                                                  VkBufferCopy region{};
                                                  region.srcOffset = source_offset;
                                                  region.dstOffset = offset;
@@ -50,8 +51,7 @@ namespace catalyst::rendering::detail::vulkan
                                              });
             if (!point)
             {
-                logging::error<detail::render_log>("buffer upload of {} bytes failed: {}", data.size(),
-                                                   point.error());
+                logging::error<detail::render_log>("buffer upload of {} bytes failed: {}", data.size(), point.error());
                 return false;
             }
             return true;
@@ -131,10 +131,12 @@ namespace catalyst::rendering::detail
             const VkDevice d = dev->device;
             const VkBuffer buffer = b->buffer;
             const VkDeviceMemory memory = b->memory;
-            defer_release(*dev, [d, buffer, memory] {
-                vkDestroyBuffer(d, buffer, nullptr);
-                vkFreeMemory(d, memory, nullptr);
-            });
+            defer_release(*dev,
+                          [d, buffer, memory]
+                          {
+                              vkDestroyBuffer(d, buffer, nullptr);
+                              vkFreeMemory(d, memory, nullptr);
+                          });
         }
         reg().buffers.erase(id);
     }
@@ -198,8 +200,7 @@ namespace catalyst::rendering::detail
         for (std::size_t i = 0; i < queue_kind_count; ++i)
         {
             const auto kind = static_cast<queue_kind>(i);
-            (void)wait_timeline(*dev, kind, queue_for(*dev, kind).last_submitted,
-                                std::chrono::nanoseconds::max());
+            (void)wait_timeline(*dev, kind, queue_for(*dev, kind).last_submitted, std::chrono::nanoseconds::max());
         }
         if (!b->coherent)
             invalidate_host_reads(*dev, b->memory);

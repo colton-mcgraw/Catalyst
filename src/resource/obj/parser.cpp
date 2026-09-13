@@ -11,10 +11,9 @@
  * License: MIT (see LICENSE).
  */
 
-#include <catalyst/resource/obj/parser.hpp>
-
 #include <catalyst/resource/error.hpp>
 #include <catalyst/resource/obj/obj.hpp>
+#include <catalyst/resource/obj/parser.hpp>
 #include <catalyst/text/scan.hpp>
 
 #include <charconv>
@@ -75,8 +74,7 @@ namespace catalyst::resource::obj
                 return {};
             }
 
-            const std::size_t stop =
-                text::scan::swar<text::scan::control_bytes::allowed, ' ', '\t', '\r'>(rest, start);
+            const std::size_t stop = text::scan::swar<text::scan::control_bytes::allowed, ' ', '\t', '\r'>(rest, start);
 
             const std::string_view token = rest.substr(start, stop - start);
             rest = (stop == n) ? std::string_view{} : rest.substr(stop);
@@ -117,9 +115,8 @@ namespace catalyst::resource::obj
          * @return How many were read, or the message explaining why none of it counts.
          */
         template <std::size_t Max>
-        [[nodiscard]] std::expected<std::size_t, std::string> read_floats(std::string_view rest,
-                                                                         std::size_t minimum,
-                                                                         float (&out)[Max])
+        [[nodiscard]] std::expected<std::size_t, std::string> read_floats(std::string_view rest, std::size_t minimum,
+                                                                          float (&out)[Max])
         {
             std::size_t count = 0;
             while (count < Max)
@@ -135,8 +132,7 @@ namespace catalyst::resource::obj
 
             if (count < minimum)
                 return std::unexpected(
-                    std::format("expected at least {} number{}, found {}", minimum,
-                                minimum == 1 ? "" : "s", count));
+                    std::format("expected at least {} number{}, found {}", minimum, minimum == 1 ? "" : "s", count));
 
             return count;
         }
@@ -152,8 +148,7 @@ namespace catalyst::resource::obj
          *
          * @return False if @p raw is 0, or names an element that has not been declared.
          */
-        [[nodiscard]] bool resolve_index(std::int64_t raw, std::size_t count,
-                                         std::int32_t &out) noexcept
+        [[nodiscard]] bool resolve_index(std::int64_t raw, std::size_t count, std::int32_t &out) noexcept
         {
             const auto total = static_cast<std::int64_t>(count);
 
@@ -177,8 +172,7 @@ namespace catalyst::resource::obj
          * The slashes are positional, so an empty middle field is meaningful -- `1//4` is a position
          * and a normal with no texture coordinate -- while an empty first field is not.
          */
-        [[nodiscard]] std::expected<face_vertex, std::string> parse_corner(std::string_view token,
-                                                                          const obj &out)
+        [[nodiscard]] std::expected<face_vertex, std::string> parse_corner(std::string_view token, const obj &out)
         {
             std::string_view parts[3];
             std::size_t count = 0;
@@ -201,8 +195,7 @@ namespace catalyst::resource::obj
 
             // Position, texture coordinate, normal -- in the order the slashes put them, against the
             // array each one indexes.
-            const std::size_t sizes[3] = {out.vertices.size(), out.texcoords.size(),
-                                          out.normals.size()};
+            const std::size_t sizes[3] = {out.vertices.size(), out.texcoords.size(), out.normals.size()};
             const std::string_view names[3] = {"vertex", "texture coordinate", "normal"};
 
             face_vertex corner;
@@ -214,8 +207,7 @@ namespace catalyst::resource::obj
                 {
                     // Only the position is mandatory; the other two are absent by default.
                     if (i == 0)
-                        return std::unexpected(
-                            std::format("'{}' has no vertex index", token));
+                        return std::unexpected(std::format("'{}' has no vertex index", token));
                     continue;
                 }
 
@@ -224,8 +216,8 @@ namespace catalyst::resource::obj
                     return std::unexpected(std::format("'{}' is not an index", parts[i]));
 
                 if (!resolve_index(raw, sizes[i], *fields[i]))
-                    return std::unexpected(std::format("{} index {} is out of range; {} declared so far",
-                                                       names[i], raw, sizes[i]));
+                    return std::unexpected(
+                        std::format("{} index {} is out of range; {} declared so far", names[i], raw, sizes[i]));
             }
 
             return corner;
@@ -346,9 +338,9 @@ namespace catalyst::resource::obj
                 continue; // A record this parser does not implement. Not an error.
 
             if (!outcome)
-                return std::unexpected(make_error(
-                    error_code::decode_failed, uri,
-                    std::format("line {}: {}: {}", line_number, keyword, outcome.error())));
+                return std::unexpected(
+                    make_error(error_code::decode_failed, uri,
+                               std::format("line {}: {}: {}", line_number, keyword, outcome.error())));
         }
 
         return result;

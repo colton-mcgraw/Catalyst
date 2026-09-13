@@ -141,11 +141,12 @@ namespace catalyst::rendering::detail::vulkan
             std::array<VkWriteDescriptorSet, 16> writes{};
             std::array<VkDescriptorBufferInfo, 16> buffer_infos{};
             std::array<VkDescriptorImageInfo, 16> image_infos{};
-            static_assert(max_uniform_buffer_slots <= 16 && max_storage_buffer_slots <= 16 &&
-                          max_texture_slots <= 16 && max_sampler_slots <= 16);
+            static_assert(max_uniform_buffer_slots <= 16 && max_storage_buffer_slots <= 16 && max_texture_slots <= 16 &&
+                          max_sampler_slots <= 16);
             std::uint32_t count = 0;
 
-            auto add = [&](std::uint32_t binding, VkDescriptorType type) -> VkWriteDescriptorSet & {
+            auto add = [&](std::uint32_t binding, VkDescriptorType type) -> VkWriteDescriptorSet &
+            {
                 VkWriteDescriptorSet &w = writes[count++];
                 w.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
                 w.dstSet = set;
@@ -294,8 +295,8 @@ namespace catalyst::rendering::detail::vulkan
             }
             const VkPipelineStageFlags src = to_attachment ? VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
                                                            : VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-            const VkPipelineStageFlags dst = to_attachment ? VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
-                                                           : VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+            const VkPipelineStageFlags dst =
+                to_attachment ? VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT : VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
             vkCmdPipelineBarrier(cmd, src, dst, 0, 0, nullptr, 0, nullptr, static_cast<std::uint32_t>(barriers.size()),
                                  barriers.data());
         }
@@ -330,8 +331,7 @@ namespace catalyst::rendering::detail
             const VkResult result = vkCreateCommandPool(dev.device, &info, nullptr, &pool);
             if (result != VK_SUCCESS)
             {
-                logging::error<detail::render_log>("{}: vkCreateCommandPool failed ({})", what,
-                                                   result_string(result));
+                logging::error<detail::render_log>("{}: vkCreateCommandPool failed ({})", what, result_string(result));
                 return VK_NULL_HANDLE;
             }
             return pool;
@@ -489,8 +489,8 @@ namespace catalyst::rendering::detail
         if (!dev)
             return 0;
 
-        const resource_id id = make_list(*dev, pool->owner, pool_id, pool->pool, pool->desc.queue, debug_name,
-                                         "create_command_list");
+        const resource_id id =
+            make_list(*dev, pool->owner, pool_id, pool->pool, pool->desc.queue, debug_name, "create_command_list");
         if (id != 0)
             pool->lists.push_back(id);
         return id;
@@ -518,8 +518,8 @@ namespace catalyst::rendering::detail
             return 0;
 
         const resource_id pool_id = allocate_id();
-        const resource_id id = make_list(*dev, device, pool_id, pool.pool, desc.queue, desc.debug_name,
-                                         "create_command_list");
+        const resource_id id =
+            make_list(*dev, device, pool_id, pool.pool, desc.queue, desc.debug_name, "create_command_list");
         if (id == 0)
         {
             release_command_pool_objects(*dev, pool);
@@ -780,8 +780,8 @@ namespace catalyst::rendering::detail
         if (!p || p->owner != cl->owner)
             return;
 
-        const VkPipelineBindPoint bind_point = p->type == pipeline_type::compute ? VK_PIPELINE_BIND_POINT_COMPUTE
-                                                                                 : VK_PIPELINE_BIND_POINT_GRAPHICS;
+        const VkPipelineBindPoint bind_point =
+            p->type == pipeline_type::compute ? VK_PIPELINE_BIND_POINT_COMPUTE : VK_PIPELINE_BIND_POINT_GRAPHICS;
         vkCmdBindPipeline(cl->cmd, bind_point, p->pipeline);
         cl->bound_pipeline = pipeline;
         cl->bound_pipeline_type = p->type;
@@ -990,8 +990,7 @@ namespace catalyst::rendering::detail
     // Submission
     // -------------------------------------------------------------------------
 
-    std::expected<std::uint64_t, error> submit(resource_id device, queue_kind kind,
-                                               std::span<const command_list> lists,
+    std::expected<std::uint64_t, error> submit(resource_id device, queue_kind kind, std::span<const command_list> lists,
                                                std::span<const timeline_point> waits)
     {
         device_state *dev = find_device(device);

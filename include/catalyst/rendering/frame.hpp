@@ -194,7 +194,7 @@ namespace catalyst::rendering
          * @ref error_code::out_of_host_memory if a pool could not be created.
          */
         [[nodiscard]] static std::expected<frame_ring, error> create(const device &dev,
-                                                                    const frame_ring_desc &desc = {});
+                                                                     const frame_ring_desc &desc = {});
 
         frame_ring() noexcept = default;
         frame_ring(const frame_ring &) = delete;

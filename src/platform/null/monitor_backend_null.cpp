@@ -1,5 +1,4 @@
 #include <catalyst/platform/monitor.hpp>
-
 #include <catalyst/platform/window.hpp>
 
 #include <vector>

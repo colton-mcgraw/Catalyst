@@ -8,9 +8,9 @@
  * License: MIT (see LICENSE).
  */
 
-#include "detail_render.hpp"
-
 #include <catalyst/audio/offline.hpp>
+
+#include "detail_render.hpp"
 
 #include <algorithm>
 #include <cstdint>
@@ -48,11 +48,8 @@ namespace catalyst::audio
          * @details Emits the 18-byte `fmt ` chunk and the `fact` chunk that the format tag requires,
          * rather than the abbreviated 16-byte PCM header, so strict readers accept the file.
          */
-        bool write_float_wav(
-            const std::filesystem::path &path,
-            std::span<const sample> interleaved,
-            sample_rate_t rate,
-            channel_count channels)
+        bool write_float_wav(const std::filesystem::path &path, std::span<const sample> interleaved, sample_rate_t rate,
+                             channel_count channels)
         {
             if (channels == 0 || rate == 0)
                 return false;
@@ -99,9 +96,8 @@ namespace catalyst::audio
 
             if (!interleaved.empty())
             {
-                file.write(
-                    reinterpret_cast<const char *>(interleaved.data()),
-                    static_cast<std::streamsize>(data_bytes));
+                file.write(reinterpret_cast<const char *>(interleaved.data()),
+                           static_cast<std::streamsize>(data_bytes));
             }
 
             file.flush();
@@ -132,7 +128,8 @@ namespace catalyst::audio
 
     std::expected<offline_stream, error> offline_stream::open(const offline_config &config, renderer render)
     {
-        const auto invalid = [] { return std::unexpected(make_error(error_code::invalid_config, backend_kind::offline)); };
+        const auto invalid = []
+        { return std::unexpected(make_error(error_code::invalid_config, backend_kind::offline)); };
 
         if (config.sample_rate == 0)
             return invalid();
@@ -177,8 +174,7 @@ namespace catalyst::audio
 
         if (config.capture && output_channels > 0 && config.max_capture_frames != 0)
         {
-            state->captured.reserve(
-                static_cast<std::size_t>(config.max_capture_frames * output_channels));
+            state->captured.reserve(static_cast<std::size_t>(config.max_capture_frames * output_channels));
         }
 
         return offline_stream{std::move(state)};
@@ -215,17 +211,15 @@ namespace catalyst::audio
 
                 // Zero-fill past the end of the supplied capture data, so the renderer always sees
                 // a full block rather than a short one it would have to special-case.
-                const frame_count supplied = input_channels != 0
-                                                 ? state.config.input.size() / input_channels
-                                                 : 0;
+                const frame_count supplied = input_channels != 0 ? state.config.input.size() / input_channels : 0;
 
                 if (state.input_cursor < supplied)
                 {
                     const frame_count available = supplied - state.input_cursor;
                     const frame_count copy_frames = std::min<frame_count>(available, block);
                     const std::size_t copy_samples = static_cast<std::size_t>(copy_frames) * input_channels;
-                    const auto first = state.config.input.begin() +
-                                       static_cast<std::ptrdiff_t>(state.input_cursor * input_channels);
+                    const auto first =
+                        state.config.input.begin() + static_cast<std::ptrdiff_t>(state.input_cursor * input_channels);
 
                     std::copy_n(first, copy_samples, state.input_scratch.begin());
                 }
@@ -237,12 +231,11 @@ namespace catalyst::audio
             std::span<sample> output;
             if (output_channels > 0)
             {
-                output = std::span<sample>(
-                    state.output_scratch.data(), static_cast<std::size_t>(block) * output_channels);
+                output =
+                    std::span<sample>(state.output_scratch.data(), static_cast<std::size_t>(block) * output_channels);
             }
 
-            state.dispatcher.dispatch(
-                output, input, block, output_channels, input_channels, state.info.sample_rate);
+            state.dispatcher.dispatch(output, input, block, output_channels, input_channels, state.info.sample_rate);
 
             if (!output.empty() && state.config.capture)
             {
@@ -259,8 +252,8 @@ namespace catalyst::audio
                 if (storable != 0)
                 {
                     const std::size_t samples = static_cast<std::size_t>(storable) * output_channels;
-                    state.captured.insert(
-                        state.captured.end(), output.begin(), output.begin() + static_cast<std::ptrdiff_t>(samples));
+                    state.captured.insert(state.captured.end(), output.begin(),
+                                          output.begin() + static_cast<std::ptrdiff_t>(samples));
                 }
             }
 
@@ -304,11 +297,8 @@ namespace catalyst::audio
             return std::unexpected(make_error(error_code::invalid_config, backend_kind::offline));
         }
 
-        const bool written = write_float_wav(
-            path,
-            std::span<const sample>(impl_->captured),
-            impl_->info.sample_rate,
-            impl_->info.output_channels);
+        const bool written = write_float_wav(path, std::span<const sample>(impl_->captured), impl_->info.sample_rate,
+                                             impl_->info.output_channels);
 
         if (!written)
             return std::unexpected(make_error(error_code::io_failure, backend_kind::offline));

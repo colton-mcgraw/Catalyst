@@ -17,7 +17,7 @@ namespace catalyst::events
         {
             explicit chain_access() = default;
         };
-    }
+    } // namespace detail
 
     /**
      * @class next
@@ -28,8 +28,7 @@ namespace catalyst::events
     class next
     {
     public:
-        next(detail::chain_access, void *ctx, void (*resume)(void *, void *)) noexcept
-            : ctx_(ctx), resume_(resume) {}
+        next(detail::chain_access, void *ctx, void (*resume)(void *, void *)) noexcept : ctx_(ctx), resume_(resume) {}
 
         /**
          * @fn operator()
@@ -53,7 +52,9 @@ namespace catalyst::events
     {
     public:
         async_next(detail::chain_access, void *ctx, task<void> (*resume)(void *, void *)) noexcept
-            : ctx_(ctx), resume_(resume) {}
+            : ctx_(ctx), resume_(resume)
+        {
+        }
 
         /**
          * @fn operator()

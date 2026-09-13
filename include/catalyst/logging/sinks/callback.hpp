@@ -42,10 +42,7 @@ namespace catalyst::logging
 
         /// Named rather than aggregate-initialised, so `callback_sink{fn}` means what it looks like:
         /// the contract base is empty, and an aggregate would want a `{}` for it first.
-        explicit callback_sink(std::function<void(const log_event &)> callback)
-            : callback(std::move(callback))
-        {
-        }
+        explicit callback_sink(std::function<void(const log_event &)> callback) : callback(std::move(callback)) {}
 
         void write(const log_event &event) const;
     };

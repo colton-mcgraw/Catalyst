@@ -11,9 +11,9 @@
 // maps 1:1 onto input::gamepad_button/gamepad_axis. The guide button is not reported by the public API, so it never
 // actuates here.
 //
-// The generic-HID, MIDI, touch and pen seams below are Tier 4 of docs/input.md. The device model above them is finished,
-// so each is a self-contained fill-in: Raw Input plus HidP_* for joysticks, WinMM midiIn* for MIDI. They report nothing
-// until then rather than pretending, so poll() simply finds no devices of those kinds.
+// The generic-HID, MIDI, touch and pen seams below are Tier 4 of docs/input.md. The device model above them is
+// finished, so each is a self-contained fill-in: Raw Input plus HidP_* for joysticks, WinMM midiIn* for MIDI. They
+// report nothing until then rather than pretending, so poll() simply finds no devices of those kinds.
 namespace catalyst::input::detail
 {
     namespace
@@ -21,20 +21,34 @@ namespace catalyst::input::detail
         [[nodiscard]] gamepad_buttons map_buttons(WORD w) noexcept
         {
             gamepad_buttons b = gamepad_buttons::none;
-            if (w & XINPUT_GAMEPAD_A) b |= gamepad_buttons::a;
-            if (w & XINPUT_GAMEPAD_B) b |= gamepad_buttons::b;
-            if (w & XINPUT_GAMEPAD_X) b |= gamepad_buttons::x;
-            if (w & XINPUT_GAMEPAD_Y) b |= gamepad_buttons::y;
-            if (w & XINPUT_GAMEPAD_BACK) b |= gamepad_buttons::back;
-            if (w & XINPUT_GAMEPAD_START) b |= gamepad_buttons::start;
-            if (w & XINPUT_GAMEPAD_LEFT_THUMB) b |= gamepad_buttons::left_stick;
-            if (w & XINPUT_GAMEPAD_RIGHT_THUMB) b |= gamepad_buttons::right_stick;
-            if (w & XINPUT_GAMEPAD_LEFT_SHOULDER) b |= gamepad_buttons::left_shoulder;
-            if (w & XINPUT_GAMEPAD_RIGHT_SHOULDER) b |= gamepad_buttons::right_shoulder;
-            if (w & XINPUT_GAMEPAD_DPAD_UP) b |= gamepad_buttons::dpad_up;
-            if (w & XINPUT_GAMEPAD_DPAD_DOWN) b |= gamepad_buttons::dpad_down;
-            if (w & XINPUT_GAMEPAD_DPAD_LEFT) b |= gamepad_buttons::dpad_left;
-            if (w & XINPUT_GAMEPAD_DPAD_RIGHT) b |= gamepad_buttons::dpad_right;
+            if (w & XINPUT_GAMEPAD_A)
+                b |= gamepad_buttons::a;
+            if (w & XINPUT_GAMEPAD_B)
+                b |= gamepad_buttons::b;
+            if (w & XINPUT_GAMEPAD_X)
+                b |= gamepad_buttons::x;
+            if (w & XINPUT_GAMEPAD_Y)
+                b |= gamepad_buttons::y;
+            if (w & XINPUT_GAMEPAD_BACK)
+                b |= gamepad_buttons::back;
+            if (w & XINPUT_GAMEPAD_START)
+                b |= gamepad_buttons::start;
+            if (w & XINPUT_GAMEPAD_LEFT_THUMB)
+                b |= gamepad_buttons::left_stick;
+            if (w & XINPUT_GAMEPAD_RIGHT_THUMB)
+                b |= gamepad_buttons::right_stick;
+            if (w & XINPUT_GAMEPAD_LEFT_SHOULDER)
+                b |= gamepad_buttons::left_shoulder;
+            if (w & XINPUT_GAMEPAD_RIGHT_SHOULDER)
+                b |= gamepad_buttons::right_shoulder;
+            if (w & XINPUT_GAMEPAD_DPAD_UP)
+                b |= gamepad_buttons::dpad_up;
+            if (w & XINPUT_GAMEPAD_DPAD_DOWN)
+                b |= gamepad_buttons::dpad_down;
+            if (w & XINPUT_GAMEPAD_DPAD_LEFT)
+                b |= gamepad_buttons::dpad_left;
+            if (w & XINPUT_GAMEPAD_DPAD_RIGHT)
+                b |= gamepad_buttons::dpad_right;
             return b;
         }
 

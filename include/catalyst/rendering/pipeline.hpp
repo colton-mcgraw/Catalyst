@@ -56,8 +56,8 @@ namespace catalyst::rendering
 
     /**
      * @struct vertex_layout
-     * @brief Non-owning views over the bindings and attributes of a graphics pipeline. The spans only need to stay alive
-     * for the duration of `create_graphics_pipeline`.
+     * @brief Non-owning views over the bindings and attributes of a graphics pipeline. The spans only need to stay
+     * alive for the duration of `create_graphics_pipeline`.
      */
     struct vertex_layout
     {
@@ -181,7 +181,10 @@ namespace catalyst::rendering
     };
 
     /** @brief Blending disabled; source overwrites destination. */
-    [[nodiscard]] constexpr blend_state blend_opaque() noexcept { return {}; }
+    [[nodiscard]] constexpr blend_state blend_opaque() noexcept
+    {
+        return {};
+    }
 
     /** @brief Standard premultiplied-free alpha blending: `src * src.a + dst * (1 - src.a)`. */
     [[nodiscard]] constexpr blend_state blend_alpha() noexcept

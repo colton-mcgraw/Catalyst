@@ -4,10 +4,9 @@
  * License: MIT (see LICENSE).
  */
 
-#include <catalyst/resource/uri/percent.hpp>
-
 #include <catalyst/resource/uri/charset.hpp>
 #include <catalyst/resource/uri/error.hpp>
+#include <catalyst/resource/uri/percent.hpp>
 
 #include <cstddef>
 #include <expected>
@@ -40,8 +39,7 @@ namespace catalyst::resource
         return out;
     }
 
-    std::expected<std::string, uri_error> percent_decode(std::string_view text,
-                                                                             bool plus_is_space)
+    std::expected<std::string, uri_error> percent_decode(std::string_view text, bool plus_is_space)
     {
         using namespace detail::uri_chars;
 

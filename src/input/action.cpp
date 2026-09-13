@@ -21,7 +21,8 @@ namespace catalyst::input
          * into the same number. Everything else - buttons, sticks, triggers, pressure - does. The layout is asked
          * rather than the value guessed at, because a stick that happens to read 1.2 for a frame is still bounded.
          */
-        [[nodiscard]] bool control_is_bounded(const device_registry &registry, device_id device, control_id control) noexcept
+        [[nodiscard]] bool control_is_bounded(const device_registry &registry, device_id device,
+                                              control_id control) noexcept
         {
             const device_layout *layout = registry.layout(device);
             if (!layout || !layout->contains(control))
@@ -47,8 +48,7 @@ namespace catalyst::input
         }
     } // namespace
 
-    action::action(std::string name, action_kind kind)
-        : m_name(std::move(name)), m_kind(kind)
+    action::action(std::string name, action_kind kind) : m_name(std::move(name)), m_kind(kind)
     {
         m_value.kind = kind;
     }
@@ -135,14 +135,16 @@ namespace catalyst::input
         float best = 0.0f;
         device_id best_device = no_device;
 
-        registry.for_each(p.device, [&](device_id id)
+        registry.for_each(p.device,
+                          [&](device_id id)
                           {
-            const float raw = registry.value(id, p.control);
-            if (std::fabs(raw) > std::fabs(best))
-            {
-                best = raw;
-                best_device = id;
-            } });
+                              const float raw = registry.value(id, p.control);
+                              if (std::fabs(raw) > std::fabs(best))
+                              {
+                                  best = raw;
+                                  best_device = id;
+                              }
+                          });
 
         if (best_device.valid())
             device_out = best_device;
@@ -307,16 +309,22 @@ namespace catalyst::input
     // Evaluation
     // ------------------------------------------------------------------------------------------------------------------
 
-    void action::emit(events::bus *bus, std::string_view map_name, action_phase phase,
-                      std::size_t binding_index, control_id control, device_id device,
-                      std::chrono::milliseconds elapsed, input_time now)
+    void action::emit(events::bus *bus, std::string_view map_name, action_phase phase, std::size_t binding_index,
+                      control_id control, device_id device, std::chrono::milliseconds elapsed, input_time now)
     {
         switch (phase)
         {
-        case action_phase::started: m_started_this_frame = true; break;
-        case action_phase::performed: m_performed_this_frame = true; break;
-        case action_phase::cancelled: m_cancelled_this_frame = true; break;
-        case action_phase::idle: break;
+        case action_phase::started:
+            m_started_this_frame = true;
+            break;
+        case action_phase::performed:
+            m_performed_this_frame = true;
+            break;
+        case action_phase::cancelled:
+            m_cancelled_this_frame = true;
+            break;
+        case action_phase::idle:
+            break;
         }
         m_phase = phase;
 
@@ -336,8 +344,8 @@ namespace catalyst::input
         bus->dispatch(std::move(e));
     }
 
-    void action::evaluate(const device_registry &registry, input_time now, events::bus *bus,
-                          std::string_view map_name, std::span<const control_id> suppressed)
+    void action::evaluate(const device_registry &registry, input_time now, events::bus *bus, std::string_view map_name,
+                          std::span<const control_id> suppressed)
     {
         if (!m_enabled)
             return;
@@ -357,10 +365,13 @@ namespace catalyst::input
             const binding &b = m_bindings[i];
 
             // A chord elsewhere in the map has claimed this control: Ctrl+S must not also walk backwards.
-            const bool blocked = b.modifiers.empty() && !b.parts.empty() &&
-                                 std::any_of(b.parts.begin(), b.parts.end(), [&](const binding_part &p)
-                                             { return p.control.valid() &&
-                                                      std::find(suppressed.begin(), suppressed.end(), p.control) != suppressed.end(); });
+            const bool blocked =
+                b.modifiers.empty() && !b.parts.empty() &&
+                std::any_of(b.parts.begin(), b.parts.end(),
+                            [&](const binding_part &p) {
+                                return p.control.valid() &&
+                                       std::find(suppressed.begin(), suppressed.end(), p.control) != suppressed.end();
+                            });
 
             reads[i] = blocked ? evaluation{{0.0f, 0.0f, 0.0f, m_kind}, 0.0f, false, no_control, no_device}
                                : read_binding(registry, b);
@@ -458,8 +469,8 @@ namespace catalyst::input
                 else if (down && !s.performed && elapsed_ms(s.down_at, now) >= b.interact.duration)
                 {
                     s.performed = true;
-                    emit(bus, map_name, action_phase::performed, i, r.control, r.device,
-                         elapsed_ms(s.down_at, now), now);
+                    emit(bus, map_name, action_phase::performed, i, r.control, r.device, elapsed_ms(s.down_at, now),
+                         now);
                 }
                 else if (went_up && !s.performed)
                 {

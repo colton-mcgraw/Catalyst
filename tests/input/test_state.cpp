@@ -4,10 +4,10 @@
  * License: MIT (see LICENSE).
  */
 
-#include "../test_common.hpp"
-
 #include <catalyst/events/bus.hpp>
 #include <catalyst/input/context.hpp>
+
+#include "../test_common.hpp"
 
 #include <string>
 #include <vector>
@@ -238,10 +238,12 @@ namespace
         // The platform used to keep a per-window bitset just to synthesise these. It only has to say "focus went
         // away" now: the registry already knows what is down.
         std::vector<key_code> released;
-        const auto token = f.bus.add_listener<key_event>([&](const key_event &e)
-                                                         {
-            if (e.action == button_action::release)
-                released.push_back(e.code); });
+        const auto token = f.bus.add_listener<key_event>(
+            [&](const key_event &e)
+            {
+                if (e.action == button_action::release)
+                    released.push_back(e.code);
+            });
 
         f.in.feed_focus_lost(k_window);
 

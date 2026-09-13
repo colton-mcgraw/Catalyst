@@ -60,8 +60,8 @@ namespace catalyst::math
         requires(R > 0 && C > 0 && R0 + R <= M::rows && C0 + C <= M::cols)
     constexpr auto submatrix(const M &m)
     {
-        return detail::generate<typename M::value_type, R, C, detail::order_of<M>()>(
-            [&](std::size_t i, std::size_t j) { return m(R0 + i, C0 + j); });
+        return detail::generate<typename M::value_type, R, C, detail::order_of<M>()>([&](std::size_t i, std::size_t j)
+                                                                                     { return m(R0 + i, C0 + j); });
     }
 
     // m with row i and column j removed: the matrix whose determinant is
@@ -165,7 +165,8 @@ namespace catalyst::math
 
     template <matrix_like A, matrix_like B>
         requires(A::rows == A::cols && B::rows == A::rows)
-    using solution_t = matrix<detail::floating_t<detail::common_element_t<A, B>>, B::rows, B::cols, detail::order_of<B>()>;
+    using solution_t =
+        matrix<detail::floating_t<detail::common_element_t<A, B>>, B::rows, B::cols, detail::order_of<B>()>;
 
     template <matrix_like A, vector_like B>
         requires(A::rows == A::cols && B::length == A::rows)

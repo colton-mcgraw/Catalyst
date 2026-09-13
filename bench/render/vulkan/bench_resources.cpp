@@ -92,43 +92,43 @@ namespace catalyst::bench::render
 
         print_lifecycle("buffer 256 B (gpu_only)",
                         measure_lifecycle(
-                            many,
-                            [&] { return make_buffer(dev, 256, buffer_usage::vertex, memory_access::gpu_only); },
+                            many, [&] { return make_buffer(dev, 256, buffer_usage::vertex, memory_access::gpu_only); },
                             [](buffer &b) { destroy_buffer(b); }));
 
         print_lifecycle("buffer 1 MiB (gpu_only)",
                         measure_lifecycle(
-                            some,
-                            [&] { return make_buffer(dev, mib, buffer_usage::vertex, memory_access::gpu_only); },
+                            some, [&] { return make_buffer(dev, mib, buffer_usage::vertex, memory_access::gpu_only); },
                             [](buffer &b) { destroy_buffer(b); }));
 
-        print_lifecycle("texture 256x256 rgba8 (sampled)",
-                        measure_lifecycle(
-                            some,
-                            [&] {
-                                texture_desc desc;
-                                desc.extent = {256, 256, 1};
-                                desc.pixel_format = format::rgba8_unorm;
-                                desc.usage = texture_usage::sampled | texture_usage::transfer_dst;
-                                return create_texture(dev, desc);
-                            },
-                            [](texture &t) { destroy_texture(t); }));
+        print_lifecycle("texture 256x256 rgba8 (sampled)", measure_lifecycle(
+                                                               some,
+                                                               [&]
+                                                               {
+                                                                   texture_desc desc;
+                                                                   desc.extent = {256, 256, 1};
+                                                                   desc.pixel_format = format::rgba8_unorm;
+                                                                   desc.usage = texture_usage::sampled |
+                                                                                texture_usage::transfer_dst;
+                                                                   return create_texture(dev, desc);
+                                                               },
+                                                               [](texture &t) { destroy_texture(t); }));
 
-        print_lifecycle("texture 1024x1024 rgba8 (render target)",
-                        measure_lifecycle(
-                            few,
-                            [&] {
-                                texture_desc desc;
-                                desc.extent = {1024, 1024, 1};
-                                desc.pixel_format = format::rgba8_unorm;
-                                desc.usage = texture_usage::render_target | texture_usage::sampled;
-                                return create_texture(dev, desc);
-                            },
-                            [](texture &t) { destroy_texture(t); }));
+        print_lifecycle("texture 1024x1024 rgba8 (render target)", measure_lifecycle(
+                                                                       few,
+                                                                       [&]
+                                                                       {
+                                                                           texture_desc desc;
+                                                                           desc.extent = {1024, 1024, 1};
+                                                                           desc.pixel_format = format::rgba8_unorm;
+                                                                           desc.usage = texture_usage::render_target |
+                                                                                        texture_usage::sampled;
+                                                                           return create_texture(dev, desc);
+                                                                       },
+                                                                       [](texture &t) { destroy_texture(t); }));
 
-        print_lifecycle("sampler", measure_lifecycle(
-                                      many, [&] { return create_sampler(dev, {}); },
-                                      [](sampler &s) { destroy_sampler(s); }));
+        print_lifecycle(
+            "sampler",
+            measure_lifecycle(many, [&] { return create_sampler(dev, {}); }, [](sampler &s) { destroy_sampler(s); }));
 
         print_lifecycle("command list", measure_lifecycle(
                                             some, [&] { return create_command_list(dev, {}); },
@@ -145,16 +145,16 @@ namespace catalyst::bench::render
             const std::size_t iterations = size <= 64 * kib ? some : few;
             const std::span<const std::byte> data{payload.data(), size};
 
-            buffer host = make_buffer(dev, size, buffer_usage::uniform | buffer_usage::transfer_src,
-                                      memory_access::cpu_to_gpu);
+            buffer host =
+                make_buffer(dev, size, buffer_usage::uniform | buffer_usage::transfer_src, memory_access::cpu_to_gpu);
             measure_upload("write_buffer " + size_label(size) + " (cpu_to_gpu, direct)", host, data, iterations);
             destroy_buffer(host);
 
             // Whether this stages or writes straight through depends on the adapter, so say which one was measured
             // rather than assuming a staging copy.
             const char *const local_path = get_device_info(dev).unified_memory ? ", direct" : ", staged";
-            buffer local = make_buffer(dev, size, buffer_usage::vertex | buffer_usage::transfer_dst,
-                                       memory_access::gpu_only);
+            buffer local =
+                make_buffer(dev, size, buffer_usage::vertex | buffer_usage::transfer_dst, memory_access::gpu_only);
             measure_upload("write_buffer " + size_label(size) + " (gpu_only" + local_path + ")", local, data,
                            iterations);
             destroy_buffer(local);
@@ -195,22 +195,24 @@ namespace catalyst::bench::render
         if (ctx.executes_gpu_work())
         {
             const std::size_t size = 16 * mib;
-            buffer src = make_buffer(dev, size, buffer_usage::transfer_src | buffer_usage::vertex,
-                                     memory_access::gpu_only);
-            buffer dst = make_buffer(dev, size, buffer_usage::transfer_dst | buffer_usage::vertex,
-                                     memory_access::gpu_only);
+            buffer src =
+                make_buffer(dev, size, buffer_usage::transfer_src | buffer_usage::vertex, memory_access::gpu_only);
+            buffer dst =
+                make_buffer(dev, size, buffer_usage::transfer_dst | buffer_usage::vertex, memory_access::gpu_only);
             command_list cl = create_command_list(dev, {.debug_name = "copy"});
 
             if (src && dst && cl)
             {
                 // Recorded, submitted and waited for as one unit: device-to-device bandwidth plus one submit.
-                const stats s = measure(few, [&] {
-                    begin_recording(cl);
-                    copy_buffer(cl, src, 0, dst, 0, size);
-                    end_recording(cl);
-                    (void)submit(get_queue(dev), cl);
-                    wait_idle(dev);
-                });
+                const stats s = measure(few,
+                                        [&]
+                                        {
+                                            begin_recording(cl);
+                                            copy_buffer(cl, src, 0, dst, 0, size);
+                                            end_recording(cl);
+                                            (void)submit(get_queue(dev), cl);
+                                            wait_idle(dev);
+                                        });
                 print_name("copy_buffer 16 MiB on device (submit + wait)");
                 print_stats("copy", s);
                 print_value("bandwidth", mib_per_second(size, s.mean_ms / 1'000.0), "MiB/s");

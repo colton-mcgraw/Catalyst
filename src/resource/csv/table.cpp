@@ -10,7 +10,6 @@
  */
 
 #include <catalyst/resource/csv/table.hpp>
-
 #include <catalyst/resource/csv/tape.hpp>
 
 #include <cstddef>

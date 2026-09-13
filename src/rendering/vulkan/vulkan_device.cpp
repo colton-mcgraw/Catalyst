@@ -8,9 +8,8 @@
  * command buffer used for uploads, and the `destroy_device` cascade over every owned resource.
  */
 
-#include "vulkan_backend.hpp"
-
 #include "../detail_sync.hpp"
+#include "vulkan_backend.hpp"
 #include "vulkan_convert.hpp"
 
 #include <algorithm>
@@ -30,29 +29,52 @@ namespace catalyst::rendering::detail::vulkan
     {
         switch (result)
         {
-        case VK_SUCCESS:                        return "VK_SUCCESS";
-        case VK_NOT_READY:                      return "VK_NOT_READY";
-        case VK_TIMEOUT:                        return "VK_TIMEOUT";
-        case VK_INCOMPLETE:                     return "VK_INCOMPLETE";
-        case VK_SUBOPTIMAL_KHR:                 return "VK_SUBOPTIMAL_KHR";
-        case VK_ERROR_OUT_OF_HOST_MEMORY:       return "VK_ERROR_OUT_OF_HOST_MEMORY";
-        case VK_ERROR_OUT_OF_DEVICE_MEMORY:     return "VK_ERROR_OUT_OF_DEVICE_MEMORY";
-        case VK_ERROR_INITIALIZATION_FAILED:    return "VK_ERROR_INITIALIZATION_FAILED";
-        case VK_ERROR_DEVICE_LOST:              return "VK_ERROR_DEVICE_LOST";
-        case VK_ERROR_MEMORY_MAP_FAILED:        return "VK_ERROR_MEMORY_MAP_FAILED";
-        case VK_ERROR_LAYER_NOT_PRESENT:        return "VK_ERROR_LAYER_NOT_PRESENT";
-        case VK_ERROR_EXTENSION_NOT_PRESENT:    return "VK_ERROR_EXTENSION_NOT_PRESENT";
-        case VK_ERROR_FEATURE_NOT_PRESENT:      return "VK_ERROR_FEATURE_NOT_PRESENT";
-        case VK_ERROR_INCOMPATIBLE_DRIVER:      return "VK_ERROR_INCOMPATIBLE_DRIVER";
-        case VK_ERROR_TOO_MANY_OBJECTS:         return "VK_ERROR_TOO_MANY_OBJECTS";
-        case VK_ERROR_FORMAT_NOT_SUPPORTED:     return "VK_ERROR_FORMAT_NOT_SUPPORTED";
-        case VK_ERROR_SURFACE_LOST_KHR:         return "VK_ERROR_SURFACE_LOST_KHR";
-        case VK_ERROR_NATIVE_WINDOW_IN_USE_KHR: return "VK_ERROR_NATIVE_WINDOW_IN_USE_KHR";
-        case VK_ERROR_OUT_OF_DATE_KHR:          return "VK_ERROR_OUT_OF_DATE_KHR";
-        case VK_ERROR_VALIDATION_FAILED_EXT:    return "VK_ERROR_VALIDATION_FAILED_EXT";
-        case VK_ERROR_INVALID_SHADER_NV:        return "VK_ERROR_INVALID_SHADER_NV";
-        case VK_ERROR_UNKNOWN:                  return "VK_ERROR_UNKNOWN";
-        default:                                return "VkResult(other)";
+        case VK_SUCCESS:
+            return "VK_SUCCESS";
+        case VK_NOT_READY:
+            return "VK_NOT_READY";
+        case VK_TIMEOUT:
+            return "VK_TIMEOUT";
+        case VK_INCOMPLETE:
+            return "VK_INCOMPLETE";
+        case VK_SUBOPTIMAL_KHR:
+            return "VK_SUBOPTIMAL_KHR";
+        case VK_ERROR_OUT_OF_HOST_MEMORY:
+            return "VK_ERROR_OUT_OF_HOST_MEMORY";
+        case VK_ERROR_OUT_OF_DEVICE_MEMORY:
+            return "VK_ERROR_OUT_OF_DEVICE_MEMORY";
+        case VK_ERROR_INITIALIZATION_FAILED:
+            return "VK_ERROR_INITIALIZATION_FAILED";
+        case VK_ERROR_DEVICE_LOST:
+            return "VK_ERROR_DEVICE_LOST";
+        case VK_ERROR_MEMORY_MAP_FAILED:
+            return "VK_ERROR_MEMORY_MAP_FAILED";
+        case VK_ERROR_LAYER_NOT_PRESENT:
+            return "VK_ERROR_LAYER_NOT_PRESENT";
+        case VK_ERROR_EXTENSION_NOT_PRESENT:
+            return "VK_ERROR_EXTENSION_NOT_PRESENT";
+        case VK_ERROR_FEATURE_NOT_PRESENT:
+            return "VK_ERROR_FEATURE_NOT_PRESENT";
+        case VK_ERROR_INCOMPATIBLE_DRIVER:
+            return "VK_ERROR_INCOMPATIBLE_DRIVER";
+        case VK_ERROR_TOO_MANY_OBJECTS:
+            return "VK_ERROR_TOO_MANY_OBJECTS";
+        case VK_ERROR_FORMAT_NOT_SUPPORTED:
+            return "VK_ERROR_FORMAT_NOT_SUPPORTED";
+        case VK_ERROR_SURFACE_LOST_KHR:
+            return "VK_ERROR_SURFACE_LOST_KHR";
+        case VK_ERROR_NATIVE_WINDOW_IN_USE_KHR:
+            return "VK_ERROR_NATIVE_WINDOW_IN_USE_KHR";
+        case VK_ERROR_OUT_OF_DATE_KHR:
+            return "VK_ERROR_OUT_OF_DATE_KHR";
+        case VK_ERROR_VALIDATION_FAILED_EXT:
+            return "VK_ERROR_VALIDATION_FAILED_EXT";
+        case VK_ERROR_INVALID_SHADER_NV:
+            return "VK_ERROR_INVALID_SHADER_NV";
+        case VK_ERROR_UNKNOWN:
+            return "VK_ERROR_UNKNOWN";
+        default:
+            return "VkResult(other)";
         }
     }
 
@@ -120,9 +142,8 @@ namespace catalyst::rendering::detail::vulkan
             std::vector<VkExtensionProperties> extensions(count);
             if (vkEnumerateInstanceExtensionProperties(nullptr, &count, extensions.data()) != VK_SUCCESS)
                 return false;
-            return std::any_of(extensions.begin(), extensions.end(), [name](const VkExtensionProperties &e) {
-                return std::strcmp(e.extensionName, name) == 0;
-            });
+            return std::any_of(extensions.begin(), extensions.end(), [name](const VkExtensionProperties &e)
+                               { return std::strcmp(e.extensionName, name) == 0; });
         }
 
         bool has_device_extension(VkPhysicalDevice pd, const char *name)
@@ -133,9 +154,8 @@ namespace catalyst::rendering::detail::vulkan
             std::vector<VkExtensionProperties> extensions(count);
             if (vkEnumerateDeviceExtensionProperties(pd, nullptr, &count, extensions.data()) != VK_SUCCESS)
                 return false;
-            return std::any_of(extensions.begin(), extensions.end(), [name](const VkExtensionProperties &e) {
-                return std::strcmp(e.extensionName, name) == 0;
-            });
+            return std::any_of(extensions.begin(), extensions.end(), [name](const VkExtensionProperties &e)
+                               { return std::strcmp(e.extensionName, name) == 0; });
         }
 
         bool create_instance(device_state &dev)
@@ -189,8 +209,8 @@ namespace catalyst::rendering::detail::vulkan
             }
 
             VkDebugUtilsMessengerCreateInfoEXT messenger_info{VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT};
-            messenger_info.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
-                                             VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+            messenger_info.messageSeverity =
+                VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
             messenger_info.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
                                          VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
                                          VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
@@ -292,8 +312,8 @@ namespace catalyst::rendering::detail::vulkan
                 const VkQueueFlags flags = families[i].queueFlags;
                 const bool draws = (flags & VK_QUEUE_GRAPHICS_BIT) != 0;
                 const bool computes = (flags & VK_QUEUE_COMPUTE_BIT) != 0;
-                const bool transfers = (flags & (VK_QUEUE_TRANSFER_BIT | VK_QUEUE_GRAPHICS_BIT |
-                                                 VK_QUEUE_COMPUTE_BIT)) != 0;
+                const bool transfers =
+                    (flags & (VK_QUEUE_TRANSFER_BIT | VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT)) != 0;
 
                 if (!out.compute_dedicated && computes && !draws)
                 {
@@ -352,10 +372,18 @@ namespace catalyst::rendering::detail::vulkan
 
                 switch (c.properties.deviceType)
                 {
-                case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU:   c.score = dev.desc.prefer_discrete_adapter ? 3 : 1; break;
-                case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU: c.score = 2; break;
-                case VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU:    c.score = 1; break;
-                default:                                     c.score = 0; break;
+                case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU:
+                    c.score = dev.desc.prefer_discrete_adapter ? 3 : 1;
+                    break;
+                case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU:
+                    c.score = 2;
+                    break;
+                case VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU:
+                    c.score = 1;
+                    break;
+                default:
+                    c.score = 0;
+                    break;
                 }
 
                 if (c.score > best.score)
@@ -448,10 +476,9 @@ namespace catalyst::rendering::detail::vulkan
             std::vector<VkDeviceQueueCreateInfo> queue_infos;
             for (const queue_state &q : dev.queues)
             {
-                const bool already = std::any_of(queue_infos.begin(), queue_infos.end(),
-                                                 [&q](const VkDeviceQueueCreateInfo &existing) {
-                                                     return existing.queueFamilyIndex == q.family;
-                                                 });
+                const bool already =
+                    std::any_of(queue_infos.begin(), queue_infos.end(), [&q](const VkDeviceQueueCreateInfo &existing)
+                                { return existing.queueFamilyIndex == q.family; });
                 if (already)
                     continue;
 
@@ -499,8 +526,7 @@ namespace catalyst::rendering::detail::vulkan
                 queue_state &q = dev.queues[i];
                 vkGetDeviceQueue(dev.device, q.family, 0, &q.queue);
 
-                const VkResult semaphore_result =
-                    vkCreateSemaphore(dev.device, &semaphore_info, nullptr, &q.timeline);
+                const VkResult semaphore_result = vkCreateSemaphore(dev.device, &semaphore_info, nullptr, &q.timeline);
                 if (semaphore_result != VK_SUCCESS)
                 {
                     logging::error<detail::render_log>("create_device: vkCreateSemaphore (timeline) failed ({})",
@@ -509,12 +535,12 @@ namespace catalyst::rendering::detail::vulkan
                 }
             }
 
-            logging::info<detail::render_log>(
-                "queues: graphics family {}, compute family {}{}, copy family {}{}",
-                queue_for(dev, queue_kind::graphics).family, queue_for(dev, queue_kind::compute).family,
-                queue_for(dev, queue_kind::compute).dedicated ? "" : " (aliased)",
-                queue_for(dev, queue_kind::copy).family,
-                queue_for(dev, queue_kind::copy).dedicated ? "" : " (aliased)");
+            logging::info<detail::render_log>("queues: graphics family {}, compute family {}{}, copy family {}{}",
+                                              queue_for(dev, queue_kind::graphics).family,
+                                              queue_for(dev, queue_kind::compute).family,
+                                              queue_for(dev, queue_kind::compute).dedicated ? "" : " (aliased)",
+                                              queue_for(dev, queue_kind::copy).family,
+                                              queue_for(dev, queue_kind::copy).dedicated ? "" : " (aliased)");
 
             if (dev.debug_utils)
             {
@@ -532,10 +558,14 @@ namespace catalyst::rendering::detail::vulkan
         {
             switch (set)
             {
-            case set_uniform_buffers: return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-            case set_storage_buffers: return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-            case set_textures:        return VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-            default:                  return VK_DESCRIPTOR_TYPE_SAMPLER;
+            case set_uniform_buffers:
+                return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            case set_storage_buffers:
+                return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            case set_textures:
+                return VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+            default:
+                return VK_DESCRIPTOR_TYPE_SAMPLER;
             }
         }
 
@@ -543,10 +573,14 @@ namespace catalyst::rendering::detail::vulkan
         {
             switch (set)
             {
-            case set_uniform_buffers: return max_uniform_buffer_slots;
-            case set_storage_buffers: return max_storage_buffer_slots;
-            case set_textures:        return max_texture_slots;
-            default:                  return max_sampler_slots;
+            case set_uniform_buffers:
+                return max_uniform_buffer_slots;
+            case set_storage_buffers:
+                return max_storage_buffer_slots;
+            case set_textures:
+                return max_texture_slots;
+            default:
+                return max_sampler_slots;
             }
         }
 
@@ -743,14 +777,30 @@ namespace catalyst::rendering::detail::vulkan
             }
             e.code = error_code::device_lost;
             break;
-        case VK_ERROR_OUT_OF_DEVICE_MEMORY: e.code = error_code::out_of_device_memory; break;
-        case VK_ERROR_OUT_OF_HOST_MEMORY:   e.code = error_code::out_of_host_memory; break;
-        case VK_ERROR_SURFACE_LOST_KHR:     e.code = error_code::surface_lost; break;
-        case VK_ERROR_OUT_OF_DATE_KHR:      e.code = error_code::swapchain_out_of_date; break;
-        case VK_TIMEOUT:                    e.code = error_code::timeout; break;
-        case VK_NOT_READY:                  e.code = error_code::not_ready; break;
-        case VK_ERROR_FORMAT_NOT_SUPPORTED: e.code = error_code::unsupported_format; break;
-        default:                            e.code = error_code::platform_error; break;
+        case VK_ERROR_OUT_OF_DEVICE_MEMORY:
+            e.code = error_code::out_of_device_memory;
+            break;
+        case VK_ERROR_OUT_OF_HOST_MEMORY:
+            e.code = error_code::out_of_host_memory;
+            break;
+        case VK_ERROR_SURFACE_LOST_KHR:
+            e.code = error_code::surface_lost;
+            break;
+        case VK_ERROR_OUT_OF_DATE_KHR:
+            e.code = error_code::swapchain_out_of_date;
+            break;
+        case VK_TIMEOUT:
+            e.code = error_code::timeout;
+            break;
+        case VK_NOT_READY:
+            e.code = error_code::not_ready;
+            break;
+        case VK_ERROR_FORMAT_NOT_SUPPORTED:
+            e.code = error_code::unsupported_format;
+            break;
+        default:
+            e.code = error_code::platform_error;
+            break;
         }
         return e;
     }
@@ -784,18 +834,20 @@ namespace catalyst::rendering::detail::vulkan
         // Releasing now is safe: the driver has already abandoned the work that was reading it.
         const bool lost = dev.lost;
 
-        std::erase_if(dev.garbage, [&](deferred_release &g) {
-            if (!lost)
-            {
-                for (std::size_t i = 0; i < queue_kind_count; ++i)
-                {
-                    if (g.points[i] > dev.queues[i].completed)
-                        return false;
-                }
-            }
-            g.release();
-            return true;
-        });
+        std::erase_if(dev.garbage,
+                      [&](deferred_release &g)
+                      {
+                          if (!lost)
+                          {
+                              for (std::size_t i = 0; i < queue_kind_count; ++i)
+                              {
+                                  if (g.points[i] > dev.queues[i].completed)
+                                      return false;
+                              }
+                          }
+                          g.release();
+                          return true;
+                      });
     }
 
     std::expected<std::uint64_t, error> submit_batch(device_state &dev, const submit_batch_info &batch) noexcept
@@ -814,7 +866,8 @@ namespace catalyst::rendering::detail::vulkan
         std::vector<VkPipelineStageFlags> stages{batch.wait_stages.begin(), batch.wait_stages.end()};
         std::vector<std::uint64_t> wait_values(waits.size(), 0);
 
-        const auto add_timeline_wait = [&](queue_kind source_kind, std::uint64_t value) {
+        const auto add_timeline_wait = [&](queue_kind source_kind, std::uint64_t value)
+        {
             if (value == 0)
                 return;
             const queue_state &source = queue_for(dev, source_kind);

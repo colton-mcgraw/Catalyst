@@ -1,7 +1,7 @@
-#include "test_common.hpp"
-
 #include <catalyst/ui/color.hpp>
 #include <catalyst/ui/geometry.hpp>
+
+#include "test_common.hpp"
 
 using namespace catalyst::ui;
 using catalyst::tests::near;

@@ -83,12 +83,9 @@ namespace catalyst::audio
      * not - build the value first and post a pointer to it.
      */
     template <typename F>
-    concept commandable =
-        std::is_nothrow_invocable_r_v<void, F &> &&
-        std::is_trivially_copyable_v<F> &&
-        std::is_trivially_destructible_v<F> &&
-        sizeof(F) <= command_payload_bytes &&
-        alignof(F) <= alignof(std::max_align_t);
+    concept commandable = std::is_nothrow_invocable_r_v<void, F &> && std::is_trivially_copyable_v<F> &&
+                          std::is_trivially_destructible_v<F> && sizeof(F) <= command_payload_bytes &&
+                          alignof(F) <= alignof(std::max_align_t);
 
     /**
      * @class command
@@ -137,8 +134,7 @@ namespace catalyst::audio
         void (*invoke_)(void *) noexcept = nullptr;
     };
 
-    static_assert(std::is_trivially_copyable_v<command>,
-                  "a command crosses a thread boundary as bytes");
+    static_assert(std::is_trivially_copyable_v<command>, "a command crosses a thread boundary as bytes");
     static_assert(std::is_trivially_destructible_v<command>,
                   "destroying a command must not run code on the render thread");
     static_assert(sizeof(command) == cache_line_bytes,
@@ -171,10 +167,7 @@ namespace catalyst::audio
          * @param capacity How many commands may be in flight at once.
          * @throws std::bad_alloc If the storage cannot be allocated. Build rings during setup.
          */
-        explicit command_ring(std::size_t capacity = default_capacity)
-            : ring_(capacity)
-        {
-        }
+        explicit command_ring(std::size_t capacity = default_capacity) : ring_(capacity) {}
 
         /**
          * @brief Producer thread. Queues @p callable to run on the consumer thread.
@@ -246,16 +239,10 @@ namespace catalyst::audio
         [[nodiscard]] std::size_t capacity() const noexcept { return ring_.capacity(); }
 
         /** @brief How many commands have been accepted for delivery. */
-        [[nodiscard]] std::uint64_t posted() const noexcept
-        {
-            return posted_.load(std::memory_order_relaxed);
-        }
+        [[nodiscard]] std::uint64_t posted() const noexcept { return posted_.load(std::memory_order_relaxed); }
 
         /** @brief How many commands have run. */
-        [[nodiscard]] std::uint64_t executed() const noexcept
-        {
-            return executed_.load(std::memory_order_relaxed);
-        }
+        [[nodiscard]] std::uint64_t executed() const noexcept { return executed_.load(std::memory_order_relaxed); }
 
         /**
          * @brief How many `post` calls found the ring full.
@@ -264,10 +251,7 @@ namespace catalyst::audio
          * thread that must not wait for the audio thread - they are the same number, and it should
          * stay at zero.
          */
-        [[nodiscard]] std::uint64_t refused() const noexcept
-        {
-            return refused_.load(std::memory_order_relaxed);
-        }
+        [[nodiscard]] std::uint64_t refused() const noexcept { return refused_.load(std::memory_order_relaxed); }
 
     private:
         spsc_ring<command> ring_;

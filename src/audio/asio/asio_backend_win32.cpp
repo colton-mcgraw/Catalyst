@@ -22,7 +22,6 @@
 #include "../detail_convert.hpp"
 #include "../detail_render.hpp"
 #include "../win32/detail_win32.hpp"
-
 #include "asio_loader.h"
 
 #include <algorithm>
@@ -109,10 +108,7 @@ namespace catalyst::audio::detail
         class asio_backend_win32 final : public backend_base
         {
         public:
-            explicit asio_backend_win32(open_request request)
-                : backend_base(backend_kind::asio, std::move(request))
-            {
-            }
+            explicit asio_backend_win32(open_request request) : backend_base(backend_kind::asio, std::move(request)) {}
 
             ~asio_backend_win32() override { close(); }
 
@@ -231,10 +227,8 @@ namespace catalyst::audio::detail
                 out.output_layout = layout_for(static_cast<channel_count>(output_channels_));
                 out.block_frames = static_cast<std::uint32_t>(buffer_frames_);
 
-                out.output_latency =
-                    frames_to_time(static_cast<frame_count>(output_latency_frames_), rate);
-                out.input_latency =
-                    frames_to_time(static_cast<frame_count>(input_latency_frames_), rate);
+                out.output_latency = frames_to_time(static_cast<frame_count>(output_latency_frames_), rate);
+                out.input_latency = frames_to_time(static_cast<frame_count>(input_latency_frames_), rate);
 
                 // ASIO always owns the device outright.
                 out.exclusive = true;
@@ -315,13 +309,11 @@ namespace catalyst::audio::detail
 
                 output_channels_ =
                     wants_output
-                        ? std::min<std::int32_t>(
-                              static_cast<std::int32_t>(request_.output_channels), available_outputs)
+                        ? std::min<std::int32_t>(static_cast<std::int32_t>(request_.output_channels), available_outputs)
                         : 0;
                 input_channels_ =
                     wants_input
-                        ? std::min<std::int32_t>(
-                              static_cast<std::int32_t>(request_.input_channels), available_inputs)
+                        ? std::min<std::int32_t>(static_cast<std::int32_t>(request_.input_channels), available_inputs)
                         : 0;
 
                 if (output_channels_ <= 0 && input_channels_ <= 0)
@@ -372,8 +364,8 @@ namespace catalyst::audio::detail
             /// Resolves every channel's conversion before the driver can call back, so the
             /// real-time path is an indirect call rather than a sample-type comparison per channel.
             template <typename Fn, typename Pick>
-            std::expected<void, error> resolve_converters(
-                std::vector<Fn> &converters, std::int32_t channels, bool input, Pick pick)
+            std::expected<void, error> resolve_converters(std::vector<Fn> &converters, std::int32_t channels,
+                                                          bool input, Pick pick)
             {
                 converters.assign(static_cast<std::size_t>(channels), nullptr);
 
@@ -398,8 +390,8 @@ namespace catalyst::audio::detail
 
             std::expected<void, error> create_buffers()
             {
-                const auto total = static_cast<std::size_t>(output_channels_) +
-                                   static_cast<std::size_t>(input_channels_);
+                const auto total =
+                    static_cast<std::size_t>(output_channels_) + static_cast<std::size_t>(input_channels_);
 
                 buffer_infos_.assign(total, asio::asio_buffer_info{});
 
@@ -418,15 +410,13 @@ namespace catalyst::audio::detail
                     info.channel_num = channel;
                 }
 
-                if (const auto resolved = resolve_converters(
-                        output_converters_, output_channels_, false, &pack_for);
+                if (const auto resolved = resolve_converters(output_converters_, output_channels_, false, &pack_for);
                     !resolved)
                 {
                     return std::unexpected(resolved.error());
                 }
 
-                if (const auto resolved = resolve_converters(
-                        input_converters_, input_channels_, true, &unpack_for);
+                if (const auto resolved = resolve_converters(input_converters_, input_channels_, true, &unpack_for);
                     !resolved)
                 {
                     return std::unexpected(resolved.error());
@@ -443,11 +433,8 @@ namespace catalyst::audio::detail
                 callbacks_.asio_message = &asio_backend_win32::on_message;
                 callbacks_.buffer_switch_time_info = &asio_backend_win32::on_buffer_switch_time_info;
 
-                if (driver_->create_buffers(
-                        buffer_infos_.data(),
-                        static_cast<std::int32_t>(total),
-                        buffer_frames_,
-                        &callbacks_) != 0)
+                if (driver_->create_buffers(buffer_infos_.data(), static_cast<std::int32_t>(total), buffer_frames_,
+                                            &callbacks_) != 0)
                 {
                     return failure(error_code::platform_error);
                 }
@@ -471,19 +458,13 @@ namespace catalyst::audio::detail
                         continue;
 
                     input_converters_[static_cast<std::size_t>(channel)](
-                        input_interleaved_.data() + channel,
-                        source,
-                        frames,
-                        static_cast<std::size_t>(input_channels_));
+                        input_interleaved_.data() + channel, source, frames, static_cast<std::size_t>(input_channels_));
                 }
 
                 dispatcher_.dispatch(
-                    std::span<sample>(output_interleaved_),
-                    std::span<const sample>(input_interleaved_),
-                    static_cast<std::uint32_t>(buffer_frames_),
-                    static_cast<channel_count>(output_channels_),
-                    static_cast<channel_count>(input_channels_),
-                    rate());
+                    std::span<sample>(output_interleaved_), std::span<const sample>(input_interleaved_),
+                    static_cast<std::uint32_t>(buffer_frames_), static_cast<channel_count>(output_channels_),
+                    static_cast<channel_count>(input_channels_), rate());
 
                 for (std::int32_t channel = 0; channel < output_channels_; ++channel)
                 {
@@ -492,11 +473,9 @@ namespace catalyst::audio::detail
                     if (!destination)
                         continue;
 
-                    output_converters_[static_cast<std::size_t>(channel)](
-                        destination,
-                        output_interleaved_.data() + channel,
-                        frames,
-                        static_cast<std::size_t>(output_channels_));
+                    output_converters_[static_cast<std::size_t>(channel)](destination,
+                                                                          output_interleaved_.data() + channel, frames,
+                                                                          static_cast<std::size_t>(output_channels_));
                 }
             }
 
@@ -528,8 +507,8 @@ namespace catalyst::audio::detail
                     publisher->note();
             }
 
-            static std::int32_t on_message(
-                std::int32_t selector, std::int32_t value, void *message, double *opt) noexcept
+            static std::int32_t on_message(std::int32_t selector, std::int32_t value, void *message,
+                                           double *opt) noexcept
             {
                 (void)value;
                 (void)message;
@@ -567,8 +546,8 @@ namespace catalyst::audio::detail
                 return 0;
             }
 
-            static asio::asio_time *on_buffer_switch_time_info(
-                asio::asio_time *params, std::int32_t half, std::int32_t direct_process) noexcept
+            static asio::asio_time *on_buffer_switch_time_info(asio::asio_time *params, std::int32_t half,
+                                                               std::int32_t direct_process) noexcept
             {
                 on_buffer_switch(half, direct_process);
                 return params;

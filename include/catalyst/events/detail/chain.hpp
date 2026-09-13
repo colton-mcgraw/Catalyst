@@ -29,7 +29,10 @@ namespace catalyst::events::detail
         std::size_t index;
     };
 
-    inline bool live(const slot_base &s) noexcept { return s.active.load(std::memory_order_acquire); }
+    inline bool live(const slot_base &s) noexcept
+    {
+        return s.active.load(std::memory_order_acquire);
+    }
 
     // Runs middleware [index, end) as an onion around the listeners. Each
     // layer gets a fresh context pointing at the next layer, so calling next

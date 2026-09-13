@@ -44,7 +44,7 @@ namespace catalyst::logging
 // carries a CATALYST_LOG_COMPILED_LEVEL cache variable for it - and every call below that level
 // becomes an empty function that the optimiser deletes, rather than a run-time check.
 #ifndef CATALYST_LOG_COMPILED_LEVEL
-#  define CATALYST_LOG_COMPILED_LEVEL trace
+#define CATALYST_LOG_COMPILED_LEVEL trace
 #endif
 
     /**

@@ -119,10 +119,7 @@ namespace catalyst::audio
         [[nodiscard]] static device_selector system_default() { return {}; }
 
         /** @brief Asks for an exact @ref device_info::id. The one to build a settings file on. */
-        [[nodiscard]] static device_selector by_id(std::string id)
-        {
-            return device_selector{match::id, std::move(id)};
-        }
+        [[nodiscard]] static device_selector by_id(std::string id) { return device_selector{match::id, std::move(id)}; }
 
         /** @brief Asks for the first device whose name contains @p text. */
         [[nodiscard]] static device_selector by_name(std::string text)
@@ -174,9 +171,9 @@ namespace catalyst::audio
      * @param backend The backend to ask. @ref backend_kind::automatic means @ref default_backend.
      * @return @ref error_code::no_device if nothing is plugged in.
      */
-    [[nodiscard]] std::expected<device_info, error> default_device(
-        stream_direction direction = stream_direction::output,
-        backend_kind backend = backend_kind::automatic);
+    [[nodiscard]] std::expected<device_info, error>
+    default_device(stream_direction direction = stream_direction::output,
+                   backend_kind backend = backend_kind::automatic);
 
     /**
      * @brief The first device in @p list that answers @p selector and can serve @p direction.
@@ -185,9 +182,7 @@ namespace catalyst::audio
      * that shows a green tick here will not surprise the user at open time.
      * @return A pointer into @p list, or null if nothing matched.
      */
-    [[nodiscard]] const device_info *find_device(
-        const std::vector<device_info> &list,
-        const device_selector &selector,
-        stream_direction direction = stream_direction::output) noexcept;
+    [[nodiscard]] const device_info *find_device(const std::vector<device_info> &list, const device_selector &selector,
+                                                 stream_direction direction = stream_direction::output) noexcept;
 
 } // namespace catalyst::audio

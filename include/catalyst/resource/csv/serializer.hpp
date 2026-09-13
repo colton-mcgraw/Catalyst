@@ -10,13 +10,13 @@
 
 #pragma once
 
-#include <cstddef>
-#include <string>
-#include <string_view>
-
 #include "dialect.hpp"
 #include "table.hpp"
 #include "tape.hpp"
+
+#include <cstddef>
+#include <string>
+#include <string_view>
 
 namespace catalyst::resource::csv
 {

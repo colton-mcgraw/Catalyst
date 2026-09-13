@@ -7,9 +7,9 @@
  * License: MIT (see LICENSE).
  */
 
-#include "detail_backend.hpp"
-
 #include <catalyst/audio/device.hpp>
+
+#include "detail_backend.hpp"
 
 #include <algorithm>
 
@@ -48,8 +48,8 @@ namespace catalyst::audio
 
         // Some backends report no default at all - ASIO has no notion of one - so fall back to the
         // first endpoint that could actually serve the direction rather than failing outright.
-        const auto usable = std::ranges::find_if(
-            *list, [direction](const device_info &device) { return device.supports(direction); });
+        const auto usable =
+            std::ranges::find_if(*list, [direction](const device_info &device) { return device.supports(direction); });
 
         if (usable != list->end())
             return *usable;
@@ -57,10 +57,8 @@ namespace catalyst::audio
         return std::unexpected(make_error(error_code::no_device, detail::resolve(backend)));
     }
 
-    const device_info *find_device(
-        const std::vector<device_info> &list,
-        const device_selector &selector,
-        stream_direction direction) noexcept
+    const device_info *find_device(const std::vector<device_info> &list, const device_selector &selector,
+                                   stream_direction direction) noexcept
     {
         for (const device_info &device : list)
         {

@@ -8,6 +8,11 @@
 
 #pragma once
 
+#include "document.hpp"
+#include "error.hpp"
+#include "scan.hpp"
+#include "value.hpp"
+
 #include <cstddef>
 #include <cstdint>
 #include <exception>
@@ -15,11 +20,6 @@
 #include <string>
 #include <string_view>
 #include <utility>
-
-#include "document.hpp"
-#include "error.hpp"
-#include "scan.hpp"
-#include "value.hpp"
 
 namespace catalyst::resource::json
 {

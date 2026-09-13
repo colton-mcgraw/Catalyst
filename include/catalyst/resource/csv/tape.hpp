@@ -7,6 +7,8 @@
 
 #pragma once
 
+#include "error.hpp"
+
 #include <cstddef>
 #include <cstdint>
 #include <iterator>
@@ -14,8 +16,6 @@
 #include <string>
 #include <string_view>
 #include <vector>
-
-#include "error.hpp"
 
 namespace catalyst::resource::csv
 {
@@ -73,7 +73,7 @@ namespace catalyst::resource::csv
             [[nodiscard]] std::optional<std::size_t> find(std::string_view name) const noexcept;
 
         private:
-            std::vector<std::string> names_{};  ///< Column names in column order.
+            std::vector<std::string> names_{};   ///< Column names in column order.
             std::vector<std::uint32_t> order_{}; ///< Indices into @ref names_, sorted by name.
         };
 
@@ -177,12 +177,38 @@ namespace catalyst::resource::csv
             [[nodiscard]] field operator*() const noexcept { return (*row_)[index_]; }
             [[nodiscard]] field operator[](difference_type n) const noexcept;
 
-            iterator &operator++() noexcept { ++index_; return *this; }
-            iterator operator++(int) noexcept { iterator t = *this; ++index_; return t; }
-            iterator &operator--() noexcept { --index_; return *this; }
-            iterator operator--(int) noexcept { iterator t = *this; --index_; return t; }
-            iterator &operator+=(difference_type n) noexcept { index_ += static_cast<std::size_t>(n); return *this; }
-            iterator &operator-=(difference_type n) noexcept { index_ -= static_cast<std::size_t>(n); return *this; }
+            iterator &operator++() noexcept
+            {
+                ++index_;
+                return *this;
+            }
+            iterator operator++(int) noexcept
+            {
+                iterator t = *this;
+                ++index_;
+                return t;
+            }
+            iterator &operator--() noexcept
+            {
+                --index_;
+                return *this;
+            }
+            iterator operator--(int) noexcept
+            {
+                iterator t = *this;
+                --index_;
+                return t;
+            }
+            iterator &operator+=(difference_type n) noexcept
+            {
+                index_ += static_cast<std::size_t>(n);
+                return *this;
+            }
+            iterator &operator-=(difference_type n) noexcept
+            {
+                index_ -= static_cast<std::size_t>(n);
+                return *this;
+            }
 
             [[nodiscard]] friend iterator operator+(iterator i, difference_type n) noexcept { return i += n; }
             [[nodiscard]] friend iterator operator+(difference_type n, iterator i) noexcept { return i += n; }

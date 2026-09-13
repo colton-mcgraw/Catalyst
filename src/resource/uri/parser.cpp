@@ -4,10 +4,9 @@
  * License: MIT (see LICENSE).
  */
 
-#include <catalyst/resource/uri/parser.hpp>
-
 #include <catalyst/resource/uri/charset.hpp>
 #include <catalyst/resource/uri/error.hpp>
+#include <catalyst/resource/uri/parser.hpp>
 #include <catalyst/resource/uri/reference.hpp>
 
 #include <cstddef>
@@ -32,9 +31,8 @@ namespace catalyst::resource
             if (const std::size_t at = rest.rfind('@'); at != std::string_view::npos)
             {
                 const auto ok = validate_escaped(
-                    rest.substr(0, at), off,
-                    [](unsigned char c) { return is_unreserved(c) || is_sub_delim(c) || c == ':'; },
-                    uri_error_code::invalid_userinfo);
+                    rest.substr(0, at), off, [](unsigned char c)
+                    { return is_unreserved(c) || is_sub_delim(c) || c == ':'; }, uri_error_code::invalid_userinfo);
                 if (!ok)
                     return ok;
                 rest.remove_prefix(at + 1);
@@ -64,8 +62,7 @@ namespace catalyst::resource
                 const std::size_t colon = rest.find(':');
                 host_len = (colon == std::string_view::npos) ? rest.size() : colon;
                 const auto ok = validate_escaped(
-                    rest.substr(0, host_len), off,
-                    [](unsigned char c) { return is_unreserved(c) || is_sub_delim(c); },
+                    rest.substr(0, host_len), off, [](unsigned char c) { return is_unreserved(c) || is_sub_delim(c); },
                     uri_error_code::invalid_host);
                 if (!ok)
                     return ok;
@@ -175,9 +172,8 @@ namespace catalyst::resource
             const std::size_t hash = text.find('#', begin);
             const std::size_t end = (hash == std::string_view::npos) ? text.size() : hash;
             if (const auto ok = validate_escaped(
-                    text.substr(begin, end - begin), begin,
-                    [](unsigned char c) { return is_pchar_literal(c) || c == '/' || c == '?'; },
-                    uri_error_code::invalid_query);
+                    text.substr(begin, end - begin), begin, [](unsigned char c)
+                    { return is_pchar_literal(c) || c == '/' || c == '?'; }, uri_error_code::invalid_query);
                 !ok)
                 return std::unexpected(ok.error());
             query_begin = begin;
@@ -192,9 +188,8 @@ namespace catalyst::resource
         {
             const std::size_t begin = pos + 1;
             if (const auto ok = validate_escaped(
-                    text.substr(begin), begin,
-                    [](unsigned char c) { return is_pchar_literal(c) || c == '/' || c == '?'; },
-                    uri_error_code::invalid_fragment);
+                    text.substr(begin), begin, [](unsigned char c)
+                    { return is_pchar_literal(c) || c == '/' || c == '?'; }, uri_error_code::invalid_fragment);
                 !ok)
                 return std::unexpected(ok.error());
             fragment_begin = begin;

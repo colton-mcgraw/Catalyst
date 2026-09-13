@@ -37,14 +37,19 @@ target_link_libraries(catalyst_rendering PUBLIC catalyst::events)
 # PRIVATE: no public rendering header includes a logging one.
 target_link_libraries(catalyst_rendering PRIVATE catalyst::logging)
 
-set(CATALYST_RENDERING_BACKEND "auto" CACHE STRING "Rendering backend (auto|d3d12|vulkan|null)")
-set_property(CACHE CATALYST_RENDERING_BACKEND PROPERTY STRINGS auto d3d12 vulkan null)
+set(CATALYST_RENDERING_BACKEND "auto" CACHE STRING "Rendering backend (auto|vulkan|d3d12|metal|null)")
+set_property(CACHE CATALYST_RENDERING_BACKEND PROPERTY STRINGS auto vulkan d3d12 metal null)
 
 # `auto` prefers Vulkan on every platform, which is the backend Catalyst targets for Windows and
 # Linux. It used to resolve to d3d12 on Windows, and that was a trap: the d3d12 and metal backends
 # are identity stubs whose resource layer is the null bookkeeping implementation, so an `auto` build
 # on Windows silently produced a renderer that recorded state and drew nothing. Both stay selectable
 # by name, and stay opt-in until they are real.
+#
+# `metal` is the same kind of stub, and until now it was not even that: src/rendering/metal was
+# referenced by no CMakeLists, so it could not be compiled in any configuration, while
+# backend_kind::metal sat in the public enum advertising a backend no build could select. It is
+# wired the same way d3d12 is -- selectable by name, never by `auto`, and honest about what it does.
 #
 # `auto` *prefers* rather than *resolves to* Vulkan because the SDK is not everywhere. Resolving to
 # it unconditionally meant `cmake -S . -B build` -- the command in the README -- failed at configure
@@ -98,6 +103,31 @@ if(_catalyst_rendering_backend STREQUAL "d3d12")
   target_link_libraries(catalyst_rendering_backend_d3d12 PRIVATE catalyst::logging)
 
   target_link_libraries(catalyst_rendering PRIVATE catalyst_rendering_backend_d3d12)
+elseif(_catalyst_rendering_backend STREQUAL "metal")
+  if(NOT APPLE)
+    message(FATAL_ERROR "CATALYST_RENDERING_BACKEND=metal is only supported on Apple platforms")
+  endif()
+
+  message(WARNING
+    "CATALYST_RENDERING_BACKEND=metal selects an identity stub: it reports itself as the metal "
+    "backend and its resource layer is the null bookkeeping implementation, so it records state "
+    "and draws nothing. It exists so the backend seam stays compiled, not to render.")
+
+  add_library(catalyst_rendering_backend_metal STATIC
+    metal/rendering_backend_metal.cpp
+    # TODO(metal): replace with a real resource implementation.
+    ${_catalyst_rendering_null_resources}
+  )
+
+  target_include_directories(catalyst_rendering_backend_metal
+    PRIVATE
+      ${CMAKE_CURRENT_SOURCE_DIR}
+      ${PROJECT_SOURCE_DIR}/include
+  )
+
+  target_link_libraries(catalyst_rendering_backend_metal PRIVATE catalyst::logging)
+
+  target_link_libraries(catalyst_rendering PRIVATE catalyst_rendering_backend_metal)
 elseif(_catalyst_rendering_backend STREQUAL "vulkan")
   # Headers and the loader import library come from the Vulkan SDK (VULKAN_SDK env var) or the system package.
   find_package(Vulkan REQUIRED)

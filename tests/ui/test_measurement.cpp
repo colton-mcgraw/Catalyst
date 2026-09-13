@@ -1,6 +1,6 @@
-#include "test_common.hpp"
-
 #include <catalyst/ui/measurement.hpp>
+
+#include "test_common.hpp"
 
 using namespace catalyst::ui;
 using catalyst::tests::near;

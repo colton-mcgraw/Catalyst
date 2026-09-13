@@ -6,16 +6,16 @@
 
 #pragma once
 
+#include "document.hpp"
+#include "scan.hpp"
+#include "tape.hpp"
+#include "value.hpp"
+
 #include <cstddef>
 #include <cstdint>
 #include <iterator>
 #include <string>
 #include <string_view>
-
-#include "document.hpp"
-#include "scan.hpp"
-#include "tape.hpp"
-#include "value.hpp"
 
 namespace catalyst::resource::json
 {
@@ -24,10 +24,22 @@ namespace catalyst::resource::json
         // Uniform child access so one writer walks both representations. An object member is a
         // `pair<string, value>` for `value` and a `cursor::member{string_view, cursor}` for `cursor`;
         // both destructure as `[key, val]` and both keys convert to `string_view`.
-        [[nodiscard]] inline const array &elements(const value &v) { return v.as_array(); }
-        [[nodiscard]] inline auto elements(const cursor &c) { return c.elements(); }
-        [[nodiscard]] inline const object &members(const value &v) { return v.as_object(); }
-        [[nodiscard]] inline auto members(const cursor &c) { return c.members(); }
+        [[nodiscard]] inline const array &elements(const value &v)
+        {
+            return v.as_array();
+        }
+        [[nodiscard]] inline auto elements(const cursor &c)
+        {
+            return c.elements();
+        }
+        [[nodiscard]] inline const object &members(const value &v)
+        {
+            return v.as_object();
+        }
+        [[nodiscard]] inline auto members(const cursor &c)
+        {
+            return c.members();
+        }
 
         /**
          * @class serializer

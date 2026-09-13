@@ -1,6 +1,6 @@
-#include "test_common.hpp"
-
 #include <catalyst/ui/layout.hpp>
+
+#include "test_common.hpp"
 
 using namespace catalyst::ui;
 using catalyst::tests::near;
@@ -13,7 +13,10 @@ namespace
         layout(t, root, layout_params::for_viewport(extent{w, h}));
     }
 
-    rect box(const tree &t, node n) { return t.layout_of(n).border_box(); }
+    rect box(const tree &t, node n)
+    {
+        return t.layout_of(n).border_box();
+    }
 
     extent measure_fixed(const measure_input &, void *user) noexcept
     {
@@ -307,7 +310,8 @@ namespace
 
     void test_justify_content()
     {
-        const auto positions = [](justify mode) {
+        const auto positions = [](justify mode)
+        {
             tree t;
             const node root = t.create();
             t.mutable_style(root).width = px(400.0f);
@@ -348,7 +352,8 @@ namespace
 
     void test_align_items()
     {
-        const auto cross_position = [](align mode) {
+        const auto cross_position = [](align mode)
+        {
             tree t;
             const node root = t.create();
             t.mutable_style(root).width = px(400.0f);
@@ -516,7 +521,8 @@ namespace
 
         // The containing block is the root's padding box: 390x190 at (5, 5).
         CT_REQUIRE(near_rect(box(t, pinned), 15.0f, 25.0f, 50.0f, 30.0f));
-        CT_REQUIRE(near_rect(box(t, from_end), 5.0f + 390.0f - 10.0f - 50.0f, 5.0f + 190.0f - 10.0f - 30.0f, 50.0f, 30.0f));
+        CT_REQUIRE(
+            near_rect(box(t, from_end), 5.0f + 390.0f - 10.0f - 50.0f, 5.0f + 190.0f - 10.0f - 30.0f, 50.0f, 30.0f));
         CT_REQUIRE(near_rect(box(t, stretched), 15.0f, 5.0f, 350.0f, 10.0f));
 
         // An out-of-flow child does not push its in-flow siblings around.

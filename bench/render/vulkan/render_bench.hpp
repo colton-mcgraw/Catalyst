@@ -3,8 +3,9 @@
  * SPDX-FileCopyrightText: 2026-Current Catalyst
  *
  * @file
- * @brief Shared scaffolding for the rendering benchmarks: command-line options, a `context` that owns the one device and
- * render target every suite shares, per-frame sample statistics and the frame loop the draw benchmarks are built on.
+ * @brief Shared scaffolding for the rendering benchmarks: command-line options, a `context` that owns the one device
+ * and render target every suite shares, per-frame sample statistics and the frame loop the draw benchmarks are built
+ * on.
  * @details The suites live in bench_pipeline.cpp, bench_resources.cpp, bench_frame.cpp and bench_quads.cpp and are
  * driven by main.cpp. Everything here is written against the public rendering API only, so the same binary is
  * meaningful on any compiled-in backend; suites that need real GPU execution say so when the backend does not provide
@@ -209,7 +210,8 @@ namespace catalyst::bench::render
         float r = 1.0f, g = 1.0f, b = 1.0f, a = 1.0f;
     };
 
-    /** @brief Unit-quad corner consumed by the instanced benchmark; matches location 0 of shaders/quad_instanced.vert. */
+    /** @brief Unit-quad corner consumed by the instanced benchmark; matches location 0 of shaders/quad_instanced.vert.
+     */
     struct quad_corner
     {
         float x = 0.0f, y = 0.0f;
@@ -247,9 +249,9 @@ namespace catalyst::bench::render
     /**
      * @class context
      * @brief The device, optional window and swapchain shared by every suite of one run.
-     * @details Off-screen runs create a window-less swapchain, which the backend serves as a plain ring of render-target
-     * textures: `acquire`/`present` then cost nothing and the frame numbers are pure rendering. Windowed runs go through
-     * the real presentation engine, so they also include acquire and present.
+     * @details Off-screen runs create a window-less swapchain, which the backend serves as a plain ring of
+     * render-target textures: `acquire`/`present` then cost nothing and the frame numbers are pure rendering. Windowed
+     * runs go through the real presentation engine, so they also include acquire and present.
      */
     class context
     {
@@ -361,7 +363,8 @@ namespace catalyst::bench::render
         std::vector<double> frame_samples;
 
         // One frame of work: acquire, record, submit, present. Returns false when the target was not available.
-        const auto frame = [&](bool measured) {
+        const auto frame = [&](bool measured)
+        {
             const auto acquire_start = clock::now();
             const rendering::texture back_buffer = ctx.acquire();
             const auto acquired = clock::now();

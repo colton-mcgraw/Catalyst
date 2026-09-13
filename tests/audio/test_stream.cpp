@@ -9,9 +9,9 @@
  * License: MIT (see LICENSE).
  */
 
-#include "../test_common.hpp"
-
 #include <catalyst/audio/audio.hpp>
+
+#include "../test_common.hpp"
 
 #include <algorithm>
 #include <format>
@@ -70,7 +70,8 @@ namespace
 
     void test_config_validation()
     {
-        const auto rejects = [](auto mutate) {
+        const auto rejects = [](auto mutate)
+        {
             stream_config config = null_config();
             mutate(config);
             const auto result = stream::open(config, &render_silence);
@@ -84,10 +85,12 @@ namespace
         rejects([](stream_config &c) { c.block_frames = 1u << 24; });
 
         // Input direction without input channels is meaningless.
-        rejects([](stream_config &c) {
-            c.direction = stream_direction::input;
-            c.input_channels = 0;
-        });
+        rejects(
+            [](stream_config &c)
+            {
+                c.direction = stream_direction::input;
+                c.input_channels = 0;
+            });
     }
 
     void test_lifecycle_is_idempotent()
@@ -132,9 +135,8 @@ namespace
         const auto backends = available_backends();
         CT_REQUIRE(!backends.empty());
 
-        const auto contains = [&backends](backend_kind backend) {
-            return std::find(backends.begin(), backends.end(), backend) != backends.end();
-        };
+        const auto contains = [&backends](backend_kind backend)
+        { return std::find(backends.begin(), backends.end(), backend) != backends.end(); };
 
         CT_REQUIRE(contains(backend_kind::offline));
         CT_REQUIRE(contains(backend_kind::null));
@@ -271,26 +273,18 @@ namespace
     void test_names_and_formatting()
     {
         constexpr error_code codes[] = {
-            error_code::none,
-            error_code::invalid_config,
-            error_code::backend_unavailable,
-            error_code::no_device,
-            error_code::device_lost,
-            error_code::format_unsupported,
-            error_code::device_busy,
-            error_code::unsupported_operation,
-            error_code::thread_failure,
-            error_code::io_failure,
-            error_code::platform_error,
+            error_code::none,        error_code::invalid_config,        error_code::backend_unavailable,
+            error_code::no_device,   error_code::device_lost,           error_code::format_unsupported,
+            error_code::device_busy, error_code::unsupported_operation, error_code::thread_failure,
+            error_code::io_failure,  error_code::platform_error,
         };
 
         for (const auto code : codes)
             CT_REQUIRE(!name(code).empty());
 
         constexpr backend_kind backends[] = {
-            backend_kind::automatic, backend_kind::wasapi, backend_kind::asio,
-            backend_kind::alsa,      backend_kind::coreaudio, backend_kind::offline,
-            backend_kind::null,
+            backend_kind::automatic, backend_kind::wasapi,  backend_kind::asio, backend_kind::alsa,
+            backend_kind::coreaudio, backend_kind::offline, backend_kind::null,
         };
 
         for (const auto backend : backends)

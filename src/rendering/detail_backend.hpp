@@ -214,8 +214,7 @@ namespace catalyst::rendering::detail
      * timeline value that will be signalled when the submission finishes. Lists are validated by
      * the public layer; a backend may assume they are closed and owned by this device.
      */
-    std::expected<std::uint64_t, error> submit(resource_id device, queue_kind kind,
-                                               std::span<const command_list> lists,
+    std::expected<std::uint64_t, error> submit(resource_id device, queue_kind kind, std::span<const command_list> lists,
                                                std::span<const timeline_point> waits);
 
     // -------------------------------------------------------------------------

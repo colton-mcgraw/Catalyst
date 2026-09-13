@@ -149,8 +149,8 @@ namespace catalyst::audio::detail
 
             static void write(std::byte *destination, sample value, bool swap) noexcept
             {
-                const auto scaled = static_cast<std::int16_t>(
-                    std::lround(static_cast<double>(clamp_unit(value)) * 32767.0));
+                const auto scaled =
+                    static_cast<std::int16_t>(std::lround(static_cast<double>(clamp_unit(value)) * 32767.0));
 
                 auto bits = static_cast<std::uint16_t>(scaled);
                 if (swap)
@@ -174,8 +174,8 @@ namespace catalyst::audio::detail
 
             static void write(std::byte *destination, sample value, bool swap) noexcept
             {
-                const auto scaled = static_cast<std::int32_t>(
-                    std::llround(static_cast<double>(clamp_unit(value)) * 2147483647.0));
+                const auto scaled =
+                    static_cast<std::int32_t>(std::llround(static_cast<double>(clamp_unit(value)) * 2147483647.0));
 
                 auto bits = static_cast<std::uint32_t>(scaled);
                 if (swap)
@@ -199,8 +199,8 @@ namespace catalyst::audio::detail
 
             static void write(std::byte *destination, sample value, bool swap) noexcept
             {
-                const auto scaled = static_cast<std::int32_t>(
-                    std::llround(static_cast<double>(clamp_unit(value)) * 8388607.0));
+                const auto scaled =
+                    static_cast<std::int32_t>(std::llround(static_cast<double>(clamp_unit(value)) * 8388607.0));
 
                 std::uint8_t bytes[width] = {
                     static_cast<std::uint8_t>(scaled & 0xFF),
@@ -221,8 +221,7 @@ namespace catalyst::audio::detail
                 if (swap)
                     std::swap(bytes[0], bytes[2]);
 
-                auto scaled = static_cast<std::int32_t>(bytes[0]) |
-                              (static_cast<std::int32_t>(bytes[1]) << 8) |
+                auto scaled = static_cast<std::int32_t>(bytes[0]) | (static_cast<std::int32_t>(bytes[1]) << 8) |
                               (static_cast<std::int32_t>(bytes[2]) << 16);
 
                 // Sign-extend from 24 bits.
@@ -250,12 +249,10 @@ namespace catalyst::audio::detail
     } // namespace convert
 
     /** @brief Writes @p count samples to a packed device buffer, reading floats every @p stride. */
-    using pack_fn = void (*)(
-        std::byte *device, const sample *frames, std::size_t count, std::size_t stride) noexcept;
+    using pack_fn = void (*)(std::byte *device, const sample *frames, std::size_t count, std::size_t stride) noexcept;
 
     /** @brief Reads @p count samples from a packed device buffer, writing floats every @p stride. */
-    using unpack_fn = void (*)(
-        sample *frames, const std::byte *device, std::size_t count, std::size_t stride) noexcept;
+    using unpack_fn = void (*)(sample *frames, const std::byte *device, std::size_t count, std::size_t stride) noexcept;
 
     /** @brief The float-to-device conversion for @p format in @p order, or null if there is none. */
     [[nodiscard]] inline pack_fn pack_for(sample_format format, std::endian order) noexcept

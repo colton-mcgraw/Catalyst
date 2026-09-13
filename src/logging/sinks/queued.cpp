@@ -55,7 +55,8 @@ namespace catalyst::logging
     std::size_t queued_sink::drain(std::size_t max_events)
     {
         // A sink that throws must not take down the thread that was only trying to draw a log panel.
-        const auto deliver = [this](const log_event &event) noexcept {
+        const auto deliver = [this](const log_event &event) noexcept
+        {
             try
             {
                 line_cache cache(event);

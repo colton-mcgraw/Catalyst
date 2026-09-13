@@ -14,11 +14,11 @@
  * License: MIT (see LICENSE).
  */
 
-#include "../test_common.hpp"
-
 #include <catalyst/audio/mixer.hpp>
 #include <catalyst/audio/offline.hpp>
 #include <catalyst/audio/sound.hpp>
+
+#include "../test_common.hpp"
 
 #include <atomic>
 #include <cmath>
@@ -42,28 +42,21 @@ namespace
     }
 
     /// Every sample is @p value, so any gain or pan applied to it is readable directly.
-    [[nodiscard]] sound_buffer constant_sound(
-        sample value,
-        frame_count frames,
-        channel_count channels,
-        sample_rate_t rate = 48000)
+    [[nodiscard]] sound_buffer constant_sound(sample value, frame_count frames, channel_count channels,
+                                              sample_rate_t rate = 48000)
     {
         std::vector<sample> samples(static_cast<std::size_t>(frames) * channels, value);
         return sound_buffer(std::move(samples), rate, channels);
     }
 
     /// Frame f holds the value f in every channel, so a read position is visible in the output.
-    [[nodiscard]] sound_buffer ramp_sound(
-        frame_count frames,
-        channel_count channels,
-        sample_rate_t rate = 48000)
+    [[nodiscard]] sound_buffer ramp_sound(frame_count frames, channel_count channels, sample_rate_t rate = 48000)
     {
         std::vector<sample> samples(static_cast<std::size_t>(frames) * channels, sample{0});
 
         for (frame_count frame = 0; frame < frames; ++frame)
             for (channel_count channel = 0; channel < channels; ++channel)
-                samples[static_cast<std::size_t>(frame) * channels + channel] =
-                    static_cast<sample>(frame);
+                samples[static_cast<std::size_t>(frame) * channels + channel] = static_cast<sample>(frame);
 
         return sound_buffer(std::move(samples), rate, channels);
     }
@@ -232,15 +225,15 @@ namespace
         opened->render(16);
 
         const auto ramped = opened->captured();
-        CT_REQUIRE(close_enough(ramped[0], 0.8f));       // starts where it was
-        CT_REQUIRE(ramped[30] < ramped[0]);              // and moves
-        CT_REQUIRE(ramped[30] > 0.4f);                   // without arriving early
+        CT_REQUIRE(close_enough(ramped[0], 0.8f)); // starts where it was
+        CT_REQUIRE(ramped[30] < ramped[0]);        // and moves
+        CT_REQUIRE(ramped[30] > 0.4f);             // without arriving early
 
         opened->clear_captured();
         opened->render(16);
 
         for (const sample value : opened->captured())
-            CT_REQUIRE(close_enough(value, 0.4f));       // settled exactly on the target
+            CT_REQUIRE(close_enough(value, 0.4f)); // settled exactly on the target
     }
 
     void test_master_gain_scales_everything()
@@ -254,7 +247,7 @@ namespace
         CT_REQUIRE(opened.has_value());
 
         mix.set_master_gain(0.25f);
-        opened->render(16);   // ramps from 1.0 to 0.25 across this block
+        opened->render(16); // ramps from 1.0 to 0.25 across this block
         opened->clear_captured();
         opened->render(16);
 
@@ -590,10 +583,12 @@ namespace
         CT_REQUIRE(opened.has_value());
 
         std::atomic<bool> rendering{true};
-        std::thread render_thread([&opened, &rendering]
-                                  {
-            while (rendering.load(std::memory_order_relaxed))
-                opened->render(64); });
+        std::thread render_thread(
+            [&opened, &rendering]
+            {
+                while (rendering.load(std::memory_order_relaxed))
+                    opened->render(64);
+            });
 
         // Started, not merely spawned: an optimised build can finish the whole loop below in less
         // time than it takes Windows to schedule the thread, and a test that overlaps nothing is

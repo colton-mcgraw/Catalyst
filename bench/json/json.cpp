@@ -9,9 +9,9 @@
  * License: MIT (see LICENSE).
  */
 
-#include <benchmark.hpp>
-
 #include <catalyst/resource/json/json.hpp>
+
+#include <benchmark.hpp>
 
 #include <chrono>
 #include <cstddef>
@@ -59,9 +59,9 @@ namespace
     };
 
     constexpr std::string_view words[] = {
-        "alpha", "bravo",  "charlie", "delta", "echo",   "foxtrot", "golf",   "hotel",
-        "india", "juliet", "kilo",    "lima",  "mike",   "november", "oscar", "papa",
-        "quebec", "romeo", "sierra",  "tango", "uniform", "victor", "whiskey", "xray",
+        "alpha",  "bravo",  "charlie", "delta", "echo",    "foxtrot",  "golf",    "hotel",
+        "india",  "juliet", "kilo",    "lima",  "mike",    "november", "oscar",   "papa",
+        "quebec", "romeo",  "sierra",  "tango", "uniform", "victor",   "whiskey", "xray",
     };
 
     /// Plain ASCII string, no escapes: `"echo_1234_delta"`.
@@ -237,10 +237,9 @@ namespace
                                          [](std::string &t, rng &r, std::size_t) { append_string(t, r); }));
         out.push_back(make_array_payload("strings (escaped)",
                                          [](std::string &t, rng &r, std::size_t) { append_escaped_string(t, r); }));
-        out.push_back(make_array_payload("integers",
-                                         [](std::string &t, rng &r, std::size_t) { append_integer(t, r); }));
-        out.push_back(make_array_payload("doubles",
-                                         [](std::string &t, rng &r, std::size_t) { append_double(t, r); }));
+        out.push_back(
+            make_array_payload("integers", [](std::string &t, rng &r, std::size_t) { append_integer(t, r); }));
+        out.push_back(make_array_payload("doubles", [](std::string &t, rng &r, std::size_t) { append_double(t, r); }));
         out.push_back(make_array_payload("mixed scalars (arrays)",
                                          [](std::string &t, rng &r, std::size_t i) { append_mixed(t, r, i); }));
         out.push_back(make_record_payload());
@@ -271,11 +270,10 @@ namespace
         const double megavalues_per_second =
             static_cast<double>(p.scalar_count) * static_cast<double>(iterations) / elapsed / 1e6;
 
-        std::cout << "  " << std::left << std::setw(18) << label << std::right << std::fixed
-                  << std::setprecision(1) << std::setw(9) << megabytes_per_second << " MB/s" << std::setw(9)
-                  << megavalues_per_second << " Mval/s" << std::setprecision(3) << std::setw(10)
-                  << per_iteration_ms << " ms/iter"
-                  << "   [" << std::hex << (checksum & 0xffff) << std::dec << "]\n";
+        std::cout << "  " << std::left << std::setw(18) << label << std::right << std::fixed << std::setprecision(1)
+                  << std::setw(9) << megabytes_per_second << " MB/s" << std::setw(9) << megavalues_per_second
+                  << " Mval/s" << std::setprecision(3) << std::setw(10) << per_iteration_ms << " ms/iter" << "   ["
+                  << std::hex << (checksum & 0xffff) << std::dec << "]\n";
     }
 
     /// Cheap traversal so the tape's cursor and the value tree are actually walked, not just built.
@@ -338,14 +336,18 @@ namespace
                   << "   bytes/scalar: " << std::fixed << std::setprecision(1)
                   << static_cast<double>(p.text.size()) / static_cast<double>(p.scalar_count) << '\n';
 
-        run_throughput("parse -> value", p, [&] {
-            auto r = json::parse(p.text);
-            return r ? r->size() : 0u;
-        });
-        run_throughput("parse -> document", p, [&] {
-            auto r = json::parse_document(p.text);
-            return r ? r->root().size() : 0u;
-        });
+        run_throughput("parse -> value", p,
+                       [&]
+                       {
+                           auto r = json::parse(p.text);
+                           return r ? r->size() : 0u;
+                       });
+        run_throughput("parse -> document", p,
+                       [&]
+                       {
+                           auto r = json::parse_document(p.text);
+                           return r ? r->root().size() : 0u;
+                       });
         run_throughput("walk value", p, [&] { return walk(*tree); });
         run_throughput("walk document", p, [&] { return walk(doc->root()); });
         run_throughput("dump value", p, [&] { return json::dump(*tree).size(); });
@@ -358,8 +360,8 @@ namespace
 int main()
 {
     std::cout << "catalyst::resource::json throughput\n"
-              << "  payload target: " << target_bytes << " bytes, " << row_width << " scalars per row, "
-              << iterations << " timed iterations per line\n\n";
+              << "  payload target: " << target_bytes << " bytes, " << row_width << " scalars per row, " << iterations
+              << " timed iterations per line\n\n";
 
     for (const auto &p : make_payloads())
         bench_payload(p);

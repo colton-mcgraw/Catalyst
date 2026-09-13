@@ -212,8 +212,8 @@ namespace catalyst::rendering
             return awaiter{*this};
         }
 
-        [[nodiscard]] friend constexpr bool operator==(const timeline_point &, const timeline_point &) noexcept =
-            default;
+        [[nodiscard]] friend constexpr bool operator==(const timeline_point &,
+                                                       const timeline_point &) noexcept = default;
 
         /**
          * @brief Orders two points on the same timeline; `unordered` for points on different ones.

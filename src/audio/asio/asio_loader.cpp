@@ -9,9 +9,9 @@
 
 #if defined(_WIN32)
 
-#  include <winreg.h>
+#include <winreg.h>
 
-#  include <utility>
+#include <utility>
 
 namespace catalyst::audio::asio
 {
@@ -51,8 +51,7 @@ namespace catalyst::audio::asio
                 wchar_t name[256] = {};
                 auto length = static_cast<DWORD>(std::size(name));
 
-                const LSTATUS status =
-                    RegEnumKeyExW(key, index, name, &length, nullptr, nullptr, nullptr, nullptr);
+                const LSTATUS status = RegEnumKeyExW(key, index, name, &length, nullptr, nullptr, nullptr, nullptr);
                 if (status == ERROR_NO_MORE_ITEMS)
                     break;
                 if (status != ERROR_SUCCESS)
@@ -64,8 +63,7 @@ namespace catalyst::audio::asio
                 installed.name.assign(name, length);
                 installed.dll_path = read_registry_string(root, subkey.c_str(), L"DLL");
 
-                const auto clsid = detail::win32::try_parse_guid(
-                    read_registry_string(root, subkey.c_str(), L"CLSID"));
+                const auto clsid = detail::win32::try_parse_guid(read_registry_string(root, subkey.c_str(), L"CLSID"));
 
                 // An entry without a loadable DLL and a real CLSID is not a device a caller could
                 // ever open, so it is not offered as one.
@@ -89,7 +87,10 @@ namespace catalyst::audio::asio
         return drivers;
     }
 
-    driver::~driver() { close(); }
+    driver::~driver()
+    {
+        close();
+    }
 
     driver::driver(driver &&other) noexcept
         : module_(std::exchange(other.module_, nullptr)), instance_(std::move(other.instance_))

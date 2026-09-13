@@ -8,9 +8,8 @@
  * License: MIT (see LICENSE).
  */
 
-#include <catalyst/resource/csv/tape.hpp>
-
 #include <catalyst/resource/csv/error.hpp>
+#include <catalyst/resource/csv/tape.hpp>
 
 #include <algorithm>
 #include <charconv>
@@ -46,9 +45,9 @@ namespace catalyst::resource::csv
 
         std::optional<std::size_t> header_map::find(std::string_view name) const noexcept
         {
-            const auto it = std::lower_bound(order_.begin(), order_.end(), name,
-                                             [this](std::uint32_t a, std::string_view n)
-                                             { return std::string_view(names_[a]) < n; });
+            const auto it =
+                std::lower_bound(order_.begin(), order_.end(), name, [this](std::uint32_t a, std::string_view n)
+                                 { return std::string_view(names_[a]) < n; });
             std::optional<std::size_t> best;
             for (auto i = it; i != order_.end() && std::string_view(names_[*i]) == name; ++i)
                 if (!best || *i < *best)

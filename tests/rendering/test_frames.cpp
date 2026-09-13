@@ -18,11 +18,10 @@
  * refused.
  */
 
-#include "../test_common.hpp"
-
-#include "validation_option.hpp"
-
 #include <catalyst/rendering/rendering.hpp>
+
+#include "../test_common.hpp"
+#include "validation_option.hpp"
 
 #include <array>
 #include <cstdint>
@@ -38,8 +37,7 @@ namespace
 {
     device make_device()
     {
-        device dev = create_device(
-            catalyst::tests::with_validation({.application_name = "catalyst frame tests"}));
+        device dev = create_device(catalyst::tests::with_validation({.application_name = "catalyst frame tests"}));
         CT_REQUIRE(is_valid(dev));
         return dev;
     }
@@ -70,11 +68,10 @@ namespace
             values[i] = static_cast<std::uint32_t>(i);
 
         copy_work w;
-        w.src = create_structured_buffer<std::uint32_t>(dev, count, buffer_usage::transfer_src,
-                                                        memory_access::cpu_to_gpu,
-                                                        std::span<const std::uint32_t>{values});
-        w.dst = create_structured_buffer<std::uint32_t>(dev, count, buffer_usage::transfer_dst,
-                                                        memory_access::gpu_only);
+        w.src = create_structured_buffer<std::uint32_t>(
+            dev, count, buffer_usage::transfer_src, memory_access::cpu_to_gpu, std::span<const std::uint32_t>{values});
+        w.dst =
+            create_structured_buffer<std::uint32_t>(dev, count, buffer_usage::transfer_dst, memory_access::gpu_only);
         CT_REQUIRE(w.src && w.dst);
         return w;
     }
@@ -291,15 +288,17 @@ namespace
                 threads.reserve(workers);
                 for (std::uint32_t i = 0; i < workers; ++i)
                 {
-                    threads.emplace_back([&, i] {
-                        command_list cl = create_command_list(f->pool(i), "worker");
-                        if (!is_valid(cl) || !begin_recording(cl))
-                            return;
-                        w.record(cl);
-                        if (!end_recording(cl))
-                            return;
-                        lists[i] = cl;
-                    });
+                    threads.emplace_back(
+                        [&, i]
+                        {
+                            command_list cl = create_command_list(f->pool(i), "worker");
+                            if (!is_valid(cl) || !begin_recording(cl))
+                                return;
+                            w.record(cl);
+                            if (!end_recording(cl))
+                                return;
+                            lists[i] = cl;
+                        });
                 }
                 for (std::thread &t : threads)
                     t.join();
@@ -340,13 +339,15 @@ namespace
             threads.reserve(threads_count);
             for (std::uint32_t t = 0; t < threads_count; ++t)
             {
-                threads.emplace_back([&, t] {
-                    for (std::size_t i = 0; i < per_thread; ++i)
+                threads.emplace_back(
+                    [&, t]
                     {
-                        made[t].push_back(create_structured_buffer<std::uint32_t>(
-                            dev, 64, buffer_usage::storage, memory_access::cpu_to_gpu));
-                    }
-                });
+                        for (std::size_t i = 0; i < per_thread; ++i)
+                        {
+                            made[t].push_back(create_structured_buffer<std::uint32_t>(dev, 64, buffer_usage::storage,
+                                                                                      memory_access::cpu_to_gpu));
+                        }
+                    });
             }
             for (std::thread &t : threads)
                 t.join();
@@ -363,10 +364,12 @@ namespace
             std::vector<std::thread> threads;
             threads.reserve(threads_count);
             for (std::uint32_t t = 0; t < threads_count; ++t)
-                threads.emplace_back([&, t] {
-                    for (auto &b : made[t])
-                        b.destroy();
-                });
+                threads.emplace_back(
+                    [&, t]
+                    {
+                        for (auto &b : made[t])
+                            b.destroy();
+                    });
             for (std::thread &t : threads)
                 t.join();
         }

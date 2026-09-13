@@ -59,9 +59,9 @@ namespace catalyst::resource
         // match. `upper_bound` puts an equally specific new mount *before* the existing ones, which
         // is what makes a patch pack mounted later shadow the base it was mounted over.
         const std::size_t specificity = where.specificity();
-        const auto at = std::upper_bound(mounts_.begin(), mounts_.end(), specificity,
-                                         [](std::size_t value, const mount_point &m)
-                                         { return value > m.specificity(); });
+        const auto at =
+            std::upper_bound(mounts_.begin(), mounts_.end(), specificity,
+                             [](std::size_t value, const mount_point &m) { return value > m.specificity(); });
 
         const auto index = static_cast<std::size_t>(at - mounts_.begin());
         mounts_.insert(at, std::move(where));
@@ -109,16 +109,14 @@ namespace catalyst::resource
     {
         auto parsed = uri::parse(reference);
         if (!parsed)
-            return std::unexpected(
-                make_error(error_code::invalid_uri, reference, parsed.error().message()));
+            return std::unexpected(make_error(error_code::invalid_uri, reference, parsed.error().message()));
 
         // A relative reference only means something against the URI it was written in.
         if (parsed->is_relative() && !base_.empty())
         {
             auto resolved = base_.resolve(*parsed);
             if (!resolved)
-                return std::unexpected(
-                    make_error(error_code::invalid_uri, reference, resolved.error().message()));
+                return std::unexpected(make_error(error_code::invalid_uri, reference, resolved.error().message()));
             parsed = std::move(resolved);
         }
 
@@ -179,8 +177,8 @@ namespace catalyst::resource
     {
         const auto scheme = prefix.scheme();
         if (!scheme)
-            return std::unexpected(make_error(error_code::invalid_uri, prefix.string(),
-                                              "listing needs an absolute URI"));
+            return std::unexpected(
+                make_error(error_code::invalid_uri, prefix.string(), "listing needs an absolute URI"));
 
         std::vector<uri> out;
         bool any_mount = false;
@@ -207,8 +205,7 @@ namespace catalyst::resource
             if (!entries)
                 continue;
 
-            out.insert(out.end(), std::make_move_iterator(entries->begin()),
-                       std::make_move_iterator(entries->end()));
+            out.insert(out.end(), std::make_move_iterator(entries->begin()), std::make_move_iterator(entries->end()));
         }
 
         if (!any_mount)

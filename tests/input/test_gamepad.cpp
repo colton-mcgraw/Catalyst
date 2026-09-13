@@ -4,12 +4,12 @@
  * License: MIT (see LICENSE).
  */
 
-#include "../test_common.hpp"
-
 #include <catalyst/events/bus.hpp>
 #include <catalyst/input/calibration.hpp>
 #include <catalyst/input/context.hpp>
 #include <catalyst/input/gamepad.hpp>
+
+#include "../test_common.hpp"
 
 #include <chrono>
 #include <cmath>

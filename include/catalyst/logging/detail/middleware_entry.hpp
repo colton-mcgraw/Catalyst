@@ -18,12 +18,11 @@
 
 #pragma once
 
+#include <catalyst/core/detail/move_only_function.hpp>
 #include <catalyst/logging/event.hpp>
 #include <catalyst/logging/middleware.hpp>
 
 #include <atomic>
-#include <catalyst/core/detail/move_only_function.hpp>
-
 #include <functional>
 #include <memory>
 #include <vector>

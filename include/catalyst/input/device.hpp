@@ -137,8 +137,14 @@ namespace catalyst::input
         using u = std::underlying_type_t<device_flags>;
         return static_cast<device_flags>(static_cast<u>(a) & static_cast<u>(b));
     }
-    inline constexpr device_flags &operator|=(device_flags &a, device_flags b) noexcept { return a = (a | b); }
-    inline constexpr device_flags &operator&=(device_flags &a, device_flags b) noexcept { return a = (a & b); }
+    inline constexpr device_flags &operator|=(device_flags &a, device_flags b) noexcept
+    {
+        return a = (a | b);
+    }
+    inline constexpr device_flags &operator&=(device_flags &a, device_flags b) noexcept
+    {
+        return a = (a & b);
+    }
 
     /** @brief True if @p set contains every bit of @p flag. */
     [[nodiscard]] inline constexpr bool has_flag(device_flags set, device_flags flag) noexcept
@@ -164,9 +170,9 @@ namespace catalyst::input
         std::uint16_t vendor_id{0};
         std::uint16_t product_id{0};
         /**
-         * @brief The backend's slot for the device - the XInput user index, the MIDI port. Stable while the device stays
-         * connected, and what a device_selector matches on when an application wants "player 2's pad". `any_slot` when
-         * the device kind has no such notion.
+         * @brief The backend's slot for the device - the XInput user index, the MIDI port. Stable while the device
+         * stays connected, and what a device_selector matches on when an application wants "player 2's pad". `any_slot`
+         * when the device kind has no such notion.
          */
         std::uint32_t slot{any_slot};
         device_flags flags{device_flags::none};
@@ -196,7 +202,10 @@ namespace catalyst::input
     };
 
     /** @brief The value a control of this kind reads when nothing is touching it. */
-    [[nodiscard]] inline constexpr float control_rest_value(control_kind) noexcept { return 0.0f; }
+    [[nodiscard]] inline constexpr float control_rest_value(control_kind) noexcept
+    {
+        return 0.0f;
+    }
 
     /**
      * @struct control_id
@@ -219,7 +228,8 @@ namespace catalyst::input
     /** @brief The null control handle. */
     inline constexpr control_id no_control{};
 
-    /** @brief Builds a control_id from a raw slot index. Named so that a bare integer never turns into one by accident. */
+    /** @brief Builds a control_id from a raw slot index. Named so that a bare integer never turns into one by accident.
+     */
     [[nodiscard]] inline constexpr control_id control_at(std::size_t index) noexcept
     {
         return control_id{static_cast<std::uint16_t>(index)};
@@ -252,11 +262,15 @@ namespace catalyst::input
 
         /** @brief A layout over controls with static storage duration (the built-in kinds). */
         device_layout(device_kind kind, std::span<const control_info> controls) noexcept
-            : m_kind(kind), m_static(controls) {}
+            : m_kind(kind), m_static(controls)
+        {
+        }
 
         /** @brief A layout that owns its control list (a discovered device). */
         device_layout(device_kind kind, std::vector<control_info> controls) noexcept
-            : m_kind(kind), m_owned(std::move(controls)) {}
+            : m_kind(kind), m_owned(std::move(controls))
+        {
+        }
 
         [[nodiscard]] device_kind kind() const noexcept { return m_kind; }
 
@@ -342,7 +356,8 @@ namespace catalyst::input
             return slot == any_slot || slot == s;
         }
 
-        [[nodiscard]] friend constexpr bool operator==(const device_selector &, const device_selector &) noexcept = default;
+        [[nodiscard]] friend constexpr bool operator==(const device_selector &,
+                                                       const device_selector &) noexcept = default;
     };
 
     // ------------------------------------------------------------------------------------------------------------------

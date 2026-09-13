@@ -66,7 +66,10 @@ namespace catalyst::input
     inline constexpr std::size_t pen_axis_count = 7;
 
     /** @brief A normalised tilt component as an angle from vertical, in degrees over [-90, 90]. */
-    [[nodiscard]] inline constexpr float pen_tilt_degrees(float normalised) noexcept { return normalised * 90.0f; }
+    [[nodiscard]] inline constexpr float pen_tilt_degrees(float normalised) noexcept
+    {
+        return normalised * 90.0f;
+    }
 
     // ------------------------------------------------------------------------------------------------------------------
     // Controls
@@ -104,8 +107,8 @@ namespace catalyst::input
     /**
      * @struct pen_event
      * @brief The stylus moved, or one of its analog values changed.
-     * @note Published while hovering as well as while touching. `contact` distinguishes the two; a program that draws on
-     * every pen_event without checking it will paint whenever the user passes the pen over the tablet.
+     * @note Published while hovering as well as while touching. `contact` distinguishes the two; a program that draws
+     * on every pen_event without checking it will paint whenever the user passes the pen over the tablet.
      */
     struct pen_event : device_event<tags::pen>
     {

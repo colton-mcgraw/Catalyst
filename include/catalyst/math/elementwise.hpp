@@ -33,8 +33,7 @@ namespace catalyst::math
     template <vector_like V>
     constexpr auto abs(const V &v)
     {
-        return detail::map(v, [](auto e)
-                           { return detail::abs_value(e); });
+        return detail::map(v, [](auto e) { return detail::abs_value(e); });
     }
 
     // -1, 0 or +1 per element, in the element type.
@@ -42,17 +41,14 @@ namespace catalyst::math
     constexpr auto sign(const V &v)
     {
         using T = typename detail::element<V>::type;
-        return detail::map(v, [](auto e)
-                           { return T{} < e ? T{1} : e < T{} ? T(-1)
-                                                             : T{}; });
+        return detail::map(v, [](auto e) { return T{} < e ? T{1} : e < T{} ? T(-1) : T{}; });
     }
 
     template <vector_like V>
     constexpr auto sqrt(const V &v)
     {
         using F = detail::floating_t<typename detail::element<V>::type>;
-        return detail::generate<F, V::length>([&](std::size_t i)
-                                              { return detail::sqrt_value(static_cast<F>(v[i])); });
+        return detail::generate<F, V::length>([&](std::size_t i) { return detail::sqrt_value(static_cast<F>(v[i])); });
     }
 
     template <vector_like V>
@@ -60,11 +56,9 @@ namespace catalyst::math
     {
         using T = typename detail::element<V>::type;
         if constexpr (std::is_floating_point_v<T>)
-            return detail::map(v, [](auto e)
-                               { return detail::floor_value(e); });
+            return detail::map(v, [](auto e) { return detail::floor_value(e); });
         else
-            return detail::map(v, [](auto e)
-                               { return e; });
+            return detail::map(v, [](auto e) { return e; });
     }
 
     template <vector_like V>
@@ -72,11 +66,9 @@ namespace catalyst::math
     {
         using T = typename detail::element<V>::type;
         if constexpr (std::is_floating_point_v<T>)
-            return detail::map(v, [](auto e)
-                               { return detail::ceil_value(e); });
+            return detail::map(v, [](auto e) { return detail::ceil_value(e); });
         else
-            return detail::map(v, [](auto e)
-                               { return e; });
+            return detail::map(v, [](auto e) { return e; });
     }
 
     template <vector_like V>
@@ -84,11 +76,9 @@ namespace catalyst::math
     {
         using T = typename detail::element<V>::type;
         if constexpr (std::is_floating_point_v<T>)
-            return detail::map(v, [](auto e)
-                               { return detail::trunc_value(e); });
+            return detail::map(v, [](auto e) { return detail::trunc_value(e); });
         else
-            return detail::map(v, [](auto e)
-                               { return e; });
+            return detail::map(v, [](auto e) { return e; });
     }
 
     template <vector_like V>
@@ -96,20 +86,17 @@ namespace catalyst::math
     {
         using T = typename detail::element<V>::type;
         if constexpr (std::is_floating_point_v<T>)
-            return detail::map(v, [](auto e)
-                               { return detail::round_value(e); });
+            return detail::map(v, [](auto e) { return detail::round_value(e); });
         else
-            return detail::map(v, [](auto e)
-                               { return e; });
+            return detail::map(v, [](auto e) { return e; });
     }
 
     template <vector_like V, scalar_like S>
     auto pow(const V &v, S exponent)
     {
         using F = detail::floating_t<detail::common_element_t<V, S>>;
-        return detail::generate<F, V::length>(
-            [&](std::size_t i)
-            { return std::pow(static_cast<F>(v[i]), static_cast<F>(exponent)); });
+        return detail::generate<F, V::length>([&](std::size_t i)
+                                              { return std::pow(static_cast<F>(v[i]), static_cast<F>(exponent)); });
     }
 
     template <vector_like L, vector_like R>
@@ -117,17 +104,15 @@ namespace catalyst::math
     auto pow(const L &v, const R &exponent)
     {
         using F = detail::floating_t<detail::common_element_t<L, R>>;
-        return detail::generate<F, L::length>(
-            [&](std::size_t i)
-            { return std::pow(static_cast<F>(v[i]), static_cast<F>(exponent[i])); });
+        return detail::generate<F, L::length>([&](std::size_t i)
+                                              { return std::pow(static_cast<F>(v[i]), static_cast<F>(exponent[i])); });
     }
 
     template <vector_like V>
     auto exp(const V &v)
     {
         using F = detail::floating_t<typename detail::element<V>::type>;
-        return detail::generate<F, V::length>([&](std::size_t i)
-                                              { return std::exp(static_cast<F>(v[i])); });
+        return detail::generate<F, V::length>([&](std::size_t i) { return std::exp(static_cast<F>(v[i])); });
     }
 
     // 0 where v < edge, 1 elsewhere (GLSL step), in v's element type.
@@ -136,8 +121,7 @@ namespace catalyst::math
     constexpr auto step(S edge, const V &v)
     {
         using T = typename detail::element<V>::type;
-        return detail::map(v, [=](auto e)
-                           { return e < edge ? T{} : T{1}; });
+        return detail::map(v, [=](auto e) { return e < edge ? T{} : T{1}; });
     }
 
     template <vector_like E, vector_like V>
@@ -145,8 +129,7 @@ namespace catalyst::math
     constexpr auto step(const E &edge, const V &v)
     {
         using T = typename detail::element<V>::type;
-        return detail::generate<T, V::length>([&](std::size_t i)
-                                              { return v[i] < edge[i] ? T{} : T{1}; });
+        return detail::generate<T, V::length>([&](std::size_t i) { return v[i] < edge[i] ? T{} : T{1}; });
     }
 
     // Hermite ramp from 0 at edge0 to 1 at edge1 (GLSL smoothstep). Floating
@@ -156,13 +139,14 @@ namespace catalyst::math
     constexpr auto smoothstep(S edge0, S edge1, const V &v)
     {
         using F = detail::floating_t<detail::common_element_t<V, S>>;
-        return detail::generate<F, V::length>([&](std::size_t i)
-                                              {
-            const F t = std::clamp(
-                (static_cast<F>(v[i]) - static_cast<F>(edge0)) / (static_cast<F>(edge1) - static_cast<F>(edge0)), 
-                F(0), 
-                F(1));
-            return t * t * (F(3) - F(2) * t); });
+        return detail::generate<F, V::length>(
+            [&](std::size_t i)
+            {
+                const F t = std::clamp((static_cast<F>(v[i]) - static_cast<F>(edge0)) /
+                                           (static_cast<F>(edge1) - static_cast<F>(edge0)),
+                                       F(0), F(1));
+                return t * t * (F(3) - F(2) * t);
+            });
     }
 
     // clamp(v, 0, 1) in the element type.
@@ -170,8 +154,7 @@ namespace catalyst::math
     constexpr auto saturate(const V &v)
     {
         using T = typename detail::element<V>::type;
-        return detail::map(v, [](auto e)
-                           { return std::clamp(e, T{}, T{1}); });
+        return detail::map(v, [](auto e) { return std::clamp(e, T{}, T{1}); });
     }
 
     template <vector_like L, vector_like R>
@@ -179,8 +162,7 @@ namespace catalyst::math
     constexpr auto min(const L &a, const R &b)
     {
         using T = detail::common_element_t<L, R>;
-        return detail::zip(a, b, [](auto x, auto y)
-                           { return std::min(static_cast<T>(x), static_cast<T>(y)); });
+        return detail::zip(a, b, [](auto x, auto y) { return std::min(static_cast<T>(x), static_cast<T>(y)); });
     }
 
     template <vector_like L, vector_like R>
@@ -188,8 +170,7 @@ namespace catalyst::math
     constexpr auto max(const L &a, const R &b)
     {
         using T = detail::common_element_t<L, R>;
-        return detail::zip(a, b, [](auto x, auto y)
-                           { return std::max(static_cast<T>(x), static_cast<T>(y)); });
+        return detail::zip(a, b, [](auto x, auto y) { return std::max(static_cast<T>(x), static_cast<T>(y)); });
     }
 
     template <vector_like V, scalar_like S>
@@ -205,8 +186,9 @@ namespace catalyst::math
     constexpr auto clamp(const V &v, const Lo &lo, const Hi &hi)
     {
         using T = detail::common_element_t<V, detail::common_element_t<Lo, Hi>>;
-        return detail::generate<T, V::length>([&](std::size_t i)
-                                              { return std::clamp(static_cast<T>(v[i]), static_cast<T>(lo[i]), static_cast<T>(hi[i])); });
+        return detail::generate<T, V::length>(
+            [&](std::size_t i)
+            { return std::clamp(static_cast<T>(v[i]), static_cast<T>(lo[i]), static_cast<T>(hi[i])); });
     }
 
     // ---- matrices --------------------------------------------------------
@@ -219,8 +201,7 @@ namespace catalyst::math
         requires std::is_signed_v<typename M::value_type>
     constexpr auto abs(const M &m)
     {
-        return detail::map(m, [](auto e)
-                           { return e < 0 ? -e : e; });
+        return detail::map(m, [](auto e) { return e < 0 ? -e : e; });
     }
 
     template <matrix_like L, matrix_like R>
@@ -228,8 +209,7 @@ namespace catalyst::math
     constexpr auto min(const L &a, const R &b)
     {
         using T = detail::common_element_t<L, R>;
-        return detail::zip(a, b, [](auto x, auto y)
-                           { return std::min(static_cast<T>(x), static_cast<T>(y)); });
+        return detail::zip(a, b, [](auto x, auto y) { return std::min(static_cast<T>(x), static_cast<T>(y)); });
     }
 
     template <matrix_like L, matrix_like R>
@@ -237,8 +217,7 @@ namespace catalyst::math
     constexpr auto max(const L &a, const R &b)
     {
         using T = detail::common_element_t<L, R>;
-        return detail::zip(a, b, [](auto x, auto y)
-                           { return std::max(static_cast<T>(x), static_cast<T>(y)); });
+        return detail::zip(a, b, [](auto x, auto y) { return std::max(static_cast<T>(x), static_cast<T>(y)); });
     }
 
     template <matrix_like M, scalar_like S>

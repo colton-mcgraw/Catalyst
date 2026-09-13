@@ -284,11 +284,9 @@ namespace catalyst::logging
         template <chain_middleware F>
         middleware_id add_middleware(F &&middleware, int priority = 0)
         {
-            return install_middleware(
-                priority,
-                [fn = std::forward<F>(middleware)](log_event &event, void *context,
-                                                   detail::resume_fn resume) mutable
-                { fn(event, next{detail::chain_access{}, context, resume}); });
+            return install_middleware(priority, [fn = std::forward<F>(middleware)](log_event &event, void *context,
+                                                                                   detail::resume_fn resume) mutable
+                                      { fn(event, next{detail::chain_access{}, context, resume}); });
         }
 
         /**

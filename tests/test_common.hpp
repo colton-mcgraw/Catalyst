@@ -12,13 +12,13 @@ namespace catalyst::tests
         std::exit(1);
     }
 
-#define CT_REQUIRE(expr)                                                \
-    do                                                                  \
-    {                                                                   \
-        if (!(expr))                                                    \
-        {                                                               \
-            ::catalyst::tests::fail(#expr, __FILE__, __LINE__);         \
-        }                                                               \
+#define CT_REQUIRE(expr)                                                                                               \
+    do                                                                                                                 \
+    {                                                                                                                  \
+        if (!(expr))                                                                                                   \
+        {                                                                                                              \
+            ::catalyst::tests::fail(#expr, __FILE__, __LINE__);                                                        \
+        }                                                                                                              \
     } while (false)
 
 } // namespace catalyst::tests

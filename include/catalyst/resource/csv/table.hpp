@@ -7,6 +7,9 @@
 
 #pragma once
 
+#include "dialect.hpp"
+#include "tape.hpp"
+
 #include <cstddef>
 #include <cstdint>
 #include <iterator>
@@ -14,9 +17,6 @@
 #include <string>
 #include <string_view>
 #include <vector>
-
-#include "dialect.hpp"
-#include "tape.hpp"
 
 namespace catalyst::resource::csv
 {
@@ -56,12 +56,38 @@ namespace catalyst::resource::csv
             [[nodiscard]] csv::row operator*() const noexcept { return table_->row(index_); }
             [[nodiscard]] csv::row operator[](difference_type n) const noexcept;
 
-            iterator &operator++() noexcept { ++index_; return *this; }
-            iterator operator++(int) noexcept { iterator t = *this; ++index_; return t; }
-            iterator &operator--() noexcept { --index_; return *this; }
-            iterator operator--(int) noexcept { iterator t = *this; --index_; return t; }
-            iterator &operator+=(difference_type n) noexcept { index_ += static_cast<std::size_t>(n); return *this; }
-            iterator &operator-=(difference_type n) noexcept { index_ -= static_cast<std::size_t>(n); return *this; }
+            iterator &operator++() noexcept
+            {
+                ++index_;
+                return *this;
+            }
+            iterator operator++(int) noexcept
+            {
+                iterator t = *this;
+                ++index_;
+                return t;
+            }
+            iterator &operator--() noexcept
+            {
+                --index_;
+                return *this;
+            }
+            iterator operator--(int) noexcept
+            {
+                iterator t = *this;
+                --index_;
+                return t;
+            }
+            iterator &operator+=(difference_type n) noexcept
+            {
+                index_ += static_cast<std::size_t>(n);
+                return *this;
+            }
+            iterator &operator-=(difference_type n) noexcept
+            {
+                index_ -= static_cast<std::size_t>(n);
+                return *this;
+            }
 
             [[nodiscard]] friend iterator operator+(iterator i, difference_type n) noexcept { return i += n; }
             [[nodiscard]] friend iterator operator+(difference_type n, iterator i) noexcept { return i += n; }

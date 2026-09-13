@@ -100,7 +100,8 @@ namespace catalyst::bench::render
 
     bool parse_options(int argc, char **argv, options &out)
     {
-        const auto value_of = [&](int &i, std::string_view flag) -> std::string_view {
+        const auto value_of = [&](int &i, std::string_view flag) -> std::string_view
+        {
             if (i + 1 >= argc)
             {
                 std::cerr << "missing value for " << flag << '\n';
@@ -129,8 +130,7 @@ namespace catalyst::bench::render
                 out.vsync = true;
             else if (arg == "--width" || arg == "--height" || arg == "--images" || arg == "--frames" ||
                      arg == "--warmup" || arg == "--max-draw-calls" || arg == "--pipeline-iterations" ||
-                     arg == "--in-flight" ||
-                     arg == "--resource-iterations")
+                     arg == "--in-flight" || arg == "--resource-iterations")
             {
                 const std::string_view text = value_of(i, arg);
                 if (text.empty() || !parse_size(text, value))

@@ -31,11 +31,9 @@ namespace catalyst::resource
         // Magic number, not file extension. The vfs deals in URIs that a pack source may well have
         // stripped of any suffix, and a decoder that trusted a name would be trusting the one piece
         // of an asset's identity that content authors change most freely.
-        auto decoded = detail::starts_with(bytes, detail::ktx2_identifier)
-                           ? detail::decode_ktx2(bytes, options)
-                       : detail::starts_with(bytes, detail::dds_magic)
-                           ? detail::decode_dds(bytes, options)
-                           : detail::decode_stb(bytes, options);
+        auto decoded = detail::starts_with(bytes, detail::ktx2_identifier) ? detail::decode_ktx2(bytes, options)
+                       : detail::starts_with(bytes, detail::dds_magic)     ? detail::decode_dds(bytes, options)
+                                                                           : detail::decode_stb(bytes, options);
 
         if (!decoded)
             return decoded;

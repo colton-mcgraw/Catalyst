@@ -14,9 +14,9 @@
  * License: MIT (see LICENSE).
  */
 
-#include "../test_common.hpp"
-
 #include <catalyst/resource/image.hpp>
+
+#include "../test_common.hpp"
 
 #include <cstdint>
 #include <cstring>
@@ -140,8 +140,8 @@ namespace
     {
         // A 2x2 whose red channel is 0, 100, 200, 255. The mean is 138.75, and the round-half-up
         // the writer does makes that 139 rather than 138.
-        const image source = make_u8(format::rgba8_unorm, {2, 2, 1},
-                                     {0, 0, 0, 255, 100, 0, 0, 255, 200, 0, 0, 255, 255, 0, 0, 255});
+        const image source =
+            make_u8(format::rgba8_unorm, {2, 2, 1}, {0, 0, 0, 255, 100, 0, 0, 255, 200, 0, 0, 255, 255, 0, 0, 255});
 
         auto chain = generate_mips(source);
         CT_REQUIRE(chain.has_value());
@@ -271,12 +271,14 @@ namespace
 
     void test_regenerating_reproduces_itself()
     {
-        const image source = make_u8(format::rgba8_unorm, {4, 4, 1}, [] {
-            std::vector<std::uint8_t> data(4 * 4 * 4);
-            for (std::size_t i = 0; i < data.size(); ++i)
-                data[i] = static_cast<std::uint8_t>(i * 3 + 5);
-            return data;
-        }());
+        const image source = make_u8(format::rgba8_unorm, {4, 4, 1},
+                                     []
+                                     {
+                                         std::vector<std::uint8_t> data(4 * 4 * 4);
+                                         for (std::size_t i = 0; i < data.size(); ++i)
+                                             data[i] = static_cast<std::uint8_t>(i * 3 + 5);
+                                         return data;
+                                     }());
 
         auto once = generate_mips(source);
         CT_REQUIRE(once.has_value());

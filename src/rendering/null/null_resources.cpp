@@ -323,9 +323,7 @@ namespace catalyst::rendering::detail
         return false;
     }
 
-    void wait_idle(resource_id /*id*/) noexcept
-    {
-    }
+    void wait_idle(resource_id /*id*/) noexcept {}
 
     void collect_garbage(resource_id /*device*/) noexcept
     {
@@ -1079,8 +1077,7 @@ namespace catalyst::rendering::detail
         record(*cl);
     }
 
-    std::expected<std::uint64_t, error> submit(resource_id device, queue_kind kind,
-                                               std::span<const command_list> lists,
+    std::expected<std::uint64_t, error> submit(resource_id device, queue_kind kind, std::span<const command_list> lists,
                                                std::span<const timeline_point> /*waits*/)
     {
         device_state *dev = find(g_devices, device);
@@ -1203,8 +1200,7 @@ namespace catalyst::rendering::detail
         return {};
     }
 
-    std::expected<void, error> transfer_upload_texture(resource_id id, resource_id dst,
-                                                       std::span<const std::byte> data)
+    std::expected<void, error> transfer_upload_texture(resource_id id, resource_id dst, std::span<const std::byte> data)
     {
         transfer_batch_state *batch = find(g_transfer_batches, id);
         if (!batch)

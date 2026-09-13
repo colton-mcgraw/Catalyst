@@ -21,17 +21,17 @@
 #include <vector>
 
 #if defined(_WIN32)
-#  include <audio/win32/detail_win32.hpp>
+#include <audio/win32/detail_win32.hpp>
 #endif
 
 // Spelled through an alias rather than a using-directive: `catalyst::detail` and
 // `catalyst::audio::detail` are both in scope here, and an unqualified `detail` is ambiguous.
 namespace audio_detail = catalyst::audio::detail;
 
-using catalyst::audio::sample;
 using audio_detail::pack_for;
 using audio_detail::sample_format;
 using audio_detail::unpack_for;
+using catalyst::audio::sample;
 
 namespace
 {
@@ -56,8 +56,8 @@ namespace
         // Only a float32 device buffer in the host's own byte order can be written into directly,
         // which is the condition WASAPI's zero-copy render path turns on.
         CT_REQUIRE(audio_detail::is_native_float(sample_format::float32, std::endian::native));
-        CT_REQUIRE(!audio_detail::is_native_float(sample_format::float32,
-                                            std::endian::native == little ? big : little));
+        CT_REQUIRE(
+            !audio_detail::is_native_float(sample_format::float32, std::endian::native == little ? big : little));
         CT_REQUIRE(!audio_detail::is_native_float(sample_format::int32, std::endian::native));
     }
 
@@ -72,8 +72,8 @@ namespace
     /// Packs @p values, unpacks them again and checks nothing moved further than @p tolerance.
     void check_round_trip(sample_format format, std::endian order, sample tolerance)
     {
-        static constexpr sample values[] = {
-            0.0f, 1.0f, -1.0f, 0.5f, -0.5f, 0.25f, -0.25f, 0.125f, 1.0f / 3.0f, -0.999f};
+        static constexpr sample values[] = {0.0f,  1.0f,   -1.0f,  0.5f,        -0.5f,
+                                            0.25f, -0.25f, 0.125f, 1.0f / 3.0f, -0.999f};
 
         constexpr std::size_t count = std::size(values);
 
@@ -116,8 +116,7 @@ namespace
     void test_fixed_point_clamps_instead_of_wrapping()
     {
         static constexpr sample overs[] = {1.5f, -1.5f, 8.0f, -8.0f, 1.0000001f};
-        static constexpr sample_format formats[] = {
-            sample_format::int16, sample_format::int24, sample_format::int32};
+        static constexpr sample_format formats[] = {sample_format::int16, sample_format::int24, sample_format::int32};
 
         for (const sample_format format : formats)
         {
@@ -165,8 +164,7 @@ namespace
         constexpr std::size_t frames = 4;
         constexpr std::size_t channels = 2;
 
-        const sample interleaved[frames * channels] = {
-            0.1f, -0.1f, 0.2f, -0.2f, 0.3f, -0.3f, 0.4f, -0.4f};
+        const sample interleaved[frames * channels] = {0.1f, -0.1f, 0.2f, -0.2f, 0.3f, -0.3f, 0.4f, -0.4f};
 
         const auto pack = pack_for(sample_format::int24, little);
         const auto unpack = unpack_for(sample_format::int24, little);
@@ -233,8 +231,7 @@ namespace
     /// swapped field or a byte-order slip cannot pass.
     void test_guid_formatting_is_exact()
     {
-        const GUID guid = {
-            0x01234567, 0x89AB, 0xCDEF, {0xFE, 0xDC, 0xBA, 0x98, 0x76, 0x54, 0x32, 0x10}};
+        const GUID guid = {0x01234567, 0x89AB, 0xCDEF, {0xFE, 0xDC, 0xBA, 0x98, 0x76, 0x54, 0x32, 0x10}};
 
         CT_REQUIRE(guid_to_string(guid) == "{01234567-89AB-CDEF-FEDC-BA9876543210}");
     }
@@ -276,15 +273,15 @@ namespace
         const wchar_t *rejected[] = {
             L"",
             L"{}",
-            L"{01234567-89AB-CDEF-FEDC-BA9876543210",         // unbalanced brace
-            L"01234567-89AB-CDEF-FEDC-BA9876543210}",         // unbalanced brace
-            L"01234567-89AB-CDEF-FEDC-BA987654321",           // one digit short
-            L"01234567-89AB-CDEF-FEDC-BA98765432100",         // one digit long
-            L"0123456789AB-CDEF-FEDC-BA9876543210",           // missing a separator
-            L"01234567_89AB-CDEF-FEDC-BA9876543210",          // wrong separator
-            L"0123456G-89AB-CDEF-FEDC-BA9876543210",          // not hex
-            L"01234567-89AB-CDEF-FEDC-BA98765432 0",          // not hex, in the last field
-            L"not a guid at all, not even close to one xx",   // right length, wrong everything
+            L"{01234567-89AB-CDEF-FEDC-BA9876543210",       // unbalanced brace
+            L"01234567-89AB-CDEF-FEDC-BA9876543210}",       // unbalanced brace
+            L"01234567-89AB-CDEF-FEDC-BA987654321",         // one digit short
+            L"01234567-89AB-CDEF-FEDC-BA98765432100",       // one digit long
+            L"0123456789AB-CDEF-FEDC-BA9876543210",         // missing a separator
+            L"01234567_89AB-CDEF-FEDC-BA9876543210",        // wrong separator
+            L"0123456G-89AB-CDEF-FEDC-BA9876543210",        // not hex
+            L"01234567-89AB-CDEF-FEDC-BA98765432 0",        // not hex, in the last field
+            L"not a guid at all, not even close to one xx", // right length, wrong everything
         };
 
         for (const wchar_t *text : rejected)

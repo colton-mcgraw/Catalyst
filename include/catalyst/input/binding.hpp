@@ -217,9 +217,12 @@ namespace catalyst::input
     {
         switch (s)
         {
-        case binding_shape::axis2d: return 2;
-        case binding_shape::axis3d: return 3;
-        default: return 1;
+        case binding_shape::axis2d:
+            return 2;
+        case binding_shape::axis3d:
+            return 3;
+        default:
+            return 1;
         }
     }
 

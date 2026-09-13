@@ -9,9 +9,8 @@
  * License: MIT (see LICENSE).
  */
 
-#include <catalyst/resource/json/tape.hpp>
-
 #include <catalyst/resource/json/error.hpp>
+#include <catalyst/resource/json/tape.hpp>
 
 #include <bit>
 #include <cstddef>
@@ -24,9 +23,6 @@
 
 namespace catalyst::resource::json
 {
-
-
-
 
     bool cursor::as_bool() const
     {
@@ -92,8 +88,6 @@ namespace catalyst::resource::json
         return std::nullopt;
     }
 
-
-
     cursor cursor::at(std::string_view key) const
     {
         if (!is_object())
@@ -104,8 +98,6 @@ namespace catalyst::resource::json
         return c;
     }
 
-
-
     cursor::element_iterator cursor::element_iterator::operator++(int) noexcept
     {
         auto t = *this;
@@ -113,15 +105,12 @@ namespace catalyst::resource::json
         return t;
     }
 
-
     cursor::member_iterator cursor::member_iterator::operator++(int) noexcept
     {
         auto t = *this;
         ++*this;
         return t;
     }
-
-
 
     cursor cursor::operator[](std::size_t i) const
     {

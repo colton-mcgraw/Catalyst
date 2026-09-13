@@ -4,8 +4,8 @@
  *
  * @file
  * @brief Swapchains: the ring of presentable back buffers attached to a platform window.
- * @details The per-frame flow is `acquire_next_image` → record a render pass targeting the returned texture → `submit` →
- * `present`. The swapchain owns its images; never pass them to `destroy_texture`.
+ * @details The per-frame flow is `acquire_next_image` → record a render pass targeting the returned texture → `submit`
+ * → `present`. The swapchain owns its images; never pass them to `destroy_texture`.
  */
 
 #pragma once
@@ -47,8 +47,8 @@ namespace catalyst::rendering
     using swapchain = resource_handle<swapchain_tag>;
 
     /**
-     * @brief Creates a swapchain for `desc.window`. Returns an invalid handle for an invalid device, a zero extent or an
-     * `image_count` of 0.
+     * @brief Creates a swapchain for `desc.window`. Returns an invalid handle for an invalid device, a zero extent or
+     * an `image_count` of 0.
      */
     [[nodiscard]] swapchain create_swapchain(const device &dev, const swapchain_desc &desc);
 

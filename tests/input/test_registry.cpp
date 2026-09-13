@@ -4,13 +4,13 @@
  * License: MIT (see LICENSE).
  */
 
-#include "../test_common.hpp"
-
 #include <catalyst/events/bus.hpp>
 #include <catalyst/input/gamepad.hpp>
 #include <catalyst/input/keyboard.hpp>
 #include <catalyst/input/mouse.hpp>
 #include <catalyst/input/registry.hpp>
+
+#include "../test_common.hpp"
 
 #include <string>
 #include <vector>
@@ -104,8 +104,8 @@ namespace
         device_registry reg(bus);
 
         std::vector<control_changed_event> seen;
-        const auto token = bus.add_listener<control_changed_event>(
-            [&](const control_changed_event &e) { seen.push_back(e); });
+        const auto token =
+            bus.add_listener<control_changed_event>([&](const control_changed_event &e) { seen.push_back(e); });
 
         const device_id pad = reg.add_device(make_info(device_kind::gamepad, 0), gamepad_layout());
         reg.set_value(pad, control_of(gamepad_axis::left_x), 0.5f);
@@ -134,15 +134,19 @@ namespace
         int disconnects = 0;
         device_info disconnected_info;
 
-        const auto t1 = bus.add_listener<device_connected_event>([&](const device_connected_event &e)
-                                                                 {
-            ++connects;
-            CT_REQUIRE(e.layout != nullptr);
-            CT_REQUIRE(e.info.kind == device_kind::gamepad); });
-        const auto t2 = bus.add_listener<device_disconnected_event>([&](const device_disconnected_event &e)
-                                                                    {
-            ++disconnects;
-            disconnected_info = e.info; });
+        const auto t1 = bus.add_listener<device_connected_event>(
+            [&](const device_connected_event &e)
+            {
+                ++connects;
+                CT_REQUIRE(e.layout != nullptr);
+                CT_REQUIRE(e.info.kind == device_kind::gamepad);
+            });
+        const auto t2 = bus.add_listener<device_disconnected_event>(
+            [&](const device_disconnected_event &e)
+            {
+                ++disconnects;
+                disconnected_info = e.info;
+            });
 
         const device_id pad = reg.add_device(make_info(device_kind::gamepad, 3, "Test Pad"), gamepad_layout());
         CT_REQUIRE(connects == 1);
@@ -165,10 +169,10 @@ namespace
         // The order matters: a consumer tracking held buttons must see the release before it is told the pad is gone,
         // or it is left holding A forever.
         std::vector<std::string> order;
-        const auto t1 = bus.add_listener<control_changed_event>(
-            [&](const control_changed_event &) { order.emplace_back("control"); });
-        const auto t2 = bus.add_listener<device_disconnected_event>(
-            [&](const device_disconnected_event &) { order.emplace_back("disconnect"); });
+        const auto t1 = bus.add_listener<control_changed_event>([&](const control_changed_event &)
+                                                                { order.emplace_back("control"); });
+        const auto t2 = bus.add_listener<device_disconnected_event>([&](const device_disconnected_event &)
+                                                                    { order.emplace_back("disconnect"); });
 
         reg.reset_device(pad);
         reg.remove_device(pad);
@@ -230,8 +234,8 @@ namespace
         reg.add_device(make_info(device_kind::gamepad, 0), gamepad_layout());
 
         int disconnects = 0;
-        const auto token = bus.add_listener<device_disconnected_event>(
-            [&](const device_disconnected_event &) { ++disconnects; });
+        const auto token =
+            bus.add_listener<device_disconnected_event>([&](const device_disconnected_event &) { ++disconnects; });
 
         reg.clear();
         CT_REQUIRE(reg.size() == 0);

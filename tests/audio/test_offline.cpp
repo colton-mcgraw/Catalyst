@@ -8,9 +8,9 @@
  * License: MIT (see LICENSE).
  */
 
-#include "../test_common.hpp"
-
 #include <catalyst/audio/offline.hpp>
+
+#include "../test_common.hpp"
 
 #include <cstdint>
 #include <cstring>
@@ -82,16 +82,14 @@ namespace
 
     std::uint32_t read_u32_le(const unsigned char *bytes)
     {
-        return static_cast<std::uint32_t>(bytes[0]) |
-               (static_cast<std::uint32_t>(bytes[1]) << 8) |
-               (static_cast<std::uint32_t>(bytes[2]) << 16) |
-               (static_cast<std::uint32_t>(bytes[3]) << 24);
+        return static_cast<std::uint32_t>(bytes[0]) | (static_cast<std::uint32_t>(bytes[1]) << 8) |
+               (static_cast<std::uint32_t>(bytes[2]) << 16) | (static_cast<std::uint32_t>(bytes[3]) << 24);
     }
 
     std::uint16_t read_u16_le(const unsigned char *bytes)
     {
-        return static_cast<std::uint16_t>(
-            static_cast<std::uint16_t>(bytes[0]) | (static_cast<std::uint16_t>(bytes[1]) << 8));
+        return static_cast<std::uint16_t>(static_cast<std::uint16_t>(bytes[0]) |
+                                          (static_cast<std::uint16_t>(bytes[1]) << 8));
     }
 
     // -----------------------------------------------------------------------------------------
@@ -116,7 +114,8 @@ namespace
 
     void test_config_validation()
     {
-        const auto rejects = [](auto mutate) {
+        const auto rejects = [](auto mutate)
+        {
             offline_config config = config_for(2, 64);
             mutate(config);
             const auto result = offline_stream::open(config, &render_ramp);
@@ -127,10 +126,12 @@ namespace
 
         rejects([](offline_config &c) { c.sample_rate = 0; });
         rejects([](offline_config &c) { c.output_channels = 0; });
-        rejects([](offline_config &c) {
-            c.direction = stream_direction::input;
-            c.input_channels = 0;
-        });
+        rejects(
+            [](offline_config &c)
+            {
+                c.direction = stream_direction::input;
+                c.input_channels = 0;
+            });
     }
 
     /// A render is split into whole blocks with a short final block, and the position advances by
@@ -303,7 +304,8 @@ namespace
     /// property the whole offline renderer exists to provide.
     void test_runs_are_reproducible()
     {
-        const auto run = []() {
+        const auto run = []()
+        {
             auto opened = offline_stream::open(config_for(2, 48), &render_ramp);
             CT_REQUIRE(opened.has_value());
             CT_REQUIRE(opened->render(321) == 321);
@@ -345,8 +347,7 @@ namespace
     /// The WAV must be a well-formed IEEE-float file whose payload matches what was rendered.
     void test_wav_output()
     {
-        const std::filesystem::path path =
-            std::filesystem::temp_directory_path() / "catalyst_audio_offline_test.wav";
+        const std::filesystem::path path = std::filesystem::temp_directory_path() / "catalyst_audio_offline_test.wav";
 
         std::error_code ignored;
         std::filesystem::remove(path, ignored);
@@ -364,8 +365,7 @@ namespace
         std::ifstream file(path, std::ios::binary);
         CT_REQUIRE(static_cast<bool>(file));
 
-        std::vector<unsigned char> bytes(
-            (std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+        std::vector<unsigned char> bytes((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
 
         constexpr std::size_t header_size = 58;
         const std::size_t data_bytes = frames * channels * sizeof(sample);

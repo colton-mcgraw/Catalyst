@@ -11,14 +11,14 @@
 
 #pragma once
 
+#include <catalyst/ui/geometry.hpp>
+#include <catalyst/ui/measurement.hpp>
+#include <catalyst/ui/style.hpp>
+
 #include <cstddef>
 #include <cstdint>
 #include <span>
 #include <vector>
-
-#include <catalyst/ui/geometry.hpp>
-#include <catalyst/ui/measurement.hpp>
-#include <catalyst/ui/style.hpp>
 
 namespace catalyst::ui
 {
@@ -57,9 +57,13 @@ namespace catalyst::ui
      * @fn is_null
      * @brief Reports whether a handle is the null handle.
      * @param n The handle to test.
-     * @return True when `n` refers to no node at all. A non-null handle may still be invalid if the node it referred to has been destroyed.
+     * @return True when `n` refers to no node at all. A non-null handle may still be invalid if the node it referred to
+     * has been destroyed.
      */
-    [[nodiscard]] constexpr bool is_null(const node &n) noexcept { return n.index == null_node.index; }
+    [[nodiscard]] constexpr bool is_null(const node &n) noexcept
+    {
+        return n.index == null_node.index;
+    }
 
     /**
      * @struct measure_input
@@ -150,14 +154,16 @@ namespace catalyst::ui
 
         /**
          * @fn border_box
-         * @brief Returns the rectangle covered by this node's border box, the box its background and border are painted into.
+         * @brief Returns the rectangle covered by this node's border box, the box its background and border are painted
+         * into.
          * @return The border box rectangle.
          */
         [[nodiscard]] constexpr rect border_box() const noexcept { return rect::from_pos_size(position, size); }
 
         /**
          * @fn padding_box
-         * @brief Returns the rectangle inside this node's border, the box its children and its overflow clip are placed against.
+         * @brief Returns the rectangle inside this node's border, the box its children and its overflow clip are placed
+         * against.
          * @return The padding box rectangle.
          */
         [[nodiscard]] constexpr rect padding_box() const noexcept { return deflate(border_box(), border); }

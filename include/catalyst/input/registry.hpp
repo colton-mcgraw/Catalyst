@@ -89,8 +89,8 @@ namespace catalyst::input
 
         /**
          * @brief The first connected device @p sel picks, or no_device.
-         * @details "First" is connection order, so `find(device_selector::of(device_kind::gamepad))` is the pad that has
-         * been plugged in longest, which is the one a single-player game should follow.
+         * @details "First" is connection order, so `find(device_selector::of(device_kind::gamepad))` is the pad that
+         * has been plugged in longest, which is the one a single-player game should follow.
          */
         [[nodiscard]] device_id find(const device_selector &sel) const noexcept;
 
@@ -116,7 +116,8 @@ namespace catalyst::input
         /** @brief A control's current value, or 0 for a stale handle or a slot the device does not have. */
         [[nodiscard]] float value(device_id id, control_id control) const noexcept;
 
-        /** @brief What a control reads, given a press point: `value >= point`. Useful for treating an axis as a button. */
+        /** @brief What a control reads, given a press point: `value >= point`. Useful for treating an axis as a button.
+         */
         [[nodiscard]] bool is_down(device_id id, control_id control, float press_point = 0.5f) const noexcept;
 
         /**

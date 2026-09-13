@@ -6,6 +6,9 @@
 
 #pragma once
 
+#include "error.hpp"
+#include "value.hpp"
+
 #include <bit>
 #include <cstddef>
 #include <cstdint>
@@ -13,9 +16,6 @@
 #include <iterator>
 #include <optional>
 #include <string_view>
-
-#include "error.hpp"
-#include "value.hpp"
 
 namespace catalyst::resource::json
 {
@@ -70,8 +70,14 @@ namespace catalyst::resource::json
         {
             return (std::uint64_t(t) << kTagShift) | (payload & kPayloadMask);
         }
-        [[nodiscard]] constexpr tag tag_of(std::uint64_t w) noexcept { return static_cast<tag>(w >> kTagShift); }
-        [[nodiscard]] constexpr std::uint64_t payload_of(std::uint64_t w) noexcept { return w & kPayloadMask; }
+        [[nodiscard]] constexpr tag tag_of(std::uint64_t w) noexcept
+        {
+            return static_cast<tag>(w >> kTagShift);
+        }
+        [[nodiscard]] constexpr std::uint64_t payload_of(std::uint64_t w) noexcept
+        {
+            return w & kPayloadMask;
+        }
 
         /// @brief The tape index immediately past the node beginning at @p i.
         [[nodiscard]] inline std::size_t node_end(const std::uint64_t *tape, std::size_t i) noexcept

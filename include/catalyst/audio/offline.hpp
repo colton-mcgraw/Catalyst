@@ -107,9 +107,7 @@ namespace catalyst::audio
          * @return An open stream, ready to @ref render. Fails only with
          * @ref error_code::invalid_config.
          */
-        [[nodiscard]] static std::expected<offline_stream, error> open(
-            const offline_config &config,
-            renderer render);
+        [[nodiscard]] static std::expected<offline_stream, error> open(const offline_config &config, renderer render);
 
         ~offline_stream();
 

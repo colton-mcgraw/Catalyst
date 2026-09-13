@@ -15,9 +15,9 @@
 // standard lets us ask. Where it is missing, one mutex gives the guarantee that actually matters
 // here; see console_sink::write.
 #if defined(__cpp_lib_syncbuf)
-#  include <syncstream>
+#include <syncstream>
 #else
-#  include <mutex>
+#include <mutex>
 #endif
 
 namespace catalyst::logging

@@ -5,12 +5,11 @@
  * License: MIT (see LICENSE).
  */
 
-#include <catalyst/resource/uri/resolver.hpp>
-
 #include <catalyst/resource/uri/charset.hpp>
 #include <catalyst/resource/uri/error.hpp>
 #include <catalyst/resource/uri/parser.hpp>
 #include <catalyst/resource/uri/reference.hpp>
+#include <catalyst/resource/uri/resolver.hpp>
 
 #include <cstddef>
 #include <expected>

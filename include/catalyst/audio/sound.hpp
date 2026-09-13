@@ -75,9 +75,7 @@ namespace catalyst::audio
          * shape that cannot be indexed.
          */
         sound_buffer(std::vector<sample> samples, sample_rate_t rate, channel_count channels)
-            : samples_(std::move(samples)),
-              sample_rate_(rate),
-              channels_(channels == 0 ? 1 : channels)
+            : samples_(std::move(samples)), sample_rate_(rate), channels_(channels == 0 ? 1 : channels)
         {
             samples_.resize((samples_.size() / channels_) * channels_);
         }
@@ -98,10 +96,7 @@ namespace catalyst::audio
         [[nodiscard]] sample_rate_t sample_rate() const noexcept { return sample_rate_; }
 
         /** @brief How long the buffer lasts at its own rate. */
-        [[nodiscard]] seconds duration() const noexcept
-        {
-            return frames_to_time(frames(), sample_rate_);
-        }
+        [[nodiscard]] seconds duration() const noexcept { return frames_to_time(frames(), sample_rate_); }
 
         /** @brief True when there is nothing to play. */
         [[nodiscard]] bool empty() const noexcept { return samples_.empty(); }

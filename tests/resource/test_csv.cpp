@@ -1,6 +1,6 @@
-#include "../test_common.hpp"
-
 #include <catalyst/resource/csv/csv.hpp>
+
+#include "../test_common.hpp"
 
 #include <cmath>
 #include <cstdint>
@@ -312,8 +312,8 @@ namespace
 
     void test_typed_fields()
     {
-        const table t = must_parse("i,d,b,junk\n-42,3.5,TRUE,hello\n", headerless() == dialect{} ? dialect{}
-                                                                                                 : dialect{});
+        const table t =
+            must_parse("i,d,b,junk\n-42,3.5,TRUE,hello\n", headerless() == dialect{} ? dialect{} : dialect{});
 
         CT_REQUIRE(t.row(0)["i"].try_int() == -42);
         CT_REQUIRE(t.row(0)["i"].as_int() == -42);

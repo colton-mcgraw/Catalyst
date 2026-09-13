@@ -141,8 +141,7 @@ namespace catalyst::rendering
          * was before this tier existed: the GPU-side ordering described above covers the staged
          * path, and there is nothing to order when no copy is submitted.
          */
-        std::expected<void, error> upload(const buffer &dst, std::size_t offset_bytes,
-                                          std::span<const std::byte> data);
+        std::expected<void, error> upload(const buffer &dst, std::size_t offset_bytes, std::span<const std::byte> data);
 
         /**
          * @brief Stages `data` and records a copy of it into mip 0, layer 0 of `dst`.
@@ -186,9 +185,8 @@ namespace catalyst::rendering
      * @details Right for a single upload; wrong for a hundred, which want one batch and one
      * submission. Does not block.
      */
-    [[nodiscard]] std::expected<timeline_point, error> upload(const device &dev, const buffer &dst,
-                                                              std::size_t offset_bytes,
-                                                              std::span<const std::byte> data);
+    [[nodiscard]] std::expected<timeline_point, error>
+    upload(const device &dev, const buffer &dst, std::size_t offset_bytes, std::span<const std::byte> data);
 
     /** @brief @ref upload for the top mip of a texture. */
     [[nodiscard]] std::expected<timeline_point, error> upload(const device &dev, const texture &dst,

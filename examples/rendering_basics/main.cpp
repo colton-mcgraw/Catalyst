@@ -1,6 +1,7 @@
 /*
  * @file main.cpp
- * @brief Example of the Catalyst rendering API's per-frame flow: window → device → swapchain → record → submit → present.
+ * @brief Example of the Catalyst rendering API's per-frame flow: window → device → swapchain → record → submit →
+ * present.
  * @details Opens a window with the platform module, creates a rendering device and a swapchain bound to the window's
  * native handle, uploads a triangle into a structured vertex buffer, builds a graphics pipeline from the embedded
  * SPIR-V in shaders.hpp (compiled from shaders/triangle.vert and .frag by scripts/embed_spirv.py), and then for a fixed
@@ -11,17 +12,17 @@
  * License: MIT (see LICENSE).
  */
 
-#include "shaders.hpp"
-
 #include <catalyst/catalyst.hpp>
+
+#include "shaders.hpp"
 
 #include <array>
 #include <chrono>
 #include <cmath>
 #include <cstdint>
 #include <span>
-#include <vector>
 #include <thread>
+#include <vector>
 
 namespace logging = catalyst::logging;
 
@@ -70,7 +71,8 @@ namespace
         fs_desc.debug_name = "triangle.frag";
         shader fs = create_shader(dev, fs_desc);
 
-        const std::array<vertex_binding, 1> bindings = {vertex_binding{0, sizeof(vertex), vertex_input_rate::per_vertex}};
+        const std::array<vertex_binding, 1> bindings = {
+            vertex_binding{0, sizeof(vertex), vertex_input_rate::per_vertex}};
         const std::array<vertex_attribute, 2> attributes = {
             vertex_attribute{0, 0, format::rgb32_float, offsetof(vertex, x)},
             vertex_attribute{1, 0, format::rgb32_float, offsetof(vertex, r)},
@@ -129,7 +131,8 @@ int main()
     logging::info<example_log>("Adapter: {} ({} MiB device-local)", info.adapter_name,
                                info.dedicated_video_memory_bytes >> 20);
 
-    auto client_extent = [&]() -> rendering::extent2d {
+    auto client_extent = [&]() -> rendering::extent2d
+    {
         const auto client = platform::client_rect_px(w);
         return {static_cast<std::uint32_t>(client.size().x()), static_cast<std::uint32_t>(client.size().y())};
     };
@@ -172,7 +175,8 @@ int main()
     // The queue everything in this example runs on, plus a line reporting what the adapter actually
     // gave us - `dedicated` is false when a kind is the graphics queue answering to another name.
     const rendering::queue graphics = rendering::get_queue(dev);
-    const rendering::queue_info copy_info = rendering::get_queue_info(rendering::get_queue(dev, rendering::queue_kind::copy));
+    const rendering::queue_info copy_info =
+        rendering::get_queue_info(rendering::get_queue(dev, rendering::queue_kind::copy));
     logging::info<example_log>("Copy queue: family {} ({})", copy_info.family_index,
                                copy_info.dedicated ? "dedicated engine" : "aliased onto graphics");
 
@@ -216,8 +220,8 @@ int main()
 
         rendering::begin_recording(cl);
         rendering::begin_render_pass(cl, {.color_attachments = std::span{&color, 1}, .debug_name = "clear"});
-        rendering::set_viewport(cl, {0.0f, 0.0f, static_cast<float>(sd.extent.width),
-                                     static_cast<float>(sd.extent.height)});
+        rendering::set_viewport(
+            cl, {0.0f, 0.0f, static_cast<float>(sd.extent.width), static_cast<float>(sd.extent.height)});
         rendering::set_scissor(cl, {0, 0, sd.extent.width, sd.extent.height});
 
         if (pipeline)

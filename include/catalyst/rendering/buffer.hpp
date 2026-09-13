@@ -5,10 +5,10 @@
  * @file
  * @brief GPU buffers: linear blocks of device memory used for vertex, index, uniform, storage and indirect data, plus a
  * typed `structured_buffer<T>` convenience wrapper.
- * @details A `buffer` is an opaque handle; its size, usage and CPU-visibility are fixed at creation. Data moves in and out
- * through `write_buffer` / `read_buffer` – the backend takes care of staging for GPU-only memory. Buffers are bound to a
- * command list with `set_vertex_buffer`, `set_index_buffer`, `set_uniform_buffer` or `set_storage_buffer`
- * (see command.hpp).
+ * @details A `buffer` is an opaque handle; its size, usage and CPU-visibility are fixed at creation. Data moves in and
+ * out through `write_buffer` / `read_buffer` – the backend takes care of staging for GPU-only memory. Buffers are bound
+ * to a command list with `set_vertex_buffer`, `set_index_buffer`, `set_uniform_buffer` or `set_storage_buffer` (see
+ * command.hpp).
  */
 
 #pragma once
@@ -49,7 +49,8 @@ namespace catalyst::rendering
      */
     enum class memory_access : std::uint8_t
     {
-        /** Device-local. Fastest for the GPU; `write_buffer` goes through a staging copy, `read_buffer` is not allowed. */
+        /** Device-local. Fastest for the GPU; `write_buffer` goes through a staging copy, `read_buffer` is not allowed.
+         */
         gpu_only,
         /** Host-visible upload heap. `write_buffer` is a direct memcpy; suited to per-frame uniform / dynamic data. */
         cpu_to_gpu,
@@ -124,9 +125,9 @@ namespace catalyst::rendering
 
     /**
      * @class structured_buffer
-     * @brief A `buffer` whose contents are an array of trivially-copyable `T`. Wraps the byte-level API in element-level
-     * calls and remembers the element count. It does not own the buffer any more than a plain handle does; call
-     * `destroy()` (or `destroy_buffer(handle())`) when finished.
+     * @brief A `buffer` whose contents are an array of trivially-copyable `T`. Wraps the byte-level API in
+     * element-level calls and remembers the element count. It does not own the buffer any more than a plain handle
+     * does; call `destroy()` (or `destroy_buffer(handle())`) when finished.
      */
     template <typename T>
         requires std::is_trivially_copyable_v<T>
@@ -141,7 +142,10 @@ namespace catalyst::rendering
         [[nodiscard]] constexpr const buffer &handle() const noexcept { return buffer_; }
         [[nodiscard]] constexpr std::size_t count() const noexcept { return count_; }
         [[nodiscard]] constexpr std::size_t size_bytes() const noexcept { return count_ * sizeof(T); }
-        [[nodiscard]] static constexpr std::uint32_t stride_bytes() noexcept { return static_cast<std::uint32_t>(sizeof(T)); }
+        [[nodiscard]] static constexpr std::uint32_t stride_bytes() noexcept
+        {
+            return static_cast<std::uint32_t>(sizeof(T));
+        }
         [[nodiscard]] constexpr explicit operator bool() const noexcept { return static_cast<bool>(buffer_); }
 
         /** @brief Writes `elements` starting at element index `first`. */
@@ -152,7 +156,8 @@ namespace catalyst::rendering
             return write_buffer(buffer_, first * sizeof(T), std::as_bytes(elements));
         }
 
-        /** @brief Reads `out.size()` elements starting at element index `first`. Requires `memory_access::gpu_to_cpu`. */
+        /** @brief Reads `out.size()` elements starting at element index `first`. Requires `memory_access::gpu_to_cpu`.
+         */
         bool read(std::span<T> out, std::size_t first = 0)
         {
             if (first > count_ || out.size() > count_ - first)
@@ -177,10 +182,10 @@ namespace catalyst::rendering
      */
     template <typename T>
         requires std::is_trivially_copyable_v<T>
-    [[nodiscard]] structured_buffer<T> create_structured_buffer(const device &dev, std::size_t count, buffer_usage usage,
-                                                                memory_access access = memory_access::gpu_only,
-                                                                std::span<const T> initial = {},
-                                                                const char *debug_name = nullptr)
+    [[nodiscard]] structured_buffer<T>
+    create_structured_buffer(const device &dev, std::size_t count, buffer_usage usage,
+                             memory_access access = memory_access::gpu_only, std::span<const T> initial = {},
+                             const char *debug_name = nullptr)
     {
         if (count == 0 || initial.size() > count)
             return {};

@@ -50,7 +50,8 @@ namespace catalyst::tests
      */
     inline void install_validation_sink()
     {
-        static const bool installed = [] {
+        static const bool installed = []
+        {
             if (validation_requested())
                 catalyst::logging::default_logger().add_sink(catalyst::logging::console_sink{});
             return true;

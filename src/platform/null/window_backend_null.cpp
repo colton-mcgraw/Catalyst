@@ -1,15 +1,14 @@
 /**
  * @file window_backend_null.cpp
- * @brief The headless implementation of the Catalyst platform window backend. It keeps the same observable behaviour as a
- * real backend -- ids, per-window state, the event bus and input feed seams -- entirely in memory, so code that drives
- * windows can be built and tested on machines with no window system at all.
- * License: MIT (see LICENSE).
+ * @brief The headless implementation of the Catalyst platform window backend. It keeps the same observable behaviour as
+ * a real backend -- ids, per-window state, the event bus and input feed seams -- entirely in memory, so code that
+ * drives windows can be built and tested on machines with no window system at all. License: MIT (see LICENSE).
  */
-
-#include "../detail_backend.hpp"
 
 #include <catalyst/events/bus.hpp>
 #include <catalyst/input/feed.hpp>
+
+#include "../detail_backend.hpp"
 
 #include <algorithm>
 #include <chrono>
@@ -55,16 +54,16 @@ namespace catalyst::platform::detail
         /**
          * @var g_feed
          * @brief The feed window-sourced input is delivered to, or nullptr. A headless backend has no OS to translate
-         * input from, so it never calls the feed itself; it is held so that input_feed() reports what was installed and a
-         * test can check the wiring without a window system.
+         * input from, so it never calls the feed itself; it is held so that input_feed() reports what was installed and
+         * a test can check the wiring without a window system.
          */
         input::event_feed *g_feed = nullptr;
 
         /**
          * @fn dispatch_event
          * @brief Dispatches a window event to the installed bus, or drops it if there is none.
-         * @details The bus keys on the static event type, so there is nothing to stamp and nothing to allocate: the event
-         * is dispatched from the value itself. Events are not retained when no bus is installed -- see
+         * @details The bus keys on the static event type, so there is nothing to stamp and nothing to allocate: the
+         * event is dispatched from the value itself. Events are not retained when no bus is installed -- see
          * platform::set_event_bus for why there is no queue behind this any more.
          */
         template <typename E>
@@ -207,9 +206,10 @@ namespace catalyst::platform::detail
     bool wait_events(std::uint32_t timeout_ms) noexcept
     {
         // There is no OS to wake this backend up: a headless window only ever changes because the application itself
-        // called into this module, on this thread, which it cannot do while blocked here. So no wait can produce an event,
-        // and this reports that rather than pretending otherwise. A finite timeout still elapses, so a loop that paces
-        // itself with wait_events() keeps its timing headless; an infinite one returns at once instead of deadlocking.
+        // called into this module, on this thread, which it cannot do while blocked here. So no wait can produce an
+        // event, and this reports that rather than pretending otherwise. A finite timeout still elapses, so a loop that
+        // paces itself with wait_events() keeps its timing headless; an infinite one returns at once instead of
+        // deadlocking.
         if (timeout_ms != 0xFFFFFFFFu && timeout_ms != 0)
             std::this_thread::sleep_for(std::chrono::milliseconds(timeout_ms));
 
@@ -273,8 +273,8 @@ namespace catalyst::platform::detail
         if (!s)
             return;
 
-        resize_client(*s, {resolve_px(width_px, ui::axis::x, s->dpi_scale),
-                           resolve_px(height_px, ui::axis::y, s->dpi_scale)});
+        resize_client(
+            *s, {resolve_px(width_px, ui::axis::x, s->dpi_scale), resolve_px(height_px, ui::axis::y, s->dpi_scale)});
     }
 
     void set_position(window_id id, const math::vec2<std::int32_t> &position_px) noexcept
@@ -297,7 +297,8 @@ namespace catalyst::platform::detail
         return s ? s->position_px : math::vec2<std::int32_t>{};
     }
 
-    void set_size_limits(window_id id, const math::vec2<std::int32_t> &min_px, const math::vec2<std::int32_t> &max_px) noexcept
+    void set_size_limits(window_id id, const math::vec2<std::int32_t> &min_px,
+                         const math::vec2<std::int32_t> &max_px) noexcept
     {
         window_state *s = state_from_id(id);
         if (!s)

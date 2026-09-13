@@ -1,11 +1,24 @@
 /**
  * @file keyboard.hpp
- * @brief Defines the key_code enumeration, which represents physical keys on a keyboard. The key codes are based on the USB HID Keyboard/Keypad usage IDs (usage page 0x07). This file also includes a function to convert key codes to their corresponding USB HID usage IDs. The key_code enumeration allows for consistent representation of keyboard keys across different platforms and input systems, while text entry is delivered separately via character/text input events.
- * @details The key_code enumeration provides a comprehensive list of physical keys on a keyboard, including letters, digits, function keys, and various control keys. Each key code corresponds to a specific physical key, and the values are aligned with the USB HID standard for keyboard input. This allows for consistent handling of keyboard input across different platforms and input systems. The to_usb_hid function provides a convenient way to convert key codes to their corresponding USB HID usage IDs, which can be useful when interfacing with low-level input APIs or when implementing custom input handling logic that requires knowledge of the underlying USB HID usage IDs. Text entry is handled separately through character or text input events, allowing for a clear distinction between physical key presses and the resulting text input, which can be affected by factors such as keyboard layout and modifier keys.
+ * @brief Defines the key_code enumeration, which represents physical keys on a keyboard. The key codes are based on the
+ * USB HID Keyboard/Keypad usage IDs (usage page 0x07). This file also includes a function to convert key codes to their
+ * corresponding USB HID usage IDs. The key_code enumeration allows for consistent representation of keyboard keys
+ * across different platforms and input systems, while text entry is delivered separately via character/text input
+ * events.
+ * @details The key_code enumeration provides a comprehensive list of physical keys on a keyboard, including letters,
+ * digits, function keys, and various control keys. Each key code corresponds to a specific physical key, and the values
+ * are aligned with the USB HID standard for keyboard input. This allows for consistent handling of keyboard input
+ * across different platforms and input systems. The to_usb_hid function provides a convenient way to convert key codes
+ * to their corresponding USB HID usage IDs, which can be useful when interfacing with low-level input APIs or when
+ * implementing custom input handling logic that requires knowledge of the underlying USB HID usage IDs. Text entry is
+ * handled separately through character or text input events, allowing for a clear distinction between physical key
+ * presses and the resulting text input, which can be affected by factors such as keyboard layout and modifier keys.
  * License: MIT (see LICENSE).
  */
 
 #pragma once
+
+#include <catalyst/input/device.hpp>
 
 #include <algorithm>
 #include <array>
@@ -14,20 +27,43 @@
 #include <string_view>
 #include <type_traits>
 
-#include <catalyst/input/device.hpp>
-
 /**
  * @namespace catalyst::input
- * @brief The catalyst::input namespace contains definitions and utilities related to input handling in the Catalyst framework, including keyboard input, mouse input, gamepad input, and other input devices. This namespace provides a consistent interface for handling various types of input across different platforms and input systems, allowing developers to easily manage user interactions in their applications. The key_code enumeration, which represents physical keys on a keyboard, is defined within this namespace, along with functions for converting key codes to USB HID usage IDs and handling text input events separately from physical key presses.
- * @details The catalyst::input namespace is designed to provide a comprehensive set of tools and definitions for handling user input in a consistent and efficient manner. By organizing all input-related functionality within this namespace, we can avoid naming conflicts and provide a clear structure for developers to access the various input handling utilities they need for their projects. The key_code enumeration allows for consistent representation of physical keys on a keyboard, while the to_usb_hid function provides a convenient way to convert key codes to their corresponding USB HID usage IDs. Text entry is handled separately through character or text input events, allowing for a clear distinction between physical key presses and the resulting text input, which can be affected by factors such as keyboard layout and modifier keys. This design allows for flexibility in handling different types of input while maintaining a clear and organized structure for developers to work with.
+ * @brief The catalyst::input namespace contains definitions and utilities related to input handling in the Catalyst
+ * framework, including keyboard input, mouse input, gamepad input, and other input devices. This namespace provides a
+ * consistent interface for handling various types of input across different platforms and input systems, allowing
+ * developers to easily manage user interactions in their applications. The key_code enumeration, which represents
+ * physical keys on a keyboard, is defined within this namespace, along with functions for converting key codes to USB
+ * HID usage IDs and handling text input events separately from physical key presses.
+ * @details The catalyst::input namespace is designed to provide a comprehensive set of tools and definitions for
+ * handling user input in a consistent and efficient manner. By organizing all input-related functionality within this
+ * namespace, we can avoid naming conflicts and provide a clear structure for developers to access the various input
+ * handling utilities they need for their projects. The key_code enumeration allows for consistent representation of
+ * physical keys on a keyboard, while the to_usb_hid function provides a convenient way to convert key codes to their
+ * corresponding USB HID usage IDs. Text entry is handled separately through character or text input events, allowing
+ * for a clear distinction between physical key presses and the resulting text input, which can be affected by factors
+ * such as keyboard layout and modifier keys. This design allows for flexibility in handling different types of input
+ * while maintaining a clear and organized structure for developers to work with.
  */
 namespace catalyst::input
 {
 
     /**
      * @enum key_code
-     * @brief An enumeration representing physical keys on a keyboard, based on the USB HID Keyboard/Keypad usage IDs (usage page 0x07). Each key code corresponds to a specific physical key, allowing for consistent representation of keyboard input across different platforms and input systems. The key codes include letters, digits, function keys, and various control keys, providing a comprehensive list of keys that can be used in applications for handling keyboard input. Text entry is handled separately through character or text input events, allowing for a clear distinction between physical key presses and the resulting text input.
-     * @details The key_code enumeration provides a comprehensive list of physical keys on a keyboard, with values aligned to the USB HID standard for keyboard input. This allows for consistent handling of keyboard input across different platforms and input systems. Each key code corresponds to a specific physical key, such as letters (a-z), digits (0-9), function keys (F1-F24), and various control keys (enter, escape, backspace, etc.). By using this enumeration, developers can easily manage keyboard input in their applications while maintaining compatibility with the underlying USB HID usage IDs when needed. Text entry is handled separately through character or text input events, allowing for proper representation of characters that may be produced by various key combinations, keyboard layouts, and modifier keys.
+     * @brief An enumeration representing physical keys on a keyboard, based on the USB HID Keyboard/Keypad usage IDs
+     * (usage page 0x07). Each key code corresponds to a specific physical key, allowing for consistent representation
+     * of keyboard input across different platforms and input systems. The key codes include letters, digits, function
+     * keys, and various control keys, providing a comprehensive list of keys that can be used in applications for
+     * handling keyboard input. Text entry is handled separately through character or text input events, allowing for a
+     * clear distinction between physical key presses and the resulting text input.
+     * @details The key_code enumeration provides a comprehensive list of physical keys on a keyboard, with values
+     * aligned to the USB HID standard for keyboard input. This allows for consistent handling of keyboard input across
+     * different platforms and input systems. Each key code corresponds to a specific physical key, such as letters
+     * (a-z), digits (0-9), function keys (F1-F24), and various control keys (enter, escape, backspace, etc.). By using
+     * this enumeration, developers can easily manage keyboard input in their applications while maintaining
+     * compatibility with the underlying USB HID usage IDs when needed. Text entry is handled separately through
+     * character or text input events, allowing for proper representation of characters that may be produced by various
+     * key combinations, keyboard layouts, and modifier keys.
      */
     enum class key_code : std::uint16_t
     {
@@ -196,10 +232,10 @@ namespace catalyst::input
 
     /**
      * @fn key_name
-     * @brief Returns a short, stable, human-readable name for a physical key (e.g. "A", "Left Shift", "Keypad Enter"). The
-     * names describe the key's position on a US layout, not the character it produces under the active layout; they are
-     * intended for key-binding UIs, logs and configuration files. Returns "Unknown" for key_code::unknown and for values
-     * that are not part of the enumeration.
+     * @brief Returns a short, stable, human-readable name for a physical key (e.g. "A", "Left Shift", "Keypad Enter").
+     * The names describe the key's position on a US layout, not the character it produces under the active layout; they
+     * are intended for key-binding UIs, logs and configuration files. Returns "Unknown" for key_code::unknown and for
+     * values that are not part of the enumeration.
      * @param code The key to name.
      * @return A null-terminated string view with static storage duration.
      */
@@ -216,10 +252,19 @@ namespace catalyst::input
 
     /**
      * @fn to_usb_hid
-     * @brief Converts a key_code to its corresponding USB HID usage ID. This function takes a key_code enumeration value and returns the corresponding usb_hid value that represents the same physical key according to the USB HID standard for keyboard input (usage page 0x07). If the key_code is unknown, it returns usb_hid_unknown. This conversion is useful when interfacing with low-level input APIs or when implementing custom input handling logic that requires knowledge of the underlying USB HID usage IDs.
+     * @brief Converts a key_code to its corresponding USB HID usage ID. This function takes a key_code enumeration
+     * value and returns the corresponding usb_hid value that represents the same physical key according to the USB HID
+     * standard for keyboard input (usage page 0x07). If the key_code is unknown, it returns usb_hid_unknown. This
+     * conversion is useful when interfacing with low-level input APIs or when implementing custom input handling logic
+     * that requires knowledge of the underlying USB HID usage IDs.
      * @param code The key_code value to convert to a USB HID usage ID.
      * @return The corresponding usb_hid value for the given key_code, or usb_hid_unknown if the key_code is unknown.
-     * @details The to_usb_hid function provides a convenient way to convert key codes to their corresponding USB HID usage IDs, which can be useful when interfacing with low-level input APIs or when implementing custom input handling logic that requires knowledge of the underlying USB HID usage IDs. By using this function, developers can easily obtain the USB HID usage ID for a given key code, allowing for consistent handling of keyboard input across different platforms and input systems while maintaining compatibility with the underlying USB HID standard.
+     * @details The to_usb_hid function provides a convenient way to convert key codes to their corresponding USB HID
+     * usage IDs, which can be useful when interfacing with low-level input APIs or when implementing custom input
+     * handling logic that requires knowledge of the underlying USB HID usage IDs. By using this function, developers
+     * can easily obtain the USB HID usage ID for a given key code, allowing for consistent handling of keyboard input
+     * across different platforms and input systems while maintaining compatibility with the underlying USB HID
+     * standard.
      */
     [[nodiscard]] inline constexpr usb_hid to_usb_hid(key_code code) noexcept
     {
@@ -233,10 +278,21 @@ namespace catalyst::input
 
     /**
      * @fn from_usb_hid
-     * @brief Converts a USB HID usage ID to its corresponding key_code. This function takes a usb_hid value that represents a USB HID usage ID and returns the corresponding key_code enumeration value that represents the same physical key according to the USB HID standard for keyboard input (usage page 0x07). If the usage ID is unknown or does not belong to the keyboard usage page, it returns key_code::unknown. This conversion is useful when interfacing with low-level input APIs or when implementing custom input handling logic that requires knowledge of the underlying USB HID usage IDs.
+     * @brief Converts a USB HID usage ID to its corresponding key_code. This function takes a usb_hid value that
+     * represents a USB HID usage ID and returns the corresponding key_code enumeration value that represents the same
+     * physical key according to the USB HID standard for keyboard input (usage page 0x07). If the usage ID is unknown
+     * or does not belong to the keyboard usage page, it returns key_code::unknown. This conversion is useful when
+     * interfacing with low-level input APIs or when implementing custom input handling logic that requires knowledge of
+     * the underlying USB HID usage IDs.
      * @param usage The usb_hid value to convert to a key_code.
-     * @return The corresponding key_code value for the given usb_hid usage ID, or key_code::unknown if the usage ID is unknown or does not belong to the keyboard usage page.
-     * @details The from_usb_hid function provides a convenient way to convert USB HID usage IDs to their corresponding key codes, which can be useful when interfacing with low-level input APIs or when implementing custom input handling logic that requires knowledge of the underlying USB HID usage IDs. By using this function, developers can easily obtain the key code for a given USB HID usage ID, allowing for consistent handling of keyboard input across different platforms and input systems while maintaining compatibility with the underlying USB HID standard.
+     * @return The corresponding key_code value for the given usb_hid usage ID, or key_code::unknown if the usage ID is
+     * unknown or does not belong to the keyboard usage page.
+     * @details The from_usb_hid function provides a convenient way to convert USB HID usage IDs to their corresponding
+     * key codes, which can be useful when interfacing with low-level input APIs or when implementing custom input
+     * handling logic that requires knowledge of the underlying USB HID usage IDs. By using this function, developers
+     * can easily obtain the key code for a given USB HID usage ID, allowing for consistent handling of keyboard input
+     * across different platforms and input systems while maintaining compatibility with the underlying USB HID
+     * standard.
      */
     [[nodiscard]] inline constexpr key_code from_usb_hid(usb_hid usage) noexcept
     {
@@ -261,8 +317,18 @@ namespace catalyst::input
 
     /**
      * @enum key_modifiers
-     * @brief An enumeration representing modifier keys that can be held down in combination with other keys, such as shift, control, alt, super, caps lock, and num lock. This enumeration is used in key events to indicate which modifier keys are active at the time of a key press, allowing for proper handling of key combinations and modified input in applications. By using this enumeration, developers can easily check for specific modifier keys being held down and implement features such as keyboard shortcuts, modified character input, and special behavior based on active modifiers.
-     * @details The key_modifiers enumeration includes values for common modifier keys such as shift, control, alt, super (often the Windows or Command key), caps lock, and num lock. The none value indicates that no modifiers are active. By using this enumeration in key events, developers can easily check for specific modifier keys being held down and implement features such as keyboard shortcuts (e.g., Ctrl+C for copy), modified character input (e.g., Shift+1 for '!'), and special behavior based on active modifiers (e.g., Caps Lock affecting letter case), allowing for more versatile and user-friendly input handling in applications.
+     * @brief An enumeration representing modifier keys that can be held down in combination with other keys, such as
+     * shift, control, alt, super, caps lock, and num lock. This enumeration is used in key events to indicate which
+     * modifier keys are active at the time of a key press, allowing for proper handling of key combinations and
+     * modified input in applications. By using this enumeration, developers can easily check for specific modifier keys
+     * being held down and implement features such as keyboard shortcuts, modified character input, and special behavior
+     * based on active modifiers.
+     * @details The key_modifiers enumeration includes values for common modifier keys such as shift, control, alt,
+     * super (often the Windows or Command key), caps lock, and num lock. The none value indicates that no modifiers are
+     * active. By using this enumeration in key events, developers can easily check for specific modifier keys being
+     * held down and implement features such as keyboard shortcuts (e.g., Ctrl+C for copy), modified character input
+     * (e.g., Shift+1 for '!'), and special behavior based on active modifiers (e.g., Caps Lock affecting letter case),
+     * allowing for more versatile and user-friendly input handling in applications.
      */
     enum class key_modifiers : std::uint8_t
     {
@@ -277,11 +343,19 @@ namespace catalyst::input
 
     /**
      * @fn operator|
-     * @brief Bitwise OR operator for key_modifiers enumeration. This operator allows for combining multiple key modifiers into a single key_modifiers value, enabling the representation of multiple active modifiers at the same time. For example, if both shift and control modifiers are active, you can combine them using this operator to create a key_modifiers value that represents both modifiers being held down.
+     * @brief Bitwise OR operator for key_modifiers enumeration. This operator allows for combining multiple key
+     * modifiers into a single key_modifiers value, enabling the representation of multiple active modifiers at the same
+     * time. For example, if both shift and control modifiers are active, you can combine them using this operator to
+     * create a key_modifiers value that represents both modifiers being held down.
      * @param a The first key_modifiers value to combine.
      * @param b The second key_modifiers value to combine.
-     * @return A new key_modifiers value that represents the combination of the two input modifiers using a bitwise OR operation.
-     * @details The operator| function allows for combining multiple key modifiers into a single key_modifiers value by performing a bitwise OR operation on the underlying integer representations of the modifiers. This is useful for representing multiple active modifiers at the same time, such as when both shift and control keys are held down. By using this operator, developers can easily create combined modifier values that can be checked against in key events to determine which modifiers are active during a key press.
+     * @return A new key_modifiers value that represents the combination of the two input modifiers using a bitwise OR
+     * operation.
+     * @details The operator| function allows for combining multiple key modifiers into a single key_modifiers value by
+     * performing a bitwise OR operation on the underlying integer representations of the modifiers. This is useful for
+     * representing multiple active modifiers at the same time, such as when both shift and control keys are held down.
+     * By using this operator, developers can easily create combined modifier values that can be checked against in key
+     * events to determine which modifiers are active during a key press.
      */
     [[nodiscard]] inline constexpr key_modifiers operator|(key_modifiers a, key_modifiers b) noexcept
     {
@@ -290,11 +364,19 @@ namespace catalyst::input
     }
     /**
      * @fn operator&
-     * @brief Bitwise AND operator for key_modifiers enumeration. This operator allows for checking if specific modifiers are active within a combined key_modifiers value. For example, if you have a key_modifiers value that represents both shift and control being active, you can use this operator to check if the shift modifier is active by performing a bitwise AND operation with the shift modifier value.
+     * @brief Bitwise AND operator for key_modifiers enumeration. This operator allows for checking if specific
+     * modifiers are active within a combined key_modifiers value. For example, if you have a key_modifiers value that
+     * represents both shift and control being active, you can use this operator to check if the shift modifier is
+     * active by performing a bitwise AND operation with the shift modifier value.
      * @param a The first key_modifiers value to check.
      * @param b The second key_modifiers value to check against.
-     * @return A new key_modifiers value that represents the result of the bitwise AND operation between the two input modifiers, which can be used to check for specific active modifiers.
-     * @details The operator& function allows for checking if specific modifiers are active within a combined key_modifiers value by performing a bitwise AND operation on the underlying integer representations of the modifiers. This is useful for determining if certain modifiers are active during a key press, such as when both shift and control keys are held down. By using this operator, developers can easily check for specific active modifiers in key events and implement behavior based on which modifiers are currently active.
+     * @return A new key_modifiers value that represents the result of the bitwise AND operation between the two input
+     * modifiers, which can be used to check for specific active modifiers.
+     * @details The operator& function allows for checking if specific modifiers are active within a combined
+     * key_modifiers value by performing a bitwise AND operation on the underlying integer representations of the
+     * modifiers. This is useful for determining if certain modifiers are active during a key press, such as when both
+     * shift and control keys are held down. By using this operator, developers can easily check for specific active
+     * modifiers in key events and implement behavior based on which modifiers are currently active.
      */
     [[nodiscard]] inline constexpr key_modifiers operator&(key_modifiers a, key_modifiers b) noexcept
     {
@@ -303,11 +385,19 @@ namespace catalyst::input
     }
     /**
      * @fn operator^
-     * @brief Bitwise XOR operator for key_modifiers enumeration. This operator allows for toggling specific modifiers within a combined key_modifiers value. For example, if you have a key_modifiers value that represents both shift and control being active, you can use this operator to toggle the shift modifier by performing a bitwise XOR operation with the shift modifier value.
+     * @brief Bitwise XOR operator for key_modifiers enumeration. This operator allows for toggling specific modifiers
+     * within a combined key_modifiers value. For example, if you have a key_modifiers value that represents both shift
+     * and control being active, you can use this operator to toggle the shift modifier by performing a bitwise XOR
+     * operation with the shift modifier value.
      * @param a The first key_modifiers value to toggle.
      * @param b The second key_modifiers value to toggle against.
-     * @return A new key_modifiers value that represents the result of the bitwise XOR operation between the two input modifiers, which can be used to toggle specific modifiers.
-     * @details The operator^ function allows for toggling specific modifiers within a combined key_modifiers value by performing a bitwise XOR operation on the underlying integer representations of the modifiers. This is useful for changing the state of certain modifiers during a key press, such as when both shift and control keys are held down and you want to toggle the state of one of them. By using this operator, developers can easily toggle specific modifiers in key events and implement behavior based on changes to which modifiers are currently active.
+     * @return A new key_modifiers value that represents the result of the bitwise XOR operation between the two input
+     * modifiers, which can be used to toggle specific modifiers.
+     * @details The operator^ function allows for toggling specific modifiers within a combined key_modifiers value by
+     * performing a bitwise XOR operation on the underlying integer representations of the modifiers. This is useful for
+     * changing the state of certain modifiers during a key press, such as when both shift and control keys are held
+     * down and you want to toggle the state of one of them. By using this operator, developers can easily toggle
+     * specific modifiers in key events and implement behavior based on changes to which modifiers are currently active.
      */
     [[nodiscard]] inline constexpr key_modifiers operator^(key_modifiers a, key_modifiers b) noexcept
     {
@@ -316,10 +406,19 @@ namespace catalyst::input
     }
     /**
      * @fn operator~
-     * @brief Bitwise NOT operator for key_modifiers enumeration. This operator allows for inverting the state of all modifiers within a key_modifiers value. For example, if you have a key_modifiers value that represents both shift and control being active, using this operator will produce a new key_modifiers value where shift and control are inactive, and all other modifiers are active.
+     * @brief Bitwise NOT operator for key_modifiers enumeration. This operator allows for inverting the state of all
+     * modifiers within a key_modifiers value. For example, if you have a key_modifiers value that represents both shift
+     * and control being active, using this operator will produce a new key_modifiers value where shift and control are
+     * inactive, and all other modifiers are active.
      * @param a The key_modifiers value to invert.
-     * @return A new key_modifiers value that represents the result of the bitwise NOT operation on the input modifier, which can be used to invert the state of all modifiers.
-     * @details The operator~ function allows for inverting the state of all modifiers within a key_modifiers value by performing a bitwise NOT operation on the underlying integer representation of the modifiers. This is useful for quickly toggling the state of all modifiers at once, such as when you want to check for the absence of certain modifiers or when you want to create a new modifier state that is the opposite of the current one. By using this operator, developers can easily invert the state of all modifiers in key events and implement behavior based on changes to which modifiers are currently active.
+     * @return A new key_modifiers value that represents the result of the bitwise NOT operation on the input modifier,
+     * which can be used to invert the state of all modifiers.
+     * @details The operator~ function allows for inverting the state of all modifiers within a key_modifiers value by
+     * performing a bitwise NOT operation on the underlying integer representation of the modifiers. This is useful for
+     * quickly toggling the state of all modifiers at once, such as when you want to check for the absence of certain
+     * modifiers or when you want to create a new modifier state that is the opposite of the current one. By using this
+     * operator, developers can easily invert the state of all modifiers in key events and implement behavior based on
+     * changes to which modifiers are currently active.
      */
     [[nodiscard]] inline constexpr key_modifiers operator~(key_modifiers a) noexcept
     {
@@ -328,11 +427,21 @@ namespace catalyst::input
     }
     /**
      * @fn operator|=
-     * @brief Bitwise OR assignment operator for key_modifiers enumeration. This operator allows for combining multiple key modifiers into a single key_modifiers value and assigning the result back to the first operand. For example, if you have a key_modifiers variable that currently represents the shift modifier being active, you can use this operator to add the control modifier to it by performing a bitwise OR operation with the control modifier value and assigning the result back to the variable.
+     * @brief Bitwise OR assignment operator for key_modifiers enumeration. This operator allows for combining multiple
+     * key modifiers into a single key_modifiers value and assigning the result back to the first operand. For example,
+     * if you have a key_modifiers variable that currently represents the shift modifier being active, you can use this
+     * operator to add the control modifier to it by performing a bitwise OR operation with the control modifier value
+     * and assigning the result back to the variable.
      * @param a The key_modifiers variable to modify and assign the result to.
      * @param b The key_modifiers value to combine with the first operand.
-     * @return A reference to the modified key_modifiers variable that now represents the combination of the original value and the second input modifier using a bitwise OR operation.
-     * @details The operator|= function allows for combining multiple key modifiers into a single key_modifiers value and assigning the result back to the first operand by performing a bitwise OR operation on the underlying integer representations of the modifiers. This is useful for representing multiple active modifiers at the same time, such as when both shift and control keys are held down. By using this operator, developers can easily create combined modifier values that can be checked against in key events to determine which modifiers are active during a key press, while also allowing for convenient modification of existing modifier states.
+     * @return A reference to the modified key_modifiers variable that now represents the combination of the original
+     * value and the second input modifier using a bitwise OR operation.
+     * @details The operator|= function allows for combining multiple key modifiers into a single key_modifiers value
+     * and assigning the result back to the first operand by performing a bitwise OR operation on the underlying integer
+     * representations of the modifiers. This is useful for representing multiple active modifiers at the same time,
+     * such as when both shift and control keys are held down. By using this operator, developers can easily create
+     * combined modifier values that can be checked against in key events to determine which modifiers are active during
+     * a key press, while also allowing for convenient modification of existing modifier states.
      */
     inline constexpr key_modifiers &operator|=(key_modifiers &a, key_modifiers b) noexcept
     {
@@ -341,11 +450,22 @@ namespace catalyst::input
     }
     /**
      * @fn operator&=
-     * @brief Bitwise AND assignment operator for key_modifiers enumeration. This operator allows for checking if specific modifiers are active within a combined key_modifiers value and assigning the result back to the first operand. For example, if you have a key_modifiers variable that currently represents both shift and control being active, you can use this operator to check if the shift modifier is active by performing a bitwise AND operation with the shift modifier value and assigning the result back to the variable.
+     * @brief Bitwise AND assignment operator for key_modifiers enumeration. This operator allows for checking if
+     * specific modifiers are active within a combined key_modifiers value and assigning the result back to the first
+     * operand. For example, if you have a key_modifiers variable that currently represents both shift and control being
+     * active, you can use this operator to check if the shift modifier is active by performing a bitwise AND operation
+     * with the shift modifier value and assigning the result back to the variable.
      * @param a The key_modifiers variable to modify and assign the result to.
      * @param b The key_modifiers value to check against and combine with the first operand.
-     * @return A reference to the modified key_modifiers variable that now represents the result of the bitwise AND operation between the original value and the second input modifier, which can be used to check for specific active modifiers.
-     * @details The operator&= function allows for checking if specific modifiers are active within a combined key_modifiers value and assigning the result back to the first operand by performing a bitwise AND operation on the underlying integer representations of the modifiers. This is useful for determining if certain modifiers are active during a key press, such as when both shift and control keys are held down. By using this operator, developers can easily check for specific active modifiers in key events and implement behavior based on which modifiers are currently active, while also allowing for convenient modification of existing modifier states.
+     * @return A reference to the modified key_modifiers variable that now represents the result of the bitwise AND
+     * operation between the original value and the second input modifier, which can be used to check for specific
+     * active modifiers.
+     * @details The operator&= function allows for checking if specific modifiers are active within a combined
+     * key_modifiers value and assigning the result back to the first operand by performing a bitwise AND operation on
+     * the underlying integer representations of the modifiers. This is useful for determining if certain modifiers are
+     * active during a key press, such as when both shift and control keys are held down. By using this operator,
+     * developers can easily check for specific active modifiers in key events and implement behavior based on which
+     * modifiers are currently active, while also allowing for convenient modification of existing modifier states.
      */
     inline constexpr key_modifiers &operator&=(key_modifiers &a, key_modifiers b) noexcept
     {
@@ -354,11 +474,23 @@ namespace catalyst::input
     }
     /**
      * @fn operator^=
-     * @brief Bitwise XOR assignment operator for key_modifiers enumeration. This operator allows for toggling specific modifiers within a combined key_modifiers value and assigning the result back to the first operand. For example, if you have a key_modifiers variable that currently represents both shift and control being active, you can use this operator to toggle the shift modifier by performing a bitwise XOR operation with the shift modifier value and assigning the result back to the variable.
+     * @brief Bitwise XOR assignment operator for key_modifiers enumeration. This operator allows for toggling specific
+     * modifiers within a combined key_modifiers value and assigning the result back to the first operand. For example,
+     * if you have a key_modifiers variable that currently represents both shift and control being active, you can use
+     * this operator to toggle the shift modifier by performing a bitwise XOR operation with the shift modifier value
+     * and assigning the result back to the variable.
      * @param a The key_modifiers variable to modify and assign the result to.
      * @param b The key_modifiers value to toggle against and combine with the first operand.
-     * @return A reference to the modified key_modifiers variable that now represents the result of the bitwise XOR operation between the original value and the second input modifier, which can be used to toggle specific modifiers.
-     * @details The operator^= function allows for toggling specific modifiers within a combined key_modifiers value and assigning the result back to the first operand by performing a bitwise XOR operation on the underlying integer representations of the modifiers. This is useful for changing the state of certain modifiers during a key press, such as when both shift and control keys are held down and you want to toggle the state of one of them. By using this operator, developers can easily toggle specific modifiers in key events and implement behavior based on changes to which modifiers are currently active, while also allowing for convenient modification of existing modifier states.
+     * @return A reference to the modified key_modifiers variable that now represents the result of the bitwise XOR
+     * operation between the original value and the second input modifier, which can be used to toggle specific
+     * modifiers.
+     * @details The operator^= function allows for toggling specific modifiers within a combined key_modifiers value and
+     * assigning the result back to the first operand by performing a bitwise XOR operation on the underlying integer
+     * representations of the modifiers. This is useful for changing the state of certain modifiers during a key press,
+     * such as when both shift and control keys are held down and you want to toggle the state of one of them. By using
+     * this operator, developers can easily toggle specific modifiers in key events and implement behavior based on
+     * changes to which modifiers are currently active, while also allowing for convenient modification of existing
+     * modifier states.
      */
     inline constexpr key_modifiers &operator^=(key_modifiers &a, key_modifiers b) noexcept
     {
@@ -367,11 +499,20 @@ namespace catalyst::input
     }
     /**
      * @fn has_modifier
-     * @brief Checks if a specific modifier is active within a combined key_modifiers value. This function takes a key_modifiers value that may represent multiple active modifiers and a specific key_modifiers flag to check for, and returns true if the specified modifier is active within the combined value, or false otherwise. For example, if you have a key_modifiers value that represents both shift and control being active, you can use this function to check if the shift modifier is active by passing the combined value and the shift modifier flag.
+     * @brief Checks if a specific modifier is active within a combined key_modifiers value. This function takes a
+     * key_modifiers value that may represent multiple active modifiers and a specific key_modifiers flag to check for,
+     * and returns true if the specified modifier is active within the combined value, or false otherwise. For example,
+     * if you have a key_modifiers value that represents both shift and control being active, you can use this function
+     * to check if the shift modifier is active by passing the combined value and the shift modifier flag.
      * @param value The combined key_modifiers value to check for the presence of the specified modifier.
      * @param flag The specific key_modifiers flag to check for within the combined value.
      * @return True if the specified modifier is active within the combined key_modifiers value, or false otherwise.
-     * @details The has_modifier function allows for checking if a specific modifier is active within a combined key_modifiers value by performing a bitwise AND operation between the combined value and the specified flag, and then checking if the result is not equal to none. This is useful for determining if certain modifiers are active during a key press, such as when both shift and control keys are held down. By using this function, developers can easily check for specific active modifiers in key events and implement behavior based on which modifiers are currently active.
+     * @details The has_modifier function allows for checking if a specific modifier is active within a combined
+     * key_modifiers value by performing a bitwise AND operation between the combined value and the specified flag, and
+     * then checking if the result is not equal to none. This is useful for determining if certain modifiers are active
+     * during a key press, such as when both shift and control keys are held down. By using this function, developers
+     * can easily check for specific active modifiers in key events and implement behavior based on which modifiers are
+     * currently active.
      */
     [[nodiscard]] inline constexpr bool has_modifier(key_modifiers value, key_modifiers flag) noexcept
     {
@@ -419,10 +560,10 @@ namespace catalyst::input
 
     /**
      * @struct key_event
-     * @brief One physical key press, auto-repeat or release. Key events describe *physical* keys (see key_code); for the
-     * characters the user actually typed, listen for text_input_event instead (see text.hpp).
-     * @details When a window loses focus the registry synthesises a release for every key it still holds, so no consumer
-     * is left with a key stuck down. The platform layer only reports the focus loss; see input::event_feed.
+     * @brief One physical key press, auto-repeat or release. Key events describe *physical* keys (see key_code); for
+     * the characters the user actually typed, listen for text_input_event instead (see text.hpp).
+     * @details When a window loses focus the registry synthesises a release for every key it still holds, so no
+     * consumer is left with a key stuck down. The platform layer only reports the focus loss; see input::event_feed.
      */
     struct key_event : device_event<tags::key>
     {

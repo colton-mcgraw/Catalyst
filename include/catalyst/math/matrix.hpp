@@ -47,17 +47,14 @@ namespace catalyst::math
     // cv/ref-qualified matrices too, so it can constrain forwarding
     // references.
     template <typename M>
-    concept matrix_like =
-        requires {
-            typename detail::bare<M>::value_type;
-            { detail::bare<M>::rows } -> std::convertible_to<std::size_t>;
-            { detail::bare<M>::cols } -> std::convertible_to<std::size_t>;
-            requires(detail::bare<M>::rows > 0 && detail::bare<M>::cols > 0);
-        } &&
-        requires(const detail::bare<M> &m, std::size_t i, std::size_t j) {
-            { m(i, j) } -> std::convertible_to<typename detail::bare<M>::value_type>;
-        } &&
-        scalar_like<typename detail::bare<M>::value_type>;
+    concept matrix_like = requires {
+        typename detail::bare<M>::value_type;
+        { detail::bare<M>::rows } -> std::convertible_to<std::size_t>;
+        { detail::bare<M>::cols } -> std::convertible_to<std::size_t>;
+        requires(detail::bare<M>::rows > 0 && detail::bare<M>::cols > 0);
+    } && requires(const detail::bare<M> &m, std::size_t i, std::size_t j) {
+        { m(i, j) } -> std::convertible_to<typename detail::bare<M>::value_type>;
+    } && scalar_like<typename detail::bare<M>::value_type>;
 
     namespace detail
     {
@@ -89,7 +86,9 @@ namespace catalyst::math
         template <matrix_like M>
         constexpr matrix_order order_of() noexcept
         {
-            if constexpr (requires { { bare<M>::order } -> std::convertible_to<matrix_order>; })
+            if constexpr (requires {
+                              { bare<M>::order } -> std::convertible_to<matrix_order>;
+                          })
                 return bare<M>::order;
             else
                 return matrix_order::row_major;
@@ -257,7 +256,7 @@ namespace catalyst::math
         // matrix. An rvalue matrix hands out a vector copy instead: a view
         // into a temporary would dangle the moment the expression ended.
 
-      private:
+    private:
         template <typename Self>
         static constexpr auto line(Self &&self, size_type index) noexcept
         {
@@ -269,7 +268,7 @@ namespace catalyst::math
                 return line_view(self.elements[index]);
         }
 
-      public:
+    public:
         constexpr auto operator[](this auto &&self, size_type index) noexcept
         {
             MATH_ASSERT(index < line_count, "catalyst::math::matrix::operator[]: line index out of range");
@@ -517,16 +516,16 @@ namespace catalyst::math
         template <matrix_like M, scalar_like S>
         constexpr auto zip(const M &m, S s, auto op)
         {
-            return generate<common_element_t<M, S>, M::rows, M::cols, order_of<M>()>(
-                [&](std::size_t i, std::size_t j) { return op(m(i, j), s); });
+            return generate<common_element_t<M, S>, M::rows, M::cols, order_of<M>()>([&](std::size_t i, std::size_t j)
+                                                                                     { return op(m(i, j), s); });
         }
 
         template <typename S, matrix_like M>
             requires scalar_like<S>
         constexpr auto zip(S s, const M &m, auto op)
         {
-            return generate<common_element_t<S, M>, M::rows, M::cols, order_of<M>()>(
-                [&](std::size_t i, std::size_t j) { return op(s, m(i, j)); });
+            return generate<common_element_t<S, M>, M::rows, M::cols, order_of<M>()>([&](std::size_t i, std::size_t j)
+                                                                                     { return op(s, m(i, j)); });
         }
 
         template <matrix_like M>
@@ -640,12 +639,14 @@ namespace catalyst::math
     constexpr auto operator*(const L &lhs, const R &rhs)
     {
         using T = detail::common_element_t<L, R>;
-        return detail::generate<T, L::rows, R::cols, detail::order_of<L>()>([&](std::size_t i, std::size_t j) {
-            T total{};
-            for (std::size_t k = 0; k < L::cols; ++k)
-                total = static_cast<T>(total + lhs(i, k) * rhs(k, j));
-            return total;
-        });
+        return detail::generate<T, L::rows, R::cols, detail::order_of<L>()>(
+            [&](std::size_t i, std::size_t j)
+            {
+                T total{};
+                for (std::size_t k = 0; k < L::cols; ++k)
+                    total = static_cast<T>(total + lhs(i, k) * rhs(k, j));
+                return total;
+            });
     }
 
     // Matrix times column vector: (R x C) * C -> R.
@@ -654,12 +655,14 @@ namespace catalyst::math
     constexpr auto operator*(const M &m, const V &v)
     {
         using T = detail::common_element_t<M, V>;
-        return detail::generate<T, M::rows>([&](std::size_t i) {
-            T total{};
-            for (std::size_t k = 0; k < M::cols; ++k)
-                total = static_cast<T>(total + m(i, k) * v[k]);
-            return total;
-        });
+        return detail::generate<T, M::rows>(
+            [&](std::size_t i)
+            {
+                T total{};
+                for (std::size_t k = 0; k < M::cols; ++k)
+                    total = static_cast<T>(total + m(i, k) * v[k]);
+                return total;
+            });
     }
 
     // Row vector times matrix: R * (R x C) -> C.
@@ -668,12 +671,14 @@ namespace catalyst::math
     constexpr auto operator*(const V &v, const M &m)
     {
         using T = detail::common_element_t<V, M>;
-        return detail::generate<T, M::cols>([&](std::size_t j) {
-            T total{};
-            for (std::size_t k = 0; k < M::rows; ++k)
-                total = static_cast<T>(total + v[k] * m(k, j));
-            return total;
-        });
+        return detail::generate<T, M::cols>(
+            [&](std::size_t j)
+            {
+                T total{};
+                for (std::size_t k = 0; k < M::rows; ++k)
+                    total = static_cast<T>(total + v[k] * m(k, j));
+                return total;
+            });
     }
     // ---------------------------------------------------------------------
     // Comparison
@@ -776,4 +781,3 @@ namespace std
         }
     };
 } // namespace std
-

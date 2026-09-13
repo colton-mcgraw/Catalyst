@@ -26,8 +26,8 @@
 
 #if defined(_WIN32)
 
-#  include <string>
-#  include <string_view>
+#include <string>
+#include <string_view>
 
 namespace catalyst::detail::win32
 {

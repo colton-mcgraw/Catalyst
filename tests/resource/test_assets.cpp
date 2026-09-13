@@ -8,13 +8,13 @@
  * License: MIT (see LICENSE).
  */
 
-#include "../test_common.hpp"
-
 #include <catalyst/resource/blob.hpp>
 #include <catalyst/resource/image.hpp>
 #include <catalyst/resource/registry.hpp>
 #include <catalyst/resource/source.hpp>
 #include <catalyst/resource/vfs.hpp>
+
+#include "../test_common.hpp"
 
 #include <array>
 #include <string>
@@ -111,8 +111,7 @@ namespace
 
         vfs files;
         auto mounted = files.mount({.scheme = "asset"},
-                                   make_memory_source({{"meshes/hull.bin", hull},
-                                                       {"textures/stone.png", stone}}));
+                                   make_memory_source({{"meshes/hull.bin", hull}, {"textures/stone.png", stone}}));
         CT_REQUIRE(mounted.has_value());
         CT_REQUIRE(files.mounts().size() == 1);
 
@@ -147,8 +146,7 @@ namespace
         static const auto shared = bytes_of("shared");
 
         vfs files;
-        CT_REQUIRE(files.mount({.scheme = "asset"}, make_memory_source({{"shared/x.json", shared}}))
-                       .has_value());
+        CT_REQUIRE(files.mount({.scheme = "asset"}, make_memory_source({{"shared/x.json", shared}})).has_value());
 
         // A manifest's relative name only means something against the manifest's own URI.
         files.set_base(parse("asset:/levels/forest/level.json"));
@@ -173,11 +171,10 @@ namespace
         static const auto from_core = bytes_of("core");
 
         vfs files;
-        CT_REQUIRE(files.mount({.scheme = "asset"}, make_memory_source({{"core/a.bin", from_base}}))
-                       .has_value());
-        CT_REQUIRE(files.mount({.scheme = "asset", .path_prefix = "/core"},
-                               make_memory_source({{"core/a.bin", from_core}}))
-                       .has_value());
+        CT_REQUIRE(files.mount({.scheme = "asset"}, make_memory_source({{"core/a.bin", from_base}})).has_value());
+        CT_REQUIRE(
+            files.mount({.scheme = "asset", .path_prefix = "/core"}, make_memory_source({{"core/a.bin", from_core}}))
+                .has_value());
 
         auto read = files.read("asset:/core/a.bin");
         CT_REQUIRE(read.has_value());

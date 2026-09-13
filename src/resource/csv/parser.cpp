@@ -7,10 +7,9 @@
  * License: MIT (see LICENSE).
  */
 
-#include <catalyst/resource/csv/parser.hpp>
-
 #include <catalyst/resource/csv/dialect.hpp>
 #include <catalyst/resource/csv/error.hpp>
+#include <catalyst/resource/csv/parser.hpp>
 #include <catalyst/resource/csv/table.hpp>
 #include <catalyst/resource/csv/tape.hpp>
 
@@ -170,8 +169,7 @@ namespace catalyst::resource::csv::detail
             while (pos_ < text_.size() && (text_[pos_] == ' ' || text_[pos_] == '\t'))
                 ++pos_;
 
-        if (pos_ < text_.size() && text_[pos_] != dialect_.delimiter && text_[pos_] != '\r' &&
-            text_[pos_] != '\n')
+        if (pos_ < text_.size() && text_[pos_] != dialect_.delimiter && text_[pos_] != '\r' && text_[pos_] != '\n')
             return std::unexpected(error_at(parse_error_code::invalid_quoted_escape, pos_));
 
         return {};
@@ -239,8 +237,7 @@ namespace catalyst::resource::csv::detail
 namespace catalyst::resource::csv
 {
 
-    std::expected<table, parse_error> parse_table(std::string_view text,
-                                                                      const dialect &d)
+    std::expected<table, parse_error> parse_table(std::string_view text, const dialect &d)
     {
         return detail::parser(text, d).run();
     }

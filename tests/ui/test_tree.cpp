@@ -1,12 +1,15 @@
-#include "test_common.hpp"
-
 #include <catalyst/ui/node.hpp>
+
+#include "test_common.hpp"
 
 using namespace catalyst::ui;
 
 namespace
 {
-    extent stub_measure(const measure_input &, void *) noexcept { return extent{1.0f, 2.0f}; }
+    extent stub_measure(const measure_input &, void *) noexcept
+    {
+        return extent{1.0f, 2.0f};
+    }
 
     void test_create_and_validity()
     {

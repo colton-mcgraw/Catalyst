@@ -298,7 +298,8 @@ namespace std
     };
 
     template <typename T, std::size_t N, typename CharT>
-    struct formatter<catalyst::math::vector_view<T, N>, CharT> : formatter<catalyst::math::vector<std::remove_cv_t<T>, N>, CharT>
+    struct formatter<catalyst::math::vector_view<T, N>, CharT>
+        : formatter<catalyst::math::vector<std::remove_cv_t<T>, N>, CharT>
     {
         template <typename FormatContext>
         auto format(const catalyst::math::vector_view<T, N> &v, FormatContext &ctx) const

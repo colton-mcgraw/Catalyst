@@ -15,12 +15,11 @@
  * asserting the presence of latency.
  */
 
-#include "../test_common.hpp"
-
-#include "validation_option.hpp"
-
 #include <catalyst/events/task.hpp>
 #include <catalyst/rendering/rendering.hpp>
+
+#include "../test_common.hpp"
+#include "validation_option.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -37,9 +36,8 @@ namespace
 {
     device make_device(std::uint64_t ring_bytes = 0)
     {
-        device dev = create_device(
-            catalyst::tests::with_validation({.application_name = "catalyst transfer tests",
-                                              .staging_ring_bytes = ring_bytes}));
+        device dev = create_device(catalyst::tests::with_validation(
+            {.application_name = "catalyst transfer tests", .staging_ring_bytes = ring_bytes}));
         CT_REQUIRE(is_valid(dev));
         return dev;
     }
@@ -60,11 +58,11 @@ namespace
     /** A GPU-only buffer that can be uploaded into and read back out of. */
     buffer make_target(const device &dev, std::size_t bytes)
     {
-        buffer b = create_buffer(dev, {.size_bytes = bytes,
-                                       .usage = buffer_usage::transfer_dst | buffer_usage::transfer_src |
-                                                buffer_usage::storage,
-                                       .access = memory_access::gpu_only,
-                                       .debug_name = "transfer target"});
+        buffer b = create_buffer(
+            dev, {.size_bytes = bytes,
+                  .usage = buffer_usage::transfer_dst | buffer_usage::transfer_src | buffer_usage::storage,
+                  .access = memory_access::gpu_only,
+                  .debug_name = "transfer target"});
         CT_REQUIRE(is_valid(b));
         return b;
     }
@@ -193,9 +191,10 @@ namespace
         for (std::uint32_t i = 0; i < 8; ++i)
         {
             expected.push_back(pattern(count, i * 31u + 1u));
-            buffer b = create_buffer(dev, {.size_bytes = count * sizeof(std::uint32_t),
-                                           .usage = buffer_usage::transfer_dst | buffer_usage::transfer_src,
-                                           .access = memory_access::gpu_only},
+            buffer b = create_buffer(dev,
+                                     {.size_bytes = count * sizeof(std::uint32_t),
+                                      .usage = buffer_usage::transfer_dst | buffer_usage::transfer_src,
+                                      .access = memory_access::gpu_only},
                                      as_bytes(expected.back()));
             CT_REQUIRE(is_valid(b));
             buffers.push_back(b);
@@ -355,8 +354,8 @@ namespace
 
         // A buffer without transfer_src cannot be the source of a copy, and the request is refused
         // rather than producing an empty readback.
-        buffer opaque = create_buffer(dev, {.size_bytes = 64, .usage = buffer_usage::storage,
-                                            .access = memory_access::gpu_only});
+        buffer opaque =
+            create_buffer(dev, {.size_bytes = 64, .usage = buffer_usage::storage, .access = memory_access::gpu_only});
         CT_REQUIRE(is_valid(opaque));
         const auto refused = download(dev, opaque, 0, 64);
         CT_REQUIRE(!refused);
@@ -384,7 +383,8 @@ namespace
         // destroyed at the end of the full-expression while the body is still suspended, and
         // resuming then reads a dead object. GCC happened to tolerate it; Clang segfaults, and
         // -fsanitize=address calls it what it is: stack-use-after-scope.
-        auto body = [&]() -> events::task<void> {
+        auto body = [&]() -> events::task<void>
+        {
             auto rb = download(dev, target, 0, count * sizeof(std::uint32_t));
             CT_REQUIRE(rb);
 
@@ -436,7 +436,8 @@ namespace
         bool resumed = false;
         {
             // Named, then called -- see the note in test_co_await_readback.
-            auto body = [&]() -> events::task<void> {
+            auto body = [&]() -> events::task<void>
+            {
                 auto rb = download(dev, target, 0, count * sizeof(std::uint32_t));
                 CT_REQUIRE(rb);
                 (void)co_await *rb;

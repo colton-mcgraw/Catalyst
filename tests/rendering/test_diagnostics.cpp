@@ -12,13 +12,13 @@
  * sit inside the block this module owns and collide with nobody.
  */
 
-#include "../test_common.hpp"
-
 #include <catalyst/audio/events.hpp>
 #include <catalyst/input/device.hpp>
 #include <catalyst/logging/logging.hpp>
 #include <catalyst/logging/sinks/callback.hpp>
 #include <catalyst/rendering/rendering.hpp>
+
+#include "../test_common.hpp"
 
 #include <array>
 #include <cstddef>
@@ -220,8 +220,8 @@ namespace
         std::vector<catalyst::logging::log_event> seen;
 
         auto &router = catalyst::logging::default_logger();
-        const auto sink = router.add_sink(catalyst::logging::callback_sink{
-            [&seen](const catalyst::logging::log_event &e) { seen.push_back(e); }});
+        const auto sink = router.add_sink(
+            catalyst::logging::callback_sink{[&seen](const catalyst::logging::log_event &e) { seen.push_back(e); }});
 
         device dev = create_device();
         CT_REQUIRE(is_valid(dev));

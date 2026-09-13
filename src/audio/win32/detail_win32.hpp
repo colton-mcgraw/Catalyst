@@ -21,21 +21,21 @@
 
 #if defined(_WIN32)
 
-#  include <win32/strings.hpp>
-#  include <win32/windows_lean.hpp>
+#include <catalyst/audio/error.hpp>
 
-#  include <audioclient.h>
-#  include <objbase.h>
+#include <win32/strings.hpp>
+#include <win32/windows_lean.hpp>
 
-#  include <catalyst/audio/error.hpp>
+#include <audioclient.h>
+#include <objbase.h>
 
-#  include <cstddef>
-#  include <cstdint>
-#  include <memory>
-#  include <optional>
-#  include <string>
-#  include <string_view>
-#  include <utility>
+#include <cstddef>
+#include <cstdint>
+#include <memory>
+#include <optional>
+#include <string>
+#include <string_view>
+#include <utility>
 
 namespace catalyst::audio::detail::win32
 {
@@ -148,8 +148,7 @@ namespace catalyst::audio::detail::win32
         com_apartment &operator=(const com_apartment &) = delete;
 
         com_apartment(com_apartment &&other) noexcept
-            : entered_(std::exchange(other.entered_, false)),
-              usable_(std::exchange(other.usable_, false))
+            : entered_(std::exchange(other.entered_, false)), usable_(std::exchange(other.usable_, false))
         {
         }
 
@@ -220,19 +219,22 @@ namespace catalyst::audio::detail::win32
         out.reserve(38);
         out.push_back('{');
 
-        const auto push_byte = [&out](std::uint8_t value) {
+        const auto push_byte = [&out](std::uint8_t value)
+        {
             out.push_back(digits[(value >> 4) & 0x0F]);
             out.push_back(digits[value & 0x0F]);
         };
 
-        const auto push_u32 = [&push_byte](std::uint32_t value) {
+        const auto push_u32 = [&push_byte](std::uint32_t value)
+        {
             push_byte(static_cast<std::uint8_t>((value >> 24) & 0xFF));
             push_byte(static_cast<std::uint8_t>((value >> 16) & 0xFF));
             push_byte(static_cast<std::uint8_t>((value >> 8) & 0xFF));
             push_byte(static_cast<std::uint8_t>(value & 0xFF));
         };
 
-        const auto push_u16 = [&push_byte](std::uint16_t value) {
+        const auto push_u16 = [&push_byte](std::uint16_t value)
+        {
             push_byte(static_cast<std::uint8_t>((value >> 8) & 0xFF));
             push_byte(static_cast<std::uint8_t>(value & 0xFF));
         };
@@ -272,8 +274,8 @@ namespace catalyst::audio::detail::win32
 
         /// Parses exactly @p digits hex characters. The exact width is the point: a GUID field of
         /// the wrong length is a malformed GUID, not a short one.
-        [[nodiscard]] constexpr std::optional<std::uint32_t> parse_hex(
-            std::wstring_view text, std::size_t digits) noexcept
+        [[nodiscard]] constexpr std::optional<std::uint32_t> parse_hex(std::wstring_view text,
+                                                                       std::size_t digits) noexcept
         {
             if (text.size() != digits || digits > 8)
                 return std::nullopt;
@@ -306,8 +308,7 @@ namespace catalyst::audio::detail::win32
         }
 
         // 8-4-4-4-12, and nothing else: the field widths are fixed, so the separators are too.
-        if (text.size() != 36 ||
-            text[8] != L'-' || text[13] != L'-' || text[18] != L'-' || text[23] != L'-')
+        if (text.size() != 36 || text[8] != L'-' || text[13] != L'-' || text[18] != L'-' || text[23] != L'-')
         {
             return std::nullopt;
         }

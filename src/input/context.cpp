@@ -29,8 +29,7 @@ namespace catalyst::input
         }
     } // namespace
 
-    context::context(events::bus &bus)
-        : m_registry(bus), m_state(m_registry)
+    context::context(events::bus &bus) : m_registry(bus), m_state(m_registry)
     {
         m_touch_used.fill(false);
     }
@@ -89,10 +88,22 @@ namespace catalyst::input
         return cache;
     }
 
-    device_id context::keyboard() { return ensure_device(m_keyboard, device_kind::keyboard, keyboard_layout(), "Keyboard"); }
-    device_id context::mouse() { return ensure_device(m_mouse, device_kind::mouse, mouse_layout(), "Mouse"); }
-    device_id context::touchscreen() { return ensure_device(m_touch, device_kind::touchscreen, touch_layout(), "Touchscreen"); }
-    device_id context::pen_device() { return ensure_device(m_pen, device_kind::pen, pen_layout(), "Pen"); }
+    device_id context::keyboard()
+    {
+        return ensure_device(m_keyboard, device_kind::keyboard, keyboard_layout(), "Keyboard");
+    }
+    device_id context::mouse()
+    {
+        return ensure_device(m_mouse, device_kind::mouse, mouse_layout(), "Mouse");
+    }
+    device_id context::touchscreen()
+    {
+        return ensure_device(m_touch, device_kind::touchscreen, touch_layout(), "Touchscreen");
+    }
+    device_id context::pen_device()
+    {
+        return ensure_device(m_pen, device_kind::pen, pen_layout(), "Pen");
+    }
 
     device_id context::add_simulated_device(device_kind kind, layout_ref layout, std::string name, std::uint32_t slot)
     {
@@ -427,7 +438,8 @@ namespace catalyst::input
         return set_rumble(info->slot, r);
     }
 
-    void context::publish_gamepad_state(gamepad_slot &slot, std::uint32_t index, const gamepad_state &next, input_time now)
+    void context::publish_gamepad_state(gamepad_slot &slot, std::uint32_t index, const gamepad_state &next,
+                                        input_time now)
     {
         const device_id id = slot.device;
 

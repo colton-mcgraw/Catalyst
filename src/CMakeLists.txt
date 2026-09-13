@@ -242,7 +242,8 @@ foreach(_support
     catalyst_win32_support
     catalyst_input_backend_win32 catalyst_input_backend_null
     catalyst_platform_backend_win32 catalyst_platform_backend_null
-    catalyst_rendering_backend_vulkan catalyst_rendering_backend_d3d12 catalyst_rendering_backend_null)
+    catalyst_rendering_backend_vulkan catalyst_rendering_backend_d3d12
+    catalyst_rendering_backend_metal catalyst_rendering_backend_null)
   if(TARGET ${_support})
     list(APPEND _catalyst_export_targets ${_support})
   endif()

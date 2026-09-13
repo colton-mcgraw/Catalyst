@@ -7,7 +7,6 @@
  */
 
 #include <catalyst/logging/middleware.hpp>
-
 #include <catalyst/logging/router.hpp>
 
 #include <utility>

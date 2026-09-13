@@ -45,20 +45,20 @@
 
 #pragma once
 
-#include <catalyst/rendering/types.hpp>
+#include <catalyst/rendering/buffer.hpp>
+#include <catalyst/rendering/command.hpp>
+#include <catalyst/rendering/device.hpp>
 #include <catalyst/rendering/error.hpp>
 #include <catalyst/rendering/events.hpp>
-#include <catalyst/rendering/device.hpp>
-#include <catalyst/rendering/timeline.hpp>
-#include <catalyst/rendering/buffer.hpp>
-#include <catalyst/rendering/shader.hpp>
-#include <catalyst/rendering/texture.hpp>
-#include <catalyst/rendering/pipeline.hpp>
-#include <catalyst/rendering/swapchain.hpp>
-#include <catalyst/rendering/command.hpp>
-#include <catalyst/rendering/queue.hpp>
 #include <catalyst/rendering/frame.hpp>
+#include <catalyst/rendering/pipeline.hpp>
+#include <catalyst/rendering/queue.hpp>
+#include <catalyst/rendering/shader.hpp>
+#include <catalyst/rendering/swapchain.hpp>
+#include <catalyst/rendering/texture.hpp>
+#include <catalyst/rendering/timeline.hpp>
 #include <catalyst/rendering/transfer.hpp>
+#include <catalyst/rendering/types.hpp>
 
 /**
  * @namespace catalyst::rendering

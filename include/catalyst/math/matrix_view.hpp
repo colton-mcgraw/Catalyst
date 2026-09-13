@@ -352,7 +352,8 @@ namespace std
     };
 
     template <typename T, std::size_t R, std::size_t C, catalyst::math::matrix_order O, typename CharT>
-    struct formatter<catalyst::math::matrix_view<T, R, C, O>, CharT> : formatter<catalyst::math::matrix<std::remove_cv_t<T>, R, C, O>, CharT>
+    struct formatter<catalyst::math::matrix_view<T, R, C, O>, CharT>
+        : formatter<catalyst::math::matrix<std::remove_cv_t<T>, R, C, O>, CharT>
     {
         template <typename FormatContext>
         auto format(const catalyst::math::matrix_view<T, R, C, O> &v, FormatContext &ctx) const

@@ -25,10 +25,10 @@
 
 #include <catalyst/resource/error.hpp>
 
+#include "obj.hpp"
+
 #include <expected>
 #include <string_view>
-
-#include "obj.hpp"
 
 namespace catalyst::resource::obj
 {
@@ -71,8 +71,7 @@ namespace catalyst::resource::obj
          * rare, and a file that uses one fails here with a clear line number rather than silently
          * losing the continued half.
          */
-        [[nodiscard]] static std::expected<obj, error> parse(std::string_view data,
-                                                             std::string_view uri = {});
+        [[nodiscard]] static std::expected<obj, error> parse(std::string_view data, std::string_view uri = {});
     };
 
 } // namespace catalyst::resource::obj

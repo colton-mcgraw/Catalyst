@@ -10,9 +10,8 @@
  * License: MIT (see LICENSE).
  */
 
-#include <catalyst/resource/json/value.hpp>
-
 #include <catalyst/resource/json/error.hpp>
+#include <catalyst/resource/json/value.hpp>
 
 #include <cstddef>
 #include <cstdint>

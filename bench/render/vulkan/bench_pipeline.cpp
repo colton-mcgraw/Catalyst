@@ -23,8 +23,7 @@ namespace catalyst::bench::render
 
     namespace
     {
-        shader make_shader(const device &dev, shader_stage stage, std::span<const std::byte> bytecode,
-                           const char *name)
+        shader make_shader(const device &dev, shader_stage stage, std::span<const std::byte> bytecode, const char *name)
         {
             shader_desc desc;
             desc.stage = stage;
@@ -126,12 +125,11 @@ namespace catalyst::bench::render
                             [&] { return make_shader(dev, shader_stage::vertex, spirv::quad_vertex_bytes(), nullptr); },
                             [](shader &s) { destroy_shader(s); }));
 
-        print_lifecycle(
-            "shader module (fragment)",
-            measure_lifecycle(
-                iterations,
-                [&] { return make_shader(dev, shader_stage::fragment, spirv::quad_fragment_bytes(), nullptr); },
-                [](shader &s) { destroy_shader(s); }));
+        print_lifecycle("shader module (fragment)",
+                        measure_lifecycle(
+                            iterations, [&]
+                            { return make_shader(dev, shader_stage::fragment, spirv::quad_fragment_bytes(), nullptr); },
+                            [](shader &s) { destroy_shader(s); }));
 
         // Modules the pipeline measurements below reuse, so they time pipeline construction alone.
         shader vs = make_shader(dev, shader_stage::vertex, spirv::quad_vertex_bytes(), "quad.vert");
@@ -142,7 +140,8 @@ namespace catalyst::bench::render
 
         const std::array<format, 1> color_formats = {color};
 
-        const auto base_desc = [&] {
+        const auto base_desc = [&]
+        {
             graphics_pipeline_desc desc;
             desc.vertex_shader = vs;
             desc.fragment_shader = fs;
@@ -162,7 +161,8 @@ namespace catalyst::bench::render
         print_lifecycle("graphics pipeline (2 bindings, 4 attributes, alpha blend + depth)",
                         measure_lifecycle(
                             iterations,
-                            [&] {
+                            [&]
+                            {
                                 graphics_pipeline_desc desc;
                                 desc.vertex_shader = instanced_vs;
                                 desc.fragment_shader = fs;
@@ -182,7 +182,8 @@ namespace catalyst::bench::render
         print_lifecycle("graphics pipeline (distinct state per iteration)",
                         measure_lifecycle(
                             iterations,
-                            [&] {
+                            [&]
+                            {
                                 graphics_pipeline_desc desc = base_desc();
                                 desc.rasterizer.cull =
                                     std::array{cull_mode::none, cull_mode::front, cull_mode::back}[permutation % 3];
@@ -199,7 +200,8 @@ namespace catalyst::bench::render
         print_lifecycle("graphics pipeline rebuilt from SPIR-V (shader reload)",
                         measure_lifecycle(
                             iterations,
-                            [&] {
+                            [&]
+                            {
                                 shader reload_vs =
                                     make_shader(dev, shader_stage::vertex, spirv::quad_vertex_bytes(), nullptr);
                                 shader reload_fs =
@@ -214,15 +216,15 @@ namespace catalyst::bench::render
                             },
                             [](pipeline &p) { destroy_pipeline(p); }));
 
-        print_lifecycle("compute pipeline",
-                        measure_lifecycle(
-                            iterations,
-                            [&] {
-                                compute_pipeline_desc desc;
-                                desc.compute_shader = cs;
-                                return create_compute_pipeline(dev, desc);
-                            },
-                            [](pipeline &p) { destroy_pipeline(p); }));
+        print_lifecycle("compute pipeline", measure_lifecycle(
+                                                iterations,
+                                                [&]
+                                                {
+                                                    compute_pipeline_desc desc;
+                                                    desc.compute_shader = cs;
+                                                    return create_compute_pipeline(dev, desc);
+                                                },
+                                                [](pipeline &p) { destroy_pipeline(p); }));
 
         destroy_shader(vs);
         destroy_shader(fs);

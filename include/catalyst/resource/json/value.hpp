@@ -7,6 +7,8 @@
 
 #pragma once
 
+#include "error.hpp"
+
 #include <cstddef>
 #include <cstdint>
 #include <initializer_list>
@@ -17,8 +19,6 @@
 #include <utility>
 #include <variant>
 #include <vector>
-
-#include "error.hpp"
 
 namespace catalyst::resource::json
 {
@@ -116,7 +116,6 @@ namespace catalyst::resource::json
                           alt_is<type::object, object>,
                       "variant alternatives must be ordered exactly like enum type");
 
-
     public:
         /// @name Construction
         /// @{
@@ -206,14 +205,26 @@ namespace catalyst::resource::json
          */
         [[nodiscard]] type kind() const noexcept { return static_cast<type>(data_.index()); }
 
-        [[nodiscard]] bool is_null() const noexcept { return kind() == type::null; }         ///< `true` for JSON `null`.
-        [[nodiscard]] bool is_boolean() const noexcept { return kind() == type::boolean; }   ///< `true` for `true`/`false`.
-        [[nodiscard]] bool is_integer() const noexcept { return kind() == type::integer; }   ///< `true` for an integral number.
-        [[nodiscard]] bool is_floating() const noexcept { return kind() == type::floating; } ///< `true` for a floating number.
-        [[nodiscard]] bool is_number() const noexcept { return is_integer() || is_floating(); } ///< `true` for any number.
-        [[nodiscard]] bool is_string() const noexcept { return kind() == type::string; }     ///< `true` for a string.
-        [[nodiscard]] bool is_array() const noexcept { return kind() == type::array; }       ///< `true` for an array.
-        [[nodiscard]] bool is_object() const noexcept { return kind() == type::object; }     ///< `true` for an object.
+        [[nodiscard]] bool is_null() const noexcept { return kind() == type::null; } ///< `true` for JSON `null`.
+        [[nodiscard]] bool is_boolean() const noexcept
+        {
+            return kind() == type::boolean;
+        } ///< `true` for `true`/`false`.
+        [[nodiscard]] bool is_integer() const noexcept
+        {
+            return kind() == type::integer;
+        } ///< `true` for an integral number.
+        [[nodiscard]] bool is_floating() const noexcept
+        {
+            return kind() == type::floating;
+        } ///< `true` for a floating number.
+        /// `true` for any number. Trailing here rather than inline like its neighbours: the line does
+        /// not fit in 120 columns, and clang-format cannot settle on one alignment for it.
+        [[nodiscard]] bool is_number() const noexcept { return is_integer() || is_floating(); }
+
+        [[nodiscard]] bool is_string() const noexcept { return kind() == type::string; } ///< `true` for a string.
+        [[nodiscard]] bool is_array() const noexcept { return kind() == type::array; }   ///< `true` for an array.
+        [[nodiscard]] bool is_object() const noexcept { return kind() == type::object; } ///< `true` for an object.
 
         /// @}
 

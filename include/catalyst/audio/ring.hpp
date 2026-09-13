@@ -70,10 +70,8 @@ namespace catalyst::audio
      * whose move or destructor can throw, because both happen on threads with nothing to catch.
      */
     template <typename T>
-    concept ring_element =
-        std::is_nothrow_move_constructible_v<T> &&
-        std::is_nothrow_move_assignable_v<T> &&
-        std::is_nothrow_destructible_v<T>;
+    concept ring_element = std::is_nothrow_move_constructible_v<T> && std::is_nothrow_move_assignable_v<T> &&
+                           std::is_nothrow_destructible_v<T>;
 
     /**
      * @class spsc_ring
@@ -118,8 +116,7 @@ namespace catalyst::audio
          * modulo, so `try_push` and `try_pop` contain no division on the real-time path.
          */
         explicit spsc_ring(std::size_t capacity)
-            : capacity_(std::bit_ceil(capacity == 0 ? std::size_t{1} : capacity)),
-              mask_(capacity_ - 1),
+            : capacity_(std::bit_ceil(capacity == 0 ? std::size_t{1} : capacity)), mask_(capacity_ - 1),
               slots_(std::make_unique_for_overwrite<slot[]>(capacity_))
         {
         }
@@ -173,10 +170,7 @@ namespace catalyst::audio
          * @return True if it was queued; false if the ring is full, leaving @p value destroyed with
          * the call - if the caller needs it back on failure, use @ref try_emplace.
          */
-        [[nodiscard]] bool try_push(T value) noexcept
-        {
-            return try_emplace(std::move(value));
-        }
+        [[nodiscard]] bool try_push(T value) noexcept { return try_emplace(std::move(value)); }
 
         /**
          * @brief Consumer thread. Moves the front element into @p out.

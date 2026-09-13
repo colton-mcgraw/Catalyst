@@ -3,12 +3,13 @@
  * SPDX-FileCopyrightText: 2026-Current Catalyst
  *
  * @file
- * @brief Shared vocabulary for the Catalyst rendering API: opaque resource handles, pixel formats, flag-enum helpers and the
- * small geometry structs (extents, viewports, scissors) used by buffers, textures, pipelines and command lists.
- * @details Every GPU object exposed by the rendering module is referred to through a `resource_handle<Tag>`. A handle is a
- * trivially copyable 64-bit identifier owned by the active backend; it carries no ownership of its own and is manipulated
- * exclusively through the free functions declared in the per-resource headers (e.g. `create_buffer` / `destroy_buffer`).
- * This mirrors `catalyst::platform::window` and keeps the public headers free of any backend-specific types.
+ * @brief Shared vocabulary for the Catalyst rendering API: opaque resource handles, pixel formats, flag-enum helpers
+ * and the small geometry structs (extents, viewports, scissors) used by buffers, textures, pipelines and command lists.
+ * @details Every GPU object exposed by the rendering module is referred to through a `resource_handle<Tag>`. A handle
+ * is a trivially copyable 64-bit identifier owned by the active backend; it carries no ownership of its own and is
+ * manipulated exclusively through the free functions declared in the per-resource headers (e.g. `create_buffer` /
+ * `destroy_buffer`). This mirrors `catalyst::platform::window` and keeps the public headers free of any
+ * backend-specific types.
  */
 
 #pragma once
@@ -27,8 +28,8 @@ namespace catalyst::rendering
 
     /**
      * @class resource_handle
-     * @brief Type-safe wrapper around a `resource_id`. `Tag` is an empty struct that makes handles of different resource
-     * kinds distinct types, so a `buffer` cannot be passed where a `texture` is expected.
+     * @brief Type-safe wrapper around a `resource_id`. `Tag` is an empty struct that makes handles of different
+     * resource kinds distinct types, so a `buffer` cannot be passed where a `texture` is expected.
      */
     template <typename Tag>
     class resource_handle
@@ -40,7 +41,8 @@ namespace catalyst::rendering
         /** @brief Raw backend identifier. */
         [[nodiscard]] constexpr resource_id id() const noexcept { return id_; }
 
-        /** @brief True when the handle refers to *some* resource. Use the per-resource `is_valid` to check it still exists. */
+        /** @brief True when the handle refers to *some* resource. Use the per-resource `is_valid` to check it still
+         * exists. */
         [[nodiscard]] constexpr explicit operator bool() const noexcept { return id_ != 0; }
 
         friend constexpr bool operator==(const resource_handle &, const resource_handle &) noexcept = default;
@@ -92,10 +94,16 @@ namespace catalyst::rendering
     }
 
     template <flags_enum E>
-    constexpr E &operator|=(E &a, E b) noexcept { return a = a | b; }
+    constexpr E &operator|=(E &a, E b) noexcept
+    {
+        return a = a | b;
+    }
 
     template <flags_enum E>
-    constexpr E &operator&=(E &a, E b) noexcept { return a = a & b; }
+    constexpr E &operator&=(E &a, E b) noexcept
+    {
+        return a = a & b;
+    }
 
     /** @brief True when every bit of `flag` is set in `value` (and `flag` is not empty). */
     template <flags_enum E>
@@ -133,10 +141,14 @@ namespace catalyst::rendering
     {
         switch (kind)
         {
-        case backend_kind::null:   return "null";
-        case backend_kind::vulkan: return "vulkan";
-        case backend_kind::d3d12:  return "d3d12";
-        case backend_kind::metal:  return "metal";
+        case backend_kind::null:
+            return "null";
+        case backend_kind::vulkan:
+            return "vulkan";
+        case backend_kind::d3d12:
+            return "d3d12";
+        case backend_kind::metal:
+            return "metal";
         }
         return "unknown";
     }
@@ -174,9 +186,12 @@ namespace catalyst::rendering
     {
         switch (kind)
         {
-        case queue_kind::graphics: return "graphics";
-        case queue_kind::compute:  return "compute";
-        case queue_kind::copy:     return "copy";
+        case queue_kind::graphics:
+            return "graphics";
+        case queue_kind::compute:
+            return "compute";
+        case queue_kind::copy:
+            return "copy";
         }
         return "unknown";
     }
@@ -204,8 +219,8 @@ namespace catalyst::rendering
 
     /**
      * @enum format
-     * @brief Pixel / vertex-element formats. The set is intentionally the intersection of what Vulkan, D3D12 and Metal all
-     * support natively so every entry maps 1:1 onto each backend.
+     * @brief Pixel / vertex-element formats. The set is intentionally the intersection of what Vulkan, D3D12 and Metal
+     * all support natively so every entry maps 1:1 onto each backend.
      */
     enum class format : std::uint8_t
     {
@@ -235,14 +250,14 @@ namespace catalyst::rendering
         d24_unorm_s8_uint,
         d32_float_s8_uint,
 
-        // Block-compressed. Appended after the uncompressed set so that adding one never renumbers an existing format, and
-        // grouped because they all break an assumption the rest of this enum satisfies: a single texel has no size, only a
-        // 4x4 block does. `format_size_bytes` answers 0 for every one of them; the arithmetic that is correct for both
-        // kinds is `format_image_size_bytes`.
+        // Block-compressed. Appended after the uncompressed set so that adding one never renumbers an existing format,
+        // and grouped because they all break an assumption the rest of this enum satisfies: a single texel has no size,
+        // only a 4x4 block does. `format_size_bytes` answers 0 for every one of them; the arithmetic that is correct
+        // for both kinds is `format_image_size_bytes`.
         //
-        // Vulkan's BC1_RGB_* has no DXGI counterpart and is deliberately absent. Its block encoding is byte-identical to
-        // BC1_RGBA_* -- the difference is only whether the sampler is promised opaque alpha -- so a reader that meets one
-        // maps it onto the RGBA spelling and loses nothing but a promise.
+        // Vulkan's BC1_RGB_* has no DXGI counterpart and is deliberately absent. Its block encoding is byte-identical
+        // to BC1_RGBA_* -- the difference is only whether the sampler is promised opaque alpha -- so a reader that
+        // meets one maps it onto the RGBA spelling and loses nothing but a promise.
         bc1_rgba_unorm,
         bc1_rgba_unorm_srgb,
         bc2_unorm,
@@ -260,39 +275,60 @@ namespace catalyst::rendering
     };
 
     /**
-     * @brief Size in bytes of one texel / vertex element of `f`; 0 for `format::unknown` **and for every block-compressed
-     * format**.
-     * @details Zero rather than the block size, deliberately. There is no such thing as one texel's worth of BC7, and the
-     * expression this function exists to be multiplied into -- `width * height * depth * format_size_bytes(f)` -- is not
-     * merely imprecise for a block format, it is wrong by the block area. Answering 0 turns every such site into a visibly
-     * empty allocation instead of one that is silently 16x too small. Use @ref format_image_size_bytes, which is correct
-     * for both kinds, or @ref format_block_size_bytes when you genuinely mean one block.
+     * @brief Size in bytes of one texel / vertex element of `f`; 0 for `format::unknown` **and for every
+     * block-compressed format**.
+     * @details Zero rather than the block size, deliberately. There is no such thing as one texel's worth of BC7, and
+     * the expression this function exists to be multiplied into -- `width * height * depth * format_size_bytes(f)` --
+     * is not merely imprecise for a block format, it is wrong by the block area. Answering 0 turns every such site into
+     * a visibly empty allocation instead of one that is silently 16x too small. Use @ref format_image_size_bytes, which
+     * is correct for both kinds, or @ref format_block_size_bytes when you genuinely mean one block.
      */
     [[nodiscard]] constexpr std::uint32_t format_size_bytes(format f) noexcept
     {
         switch (f)
         {
-        case format::unknown:           return 0;
-        case format::r8_unorm:          return 1;
-        case format::rg8_unorm:         return 2;
-        case format::rgba8_unorm:       return 4;
-        case format::rgba8_unorm_srgb:  return 4;
-        case format::bgra8_unorm:       return 4;
-        case format::bgra8_unorm_srgb:  return 4;
-        case format::r16_float:         return 2;
-        case format::rg16_float:        return 4;
-        case format::rgba16_float:      return 8;
-        case format::r16_uint:          return 2;
-        case format::r32_uint:          return 4;
-        case format::r32_sint:          return 4;
-        case format::r32_float:         return 4;
-        case format::rg32_float:        return 8;
-        case format::rgb32_float:       return 12;
-        case format::rgba32_float:      return 16;
-        case format::d16_unorm:         return 2;
-        case format::d32_float:         return 4;
-        case format::d24_unorm_s8_uint: return 4;
-        case format::d32_float_s8_uint: return 8;
+        case format::unknown:
+            return 0;
+        case format::r8_unorm:
+            return 1;
+        case format::rg8_unorm:
+            return 2;
+        case format::rgba8_unorm:
+            return 4;
+        case format::rgba8_unorm_srgb:
+            return 4;
+        case format::bgra8_unorm:
+            return 4;
+        case format::bgra8_unorm_srgb:
+            return 4;
+        case format::r16_float:
+            return 2;
+        case format::rg16_float:
+            return 4;
+        case format::rgba16_float:
+            return 8;
+        case format::r16_uint:
+            return 2;
+        case format::r32_uint:
+            return 4;
+        case format::r32_sint:
+            return 4;
+        case format::r32_float:
+            return 4;
+        case format::rg32_float:
+            return 8;
+        case format::rgb32_float:
+            return 12;
+        case format::rgba32_float:
+            return 16;
+        case format::d16_unorm:
+            return 2;
+        case format::d32_float:
+            return 4;
+        case format::d24_unorm_s8_uint:
+            return 4;
+        case format::d32_float_s8_uint:
+            return 8;
 
         // Block-compressed: see the note above. One texel has no size here.
         case format::bc1_rgba_unorm:
@@ -308,7 +344,8 @@ namespace catalyst::rendering
         case format::bc6h_ufloat:
         case format::bc6h_sfloat:
         case format::bc7_unorm:
-        case format::bc7_unorm_srgb:  return 0;
+        case format::bc7_unorm_srgb:
+            return 0;
         }
         return 0;
     }
@@ -331,15 +368,17 @@ namespace catalyst::rendering
         case format::bc6h_ufloat:
         case format::bc6h_sfloat:
         case format::bc7_unorm:
-        case format::bc7_unorm_srgb:  return true;
-        default:                      return false;
+        case format::bc7_unorm_srgb:
+            return true;
+        default:
+            return false;
         }
     }
 
     /**
      * @brief Width in texels of one compression block; 1 for an uncompressed format.
-     * @details Reported as width and height separately rather than as one edge length, even though every block format in
-     * this enum is 4x4, because non-square blocks are the normal case in the families that would be added next and a
+     * @details Reported as width and height separately rather than as one edge length, even though every block format
+     * in this enum is 4x4, because non-square blocks are the normal case in the families that would be added next and a
      * caller written against a square assumption would then be silently wrong rather than obviously wrong.
      */
     [[nodiscard]] constexpr std::uint32_t format_block_width(format f) noexcept
@@ -366,7 +405,8 @@ namespace catalyst::rendering
         case format::bc1_rgba_unorm:
         case format::bc1_rgba_unorm_srgb:
         case format::bc4_unorm:
-        case format::bc4_snorm:       return 8;
+        case format::bc4_snorm:
+            return 8;
 
         // 128 bits per 4x4 block.
         case format::bc2_unorm:
@@ -378,9 +418,11 @@ namespace catalyst::rendering
         case format::bc6h_ufloat:
         case format::bc6h_sfloat:
         case format::bc7_unorm:
-        case format::bc7_unorm_srgb:  return 16;
+        case format::bc7_unorm_srgb:
+            return 16;
 
-        default:                      return format_size_bytes(f);
+        default:
+            return format_size_bytes(f);
         }
     }
 
@@ -404,29 +446,38 @@ namespace catalyst::rendering
         case format::bc1_rgba_unorm_srgb:
         case format::bc2_unorm_srgb:
         case format::bc3_unorm_srgb:
-        case format::bc7_unorm_srgb:  return true;
-        default:                      return false;
+        case format::bc7_unorm_srgb:
+            return true;
+        default:
+            return false;
         }
     }
 
     /**
      * @brief The sRGB counterpart of `f`, or `f` unchanged when it has none or already is one.
-     * @details A pure spelling change: the two formats are byte-identical on the wire and differ only in what the sampler
-     * is told the bytes mean. It exists so a caller who knows an asset is colour -- which no image container states
-     * reliably -- can say so without a switch of its own. There is deliberately no inverse: the formats with no linear
-     * counterpart are exactly the ones where an accidental demotion would corrupt a lookup table silently.
+     * @details A pure spelling change: the two formats are byte-identical on the wire and differ only in what the
+     * sampler is told the bytes mean. It exists so a caller who knows an asset is colour -- which no image container
+     * states reliably -- can say so without a switch of its own. There is deliberately no inverse: the formats with no
+     * linear counterpart are exactly the ones where an accidental demotion would corrupt a lookup table silently.
      */
     [[nodiscard]] constexpr format to_srgb_format(format f) noexcept
     {
         switch (f)
         {
-        case format::rgba8_unorm:     return format::rgba8_unorm_srgb;
-        case format::bgra8_unorm:     return format::bgra8_unorm_srgb;
-        case format::bc1_rgba_unorm:  return format::bc1_rgba_unorm_srgb;
-        case format::bc2_unorm:       return format::bc2_unorm_srgb;
-        case format::bc3_unorm:       return format::bc3_unorm_srgb;
-        case format::bc7_unorm:       return format::bc7_unorm_srgb;
-        default:                      return f;
+        case format::rgba8_unorm:
+            return format::rgba8_unorm_srgb;
+        case format::bgra8_unorm:
+            return format::bgra8_unorm_srgb;
+        case format::bc1_rgba_unorm:
+            return format::bc1_rgba_unorm_srgb;
+        case format::bc2_unorm:
+            return format::bc2_unorm_srgb;
+        case format::bc3_unorm:
+            return format::bc3_unorm_srgb;
+        case format::bc7_unorm:
+            return format::bc7_unorm_srgb;
+        default:
+            return f;
         }
     }
 
@@ -469,8 +520,8 @@ namespace catalyst::rendering
     /**
      * @brief Tightly packed size in bytes of one mip level of one array slice in `f`, at `extent`.
      * @details The one size computation that is correct for both kinds of format, and the reason `format_size_bytes`
-     * answers 0 for the block-compressed ones rather than something plausible. A block format rounds each dimension up to
-     * a whole block -- a 5x5 BC7 surface occupies the same 2x2 blocks a 8x8 one does -- which is why this cannot be
+     * answers 0 for the block-compressed ones rather than something plausible. A block format rounds each dimension up
+     * to a whole block -- a 5x5 BC7 surface occupies the same 2x2 blocks a 8x8 one does -- which is why this cannot be
      * expressed as a multiplication by a per-texel size.
      *
      * Returns `std::uint64_t` because the product of a 16k cube map slice and a 16-byte block does not fit a 32-bit

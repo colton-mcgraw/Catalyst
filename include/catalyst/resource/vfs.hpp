@@ -66,10 +66,7 @@ namespace catalyst::resource
 
         /** @brief The number of characters a candidate URI must match for this mount to claim it.
          * Mounts are tried in descending order of this, so the most specific one wins. */
-        [[nodiscard]] std::size_t specificity() const noexcept
-        {
-            return authority.size() + path_prefix.size();
-        }
+        [[nodiscard]] std::size_t specificity() const noexcept { return authority.size() + path_prefix.size(); }
     };
 
     /**

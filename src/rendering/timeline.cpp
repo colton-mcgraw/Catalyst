@@ -111,10 +111,9 @@ namespace catalyst::rendering
             park_list &list = parked();
             const std::scoped_lock lock{list.mutex};
 
-            const auto pos = std::find_if(list.entries.begin(), list.entries.end(),
-                                          [continuation](const parked_continuation &entry) {
-                                              return entry.continuation == continuation;
-                                          });
+            const auto pos =
+                std::find_if(list.entries.begin(), list.entries.end(), [continuation](const parked_continuation &entry)
+                             { return entry.continuation == continuation; });
             if (pos != list.entries.end())
                 list.entries.erase(pos);
         }
@@ -151,11 +150,9 @@ namespace catalyst::rendering
             // special case here - `is_complete` reports true for every point on one, which is what
             // releases the coroutines waiting on work that will now never happen. They find out
             // through `await_resume`, which asks the device rather than the point.
-            const auto first_ready = std::partition(list.entries.begin(), list.entries.end(),
-                                                    [&dev](const parked_continuation &entry) {
-                                                        return entry.point.owner() != dev ||
-                                                               !entry.point.is_complete();
-                                                    });
+            const auto first_ready =
+                std::partition(list.entries.begin(), list.entries.end(), [&dev](const parked_continuation &entry)
+                               { return entry.point.owner() != dev || !entry.point.is_complete(); });
 
             ready.reserve(static_cast<std::size_t>(std::distance(first_ready, list.entries.end())));
             for (auto it = first_ready; it != list.entries.end(); ++it)

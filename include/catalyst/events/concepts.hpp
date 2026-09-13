@@ -26,11 +26,9 @@ namespace catalyst::events
      *       and the more constrained overload must win.
      */
     template <typename F, typename Event>
-    concept coroutine_listener_for =
-        listener_for<F, Event> &&
-        requires(F f, const Event &e) {
-            { f(e) } -> std::same_as<task<void>>;
-        };
+    concept coroutine_listener_for = listener_for<F, Event> && requires(F f, const Event &e) {
+        { f(e) } -> std::same_as<task<void>>;
+    };
 
     /**
      * @concept middleware_for
@@ -40,10 +38,9 @@ namespace catalyst::events
      * @note The middleware should return true to continue propagation, or false to stop it.
      */
     template <typename F, typename Event>
-    concept middleware_for =
-        requires(F f, Event &e) {
-            { f(e) } -> std::same_as<bool>;
-        };
+    concept middleware_for = requires(F f, Event &e) {
+        { f(e) } -> std::same_as<bool>;
+    };
 
     /**
      * @concept async_middleware_for
@@ -53,10 +50,9 @@ namespace catalyst::events
      * @note The middleware should return a task that resolves to true to continue propagation, or false to stop it.
      */
     template <typename F, typename Event>
-    concept async_middleware_for =
-        requires(F f, Event &e) {
-            { f(e) } -> std::same_as<task<bool>>;
-        };
+    concept async_middleware_for = requires(F f, Event &e) {
+        { f(e) } -> std::same_as<task<bool>>;
+    };
 
     /**
      * @concept chain_middleware_for
@@ -66,22 +62,21 @@ namespace catalyst::events
      * @note The middleware should call next(e) to continue propagation, or not call it to stop.
      */
     template <typename F, typename Event>
-    concept chain_middleware_for =
-        requires(F f, Event &e, const next<Event> &n) {
-            { f(e, n) } -> std::same_as<void>;
-        };
+    concept chain_middleware_for = requires(F f, Event &e, const next<Event> &n) {
+        { f(e, n) } -> std::same_as<void>;
+    };
 
     /**
      * @concept async_chain_middleware_for
-     * @brief Concept for an asynchronous chain-style middleware that can stop the event propagation by not calling next.
+     * @brief Concept for an asynchronous chain-style middleware that can stop the event propagation by not calling
+     * next.
      * @tparam F The type of the middleware function.
      * @tparam Event The type of event.
      * @note The middleware should call next(e) to continue propagation, or not call it to stop.
      */
     template <typename F, typename Event>
-    concept async_chain_middleware_for =
-        requires(F f, Event &e, const async_next<Event> &n) {
-            { f(e, n) } -> std::same_as<task<void>>;
-        };
+    concept async_chain_middleware_for = requires(F f, Event &e, const async_next<Event> &n) {
+        { f(e, n) } -> std::same_as<task<void>>;
+    };
 
 } // namespace catalyst::events

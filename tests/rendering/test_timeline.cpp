@@ -16,10 +16,10 @@
  * `submit` returns, and a test that demanded it would be asserting the presence of latency.
  */
 
-#include "../test_common.hpp"
-
 #include <catalyst/events/task.hpp>
 #include <catalyst/rendering/rendering.hpp>
+
+#include "../test_common.hpp"
 
 #include <array>
 #include <chrono>
@@ -27,8 +27,8 @@
 #include <cstdint>
 #include <cstdio>
 #include <span>
-#include <utility>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 using namespace catalyst::rendering;
@@ -59,11 +59,9 @@ namespace
             values[i] = seed + static_cast<std::uint32_t>(i);
 
         copy_work w;
-        w.src = create_structured_buffer<std::uint32_t>(dev, count, buffer_usage::transfer_src,
-                                                        memory_access::cpu_to_gpu,
-                                                        std::span<const std::uint32_t>{values});
-        w.dst = create_structured_buffer<std::uint32_t>(dev, count,
-                                                        buffer_usage::transfer_dst | buffer_usage::storage,
+        w.src = create_structured_buffer<std::uint32_t>(
+            dev, count, buffer_usage::transfer_src, memory_access::cpu_to_gpu, std::span<const std::uint32_t>{values});
+        w.dst = create_structured_buffer<std::uint32_t>(dev, count, buffer_usage::transfer_dst | buffer_usage::storage,
                                                         memory_access::gpu_to_cpu);
         CT_REQUIRE(w.src && w.dst);
 

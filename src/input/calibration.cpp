@@ -5,7 +5,6 @@
  */
 
 #include <catalyst/input/calibration.hpp>
-
 #include <catalyst/input/context.hpp>
 
 #include <algorithm>

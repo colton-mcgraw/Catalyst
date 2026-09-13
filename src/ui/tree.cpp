@@ -4,10 +4,10 @@
  * License: MIT (see LICENSE).
  */
 
+#include <catalyst/ui/node.hpp>
+
 #include <algorithm>
 #include <utility>
-
-#include <catalyst/ui/node.hpp>
 
 namespace catalyst::ui
 {

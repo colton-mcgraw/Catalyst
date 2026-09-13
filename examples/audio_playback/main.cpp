@@ -89,11 +89,8 @@ int main()
     {
         for (const auto &device : *devices)
         {
-            logging::info<example_log>(
-                " - Device: {}{}, id: {}",
-                device.name,
-                device.is_default ? " (default)" : "",
-                device.id);
+            logging::info<example_log>(" - Device: {}{}, id: {}", device.name, device.is_default ? " (default)" : "",
+                                       device.id);
         }
     }
 
@@ -102,7 +99,8 @@ int main()
     // The renderer is named rather than passed inline, because `audio::renderer` refers to it
     // rather than owning it - a temporary lambda would be gone before the first block. Binding one
     // is a compile error for that reason.
-    auto render = [&state](audio::render_block &block) noexcept {
+    auto render = [&state](audio::render_block &block) noexcept
+    {
         if (block.output.empty() || block.sample_rate == 0)
             return;
 
@@ -116,8 +114,8 @@ int main()
             const audio::frame_count index = block.position + f;
 
             const double phase = std::fmod(static_cast<double>(index) * phase_step, two_pi);
-            const auto value = static_cast<audio::sample>(
-                state.gain_at(index, stop) * static_cast<float>(std::sin(phase)));
+            const auto value =
+                static_cast<audio::sample>(state.gain_at(index, stop) * static_cast<float>(std::sin(phase)));
 
             // The frame view removes the interleaving arithmetic, which is where the bugs are.
             for (audio::sample &channel : block.output_frame(f))
@@ -132,18 +130,19 @@ int main()
     bool device_lost = false;
 
     auto lost_token = bus.add_listener<audio::device_lost_event>(
-        [&device_lost](const audio::device_lost_event &event) {
+        [&device_lost](const audio::device_lost_event &event)
+        {
             logging::error<example_log>("Device lost: {}", event.device_id);
             device_lost = true;
         });
 
     auto xrun_token = bus.add_listener<audio::xrun_event>(
-        [](const audio::xrun_event &event) {
-            logging::warn<example_log>("{} xrun(s), {} total", event.count, event.total);
-        });
+        [](const audio::xrun_event &event)
+        { logging::warn<example_log>("{} xrun(s), {} total", event.count, event.total); });
 
     auto default_token = bus.add_listener<audio::default_device_changed_event>(
-        [](const audio::default_device_changed_event &event) {
+        [](const audio::default_device_changed_event &event)
+        {
             // Note what this does *not* do: a running stream is not moved to the new default.
             // Whether following it is right depends on the program, so the module leaves it here.
             logging::info<example_log>("Default {} device is now {}", event.direction, event.device_id);
@@ -172,11 +171,8 @@ int main()
     logging::info<example_log>("Backend: {}", stream->backend());
     logging::info<example_log>("Device: {}", info.device_name);
     logging::info<example_log>(
-        "Format: {} Hz, {} ch ({}), {} frames/block, {:.2f} ms latency{}",
-        info.sample_rate,
-        info.output_channels,
-        info.output_layout,
-        info.block_frames,
+        "Format: {} Hz, {} ch ({}), {} frames/block, {:.2f} ms latency{}", info.sample_rate, info.output_channels,
+        info.output_layout, info.block_frames,
         std::chrono::duration_cast<std::chrono::duration<double, std::milli>>(info.output_latency).count(),
         info.exclusive ? " (exclusive)" : "");
 
@@ -208,12 +204,8 @@ int main()
     stream->pump();
 
     const audio::stream_stats stats = stream->stats();
-    logging::info<example_log>(
-        "Rendered {} frames in {} blocks; {} xruns, peak load {:.1f}%",
-        stats.frames_rendered,
-        stats.blocks,
-        stats.xruns,
-        stats.peak_load * 100.0);
+    logging::info<example_log>("Rendered {} frames in {} blocks; {} xruns, peak load {:.1f}%", stats.frames_rendered,
+                               stats.blocks, stats.xruns, stats.peak_load * 100.0);
 
     lost_token.remove();
     xrun_token.remove();

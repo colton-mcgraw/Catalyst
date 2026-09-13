@@ -157,10 +157,7 @@ namespace
         std::uint64_t below(std::uint64_t n) noexcept { return next() % n; }
 
         /// @brief A coordinate with the digit count a real exporter writes.
-        double coordinate() noexcept
-        {
-            return (static_cast<double>(below(2'000'000)) - 1'000'000.0) / 1'000.0;
-        }
+        double coordinate() noexcept { return (static_cast<double>(below(2'000'000)) - 1'000'000.0) / 1'000.0; }
 
     private:
         std::uint64_t state_;
@@ -185,16 +182,16 @@ namespace
     {
         std::string name;
         std::string text;
-        std::size_t lines = 0;   ///< Newline-delimited records, including the skipped ones.
-        std::size_t tokens = 0;  ///< Tokens the parser's inner loop will pull out. Filled in later.
+        std::size_t lines = 0;  ///< Newline-delimited records, including the skipped ones.
+        std::size_t tokens = 0; ///< Tokens the parser's inner loop will pull out. Filled in later.
     };
 
     /// @brief How a payload spells its face corners, which is most of what varies between exporters.
     enum class corner_form
     {
-        position_only, ///< `f 1 2 3`
+        position_only,   ///< `f 1 2 3`
         position_normal, ///< `f 1//4 2//5 3//6`
-        full ///< `f 1/1/1 2/2/2 3/3/3`
+        full             ///< `f 1/1/1 2/2/2 3/3/3`
     };
 
     struct recipe
@@ -224,7 +221,8 @@ namespace
         const bool wants_texcoords = r.corners == corner_form::full;
         const bool wants_normals = r.corners != corner_form::position_only;
 
-        const auto line = [&](std::string_view content) {
+        const auto line = [&](std::string_view content)
+        {
             p.text += content;
             p.text += eol;
             ++p.lines;
@@ -235,8 +233,7 @@ namespace
 
         for (std::size_t i = 0; i < target_vertices; ++i)
         {
-            append_formatted(p.text, "v %.6f %.6f %.6f", random.coordinate(), random.coordinate(),
-                             random.coordinate());
+            append_formatted(p.text, "v %.6f %.6f %.6f", random.coordinate(), random.coordinate(), random.coordinate());
             p.text += eol;
             ++p.lines;
         }
@@ -244,8 +241,7 @@ namespace
         if (wants_texcoords)
             for (std::size_t i = 0; i < target_vertices; ++i)
             {
-                append_formatted(p.text, "vt %.6f %.6f",
-                                 static_cast<double>(random.below(1'000'000)) / 1'000'000.0,
+                append_formatted(p.text, "vt %.6f %.6f", static_cast<double>(random.below(1'000'000)) / 1'000'000.0,
                                  static_cast<double>(random.below(1'000'000)) / 1'000'000.0);
                 p.text += eol;
                 ++p.lines;
@@ -319,13 +315,10 @@ namespace
         std::vector<payload> out;
         out.push_back(generate({.name = "triangles v/vt/vn", .corners = corner_form::full}));
         out.push_back(generate({.name = "triangles v only", .corners = corner_form::position_only}));
-        out.push_back(generate({.name = "quads v//vn",
-                                .corners = corner_form::position_normal,
-                                .corners_per_face = 4}));
-        out.push_back(generate({.name = "annotated + CRLF",
-                                .corners = corner_form::full,
-                                .annotate = true,
-                                .crlf = true}));
+        out.push_back(
+            generate({.name = "quads v//vn", .corners = corner_form::position_normal, .corners_per_face = 4}));
+        out.push_back(
+            generate({.name = "annotated + CRLF", .corners = corner_form::full, .annotate = true, .crlf = true}));
         return out;
     }
 
@@ -369,9 +362,18 @@ namespace
         return checksum;
     }
 
-    std::size_t tokenize_std(const std::string &text) { return tokenize(text, next_token_std); }
-    std::size_t tokenize_scalar(const std::string &text) { return tokenize(text, next_token_scalar); }
-    std::size_t tokenize_swar(const std::string &text) { return tokenize(text, next_token_swar); }
+    std::size_t tokenize_std(const std::string &text)
+    {
+        return tokenize(text, next_token_std);
+    }
+    std::size_t tokenize_scalar(const std::string &text)
+    {
+        return tokenize(text, next_token_scalar);
+    }
+    std::size_t tokenize_swar(const std::string &text)
+    {
+        return tokenize(text, next_token_swar);
+    }
 
     /**
      * @fn check_agreement
@@ -424,8 +426,8 @@ namespace
                 const std::string_view tc = next_token_swar(c);
                 if (ta != tb || ta != tc)
                 {
-                    std::cerr << "tokenizers disagree on '" << probe << "': std='" << ta
-                              << "' scalar='" << tb << "' swar='" << tc << "'\n";
+                    std::cerr << "tokenizers disagree on '" << probe << "': std='" << ta << "' scalar='" << tb
+                              << "' swar='" << tc << "'\n";
                     return false;
                 }
                 if (ta.empty())
@@ -455,8 +457,8 @@ namespace
 
                 if (ta != tb || ta != tc)
                 {
-                    std::cerr << p.name << ": tokenizers disagree on line " << line_number << ": std='"
-                              << ta << "' scalar='" << tb << "' swar='" << tc << "'\n";
+                    std::cerr << p.name << ": tokenizers disagree on line " << line_number << ": std='" << ta
+                              << "' scalar='" << tb << "' swar='" << tc << "'\n";
                     return false;
                 }
                 if (ta.empty())
@@ -480,10 +482,7 @@ namespace
         double worst = 0.0; ///< Seconds for the slowest. Only printed, as a noise indicator.
 
         /// @brief How far the slowest repetition ran above the fastest, as a percentage.
-        [[nodiscard]] double spread_percent() const noexcept
-        {
-            return best > 0.0 ? (worst / best - 1.0) * 100.0 : 0.0;
-        }
+        [[nodiscard]] double spread_percent() const noexcept { return best > 0.0 ? (worst / best - 1.0) * 100.0 : 0.0; }
     };
 
     /// @brief Accumulates repetitions of one measurement.
@@ -540,8 +539,7 @@ int main()
         auto parsed = obj::parser::parse(p.text, p.name);
         if (!parsed)
         {
-            std::cerr << p.name << ": generated payload failed to parse: " << parsed.error().message()
-                      << '\n';
+            std::cerr << p.name << ": generated payload failed to parse: " << parsed.error().message() << '\n';
             return 1;
         }
         if (!check_agreement(p))
@@ -560,12 +558,10 @@ int main()
         }
         p.tokens = count;
 
-        std::cout << std::left << std::setw(22) << p.name << std::right << std::fixed
-                  << std::setprecision(2) << std::setw(8)
-                  << static_cast<double>(p.text.size()) / (1024.0 * 1024.0) << " MiB"
-                  << std::setw(10) << p.lines << " lines" << std::setw(11) << p.tokens << " tokens"
-                  << std::setw(10) << parsed->vertices.size() << " v" << std::setw(10)
-                  << parsed->face_count() << " f\n";
+        std::cout << std::left << std::setw(22) << p.name << std::right << std::fixed << std::setprecision(2)
+                  << std::setw(8) << static_cast<double>(p.text.size()) / (1024.0 * 1024.0) << " MiB" << std::setw(10)
+                  << p.lines << " lines" << std::setw(11) << p.tokens << " tokens" << std::setw(10)
+                  << parsed->vertices.size() << " v" << std::setw(10) << parsed->face_count() << " f\n";
     }
     std::cout << '\n';
 
@@ -578,23 +574,23 @@ int main()
     for (std::size_t rep = 0; rep < repetitions; ++rep)
         for (std::size_t i = 0; i < payloads.size(); ++i)
             parse_times[i].add(time_once(
-                [&] {
+                [&]
+                {
                     auto r = obj::parser::parse(payloads[i].text, payloads[i].name);
                     return r ? r->face_vertices.size() : 0u;
                 },
                 checksum));
 
     std::cout << "parser::parse (end to end)\n"
-              << "  " << std::left << std::setw(22) << "payload" << std::right << std::setw(10)
-              << "MB/s" << std::setw(12) << "ms/iter" << std::setw(10) << "spread" << '\n';
+              << "  " << std::left << std::setw(22) << "payload" << std::right << std::setw(10) << "MB/s"
+              << std::setw(12) << "ms/iter" << std::setw(10) << "spread" << '\n';
     for (std::size_t i = 0; i < payloads.size(); ++i)
     {
         const auto &s = parse_times[i].result();
         std::cout << "  " << std::left << std::setw(22) << payloads[i].name << std::right << std::fixed
                   << std::setprecision(1) << std::setw(10) << megabytes_per_second(payloads[i], s.best)
-                  << std::setprecision(3) << std::setw(12)
-                  << s.best * 1'000.0 / static_cast<double>(iterations) << std::setprecision(1)
-                  << std::setw(9) << s.spread_percent() << "%\n";
+                  << std::setprecision(3) << std::setw(12) << s.best * 1'000.0 / static_cast<double>(iterations)
+                  << std::setprecision(1) << std::setw(9) << s.spread_percent() << "%\n";
     }
     std::cout << '\n';
 
@@ -622,10 +618,9 @@ int main()
                     time_once([&] { return variants[v].run(payloads[i].text); }, checksum));
 
     std::cout << "next_token only (same line splitting, tokens discarded)\n"
-              << "  " << std::left << std::setw(22) << "payload" << std::right << std::setw(11)
-              << "std MB/s" << std::setw(11) << "scalar" << std::setw(11) << "swar" << std::setw(15)
-              << "scalar vs std" << std::setw(15) << "swar vs std" << std::setw(10) << "spread"
-              << '\n';
+              << "  " << std::left << std::setw(22) << "payload" << std::right << std::setw(11) << "std MB/s"
+              << std::setw(11) << "scalar" << std::setw(11) << "swar" << std::setw(15) << "scalar vs std"
+              << std::setw(15) << "swar vs std" << std::setw(10) << "spread" << '\n';
     for (std::size_t i = 0; i < payloads.size(); ++i)
     {
         const double base = megabytes_per_second(payloads[i], token_times[i * variant_count].result().best);
@@ -634,14 +629,11 @@ int main()
                   << std::setprecision(1);
         for (std::size_t v = 0; v < variant_count; ++v)
             std::cout << std::setw(11)
-                      << megabytes_per_second(payloads[i],
-                                              token_times[i * variant_count + v].result().best);
+                      << megabytes_per_second(payloads[i], token_times[i * variant_count + v].result().best);
         for (std::size_t v = 1; v < variant_count; ++v)
         {
-            const double mbps = megabytes_per_second(payloads[i],
-                                                     token_times[i * variant_count + v].result().best);
-            std::cout << std::showpos << std::setw(14) << (mbps / base - 1.0) * 100.0 << std::noshowpos
-                      << '%';
+            const double mbps = megabytes_per_second(payloads[i], token_times[i * variant_count + v].result().best);
+            std::cout << std::showpos << std::setw(14) << (mbps / base - 1.0) * 100.0 << std::noshowpos << '%';
         }
 
         // The widest spread of the three, so a row whose comparison was measured through a stall is

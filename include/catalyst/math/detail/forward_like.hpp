@@ -38,8 +38,7 @@ namespace catalyst::math::detail
      * an lvalue reference and yields `B&`, anything else yields `B&&`.
      */
     template <typename T, typename U>
-    using forward_like_t =
-        override_ref_t<T &&, copy_const_t<std::remove_reference_t<T>, std::remove_reference_t<U>>>;
+    using forward_like_t = override_ref_t<T &&, copy_const_t<std::remove_reference_t<T>, std::remove_reference_t<U>>>;
 
     /**
      * @brief Casts @p value to the value category and constness of `T`.

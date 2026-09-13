@@ -45,10 +45,14 @@ namespace
     {
         switch (p)
         {
-        case input::action_phase::started: return "started";
-        case input::action_phase::performed: return "performed";
-        case input::action_phase::cancelled: return "cancelled";
-        case input::action_phase::idle: return "idle";
+        case input::action_phase::started:
+            return "started";
+        case input::action_phase::performed:
+            return "performed";
+        case input::action_phase::cancelled:
+            return "cancelled";
+        case input::action_phase::idle:
+            return "idle";
         }
         return "?";
     }
@@ -199,23 +203,22 @@ int main()
                                    fire.is_held() ? "yes" : "no");
     };
 
-    drive("stick pushed right", [&]
-          { in.devices().set_value(fake, input::control_of(input::gamepad_axis::left_x), 1.0f); });
-    drive("stick centred", [&]
-          { in.devices().set_value(fake, input::control_of(input::gamepad_axis::left_x), 0.0f); });
-    drive("trigger pulled", [&]
-          { in.devices().set_value(fake, input::control_of(input::gamepad_axis::right_trigger), 0.8f); });
-    drive("trigger released", [&]
-          { in.devices().set_value(fake, input::control_of(input::gamepad_axis::right_trigger), 0.0f); });
+    drive("stick pushed right",
+          [&] { in.devices().set_value(fake, input::control_of(input::gamepad_axis::left_x), 1.0f); });
+    drive("stick centred", [&] { in.devices().set_value(fake, input::control_of(input::gamepad_axis::left_x), 0.0f); });
+    drive("trigger pulled",
+          [&] { in.devices().set_value(fake, input::control_of(input::gamepad_axis::right_trigger), 0.8f); });
+    drive("trigger released",
+          [&] { in.devices().set_value(fake, input::control_of(input::gamepad_axis::right_trigger), 0.0f); });
 
     // Rebinding is the same operation a controls screen performs, and it takes effect on the next frame.
     logging::info<example_log>("Rebinding \"fire\" to the left trigger:");
     fire.rebind(0, pad(input::gamepad_axis::left_trigger).press_point(0.4f).as_override());
 
-    drive("right trigger pulled", [&]
-          { in.devices().set_value(fake, input::control_of(input::gamepad_axis::right_trigger), 0.8f); });
-    drive("left trigger pulled", [&]
-          { in.devices().set_value(fake, input::control_of(input::gamepad_axis::left_trigger), 0.8f); });
+    drive("right trigger pulled",
+          [&] { in.devices().set_value(fake, input::control_of(input::gamepad_axis::right_trigger), 0.8f); });
+    drive("left trigger pulled",
+          [&] { in.devices().set_value(fake, input::control_of(input::gamepad_axis::left_trigger), 0.8f); });
 
     logging::info<example_log>("{} device(s) connected at exit", in.devices().size());
     return 0;

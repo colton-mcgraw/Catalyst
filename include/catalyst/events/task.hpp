@@ -2,8 +2,8 @@
 
 #include <coroutine>
 #include <exception>
-#include <utility>
 #include <type_traits>
+#include <utility>
 
 namespace catalyst::events
 {
@@ -46,10 +46,7 @@ namespace catalyst::events
             std::exception_ptr exception_;
             std::coroutine_handle<> continuation_;
 
-            task get_return_object() noexcept
-            {
-                return task{std::coroutine_handle<promise_type>::from_promise(*this)};
-            }
+            task get_return_object() noexcept { return task{std::coroutine_handle<promise_type>::from_promise(*this)}; }
 
             std::suspend_always initial_suspend() noexcept { return {}; }
 

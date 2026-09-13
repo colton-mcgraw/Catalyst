@@ -141,7 +141,8 @@ namespace catalyst::ui
          */
         [[nodiscard]] constexpr bool intersects(const rect &other) const noexcept
         {
-            return min.x() < other.max.x() && other.min.x() < max.x() && min.y() < other.max.y() && other.min.y() < max.y();
+            return min.x() < other.max.x() && other.min.x() < max.x() && min.y() < other.max.y() &&
+                   other.min.y() < max.y();
         }
 
         /**

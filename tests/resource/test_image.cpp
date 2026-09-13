@@ -14,10 +14,10 @@
  * License: MIT (see LICENSE).
  */
 
-#include "../test_common.hpp"
-
 #include <catalyst/resource/blob.hpp>
 #include <catalyst/resource/image.hpp>
+
+#include "../test_common.hpp"
 
 #include <algorithm>
 #include <array>

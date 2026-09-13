@@ -123,37 +123,68 @@ namespace catalyst::resource::detail
         {
             switch (dxgi)
             {
-            case 2:   return format::rgba32_float;      // DXGI_FORMAT_R32G32B32A32_FLOAT
-            case 6:   return format::rgb32_float;       // DXGI_FORMAT_R32G32B32_FLOAT
-            case 10:  return format::rgba16_float;      // DXGI_FORMAT_R16G16B16A16_FLOAT
-            case 16:  return format::rg32_float;        // DXGI_FORMAT_R32G32_FLOAT
-            case 28:  return format::rgba8_unorm;       // DXGI_FORMAT_R8G8B8A8_UNORM
-            case 29:  return format::rgba8_unorm_srgb;  // DXGI_FORMAT_R8G8B8A8_UNORM_SRGB
-            case 34:  return format::rg16_float;        // DXGI_FORMAT_R16G16_FLOAT
-            case 41:  return format::r32_float;         // DXGI_FORMAT_R32_FLOAT
-            case 42:  return format::r32_uint;          // DXGI_FORMAT_R32_UINT
-            case 43:  return format::r32_sint;          // DXGI_FORMAT_R32_SINT
-            case 49:  return format::rg8_unorm;         // DXGI_FORMAT_R8G8_UNORM
-            case 54:  return format::r16_float;         // DXGI_FORMAT_R16_FLOAT
-            case 57:  return format::r16_uint;          // DXGI_FORMAT_R16_UINT
-            case 61:  return format::r8_unorm;          // DXGI_FORMAT_R8_UNORM
-            case 71:  return format::bc1_rgba_unorm;    // DXGI_FORMAT_BC1_UNORM
-            case 72:  return format::bc1_rgba_unorm_srgb;
-            case 74:  return format::bc2_unorm;         // DXGI_FORMAT_BC2_UNORM
-            case 75:  return format::bc2_unorm_srgb;
-            case 77:  return format::bc3_unorm;         // DXGI_FORMAT_BC3_UNORM
-            case 78:  return format::bc3_unorm_srgb;
-            case 80:  return format::bc4_unorm;         // DXGI_FORMAT_BC4_UNORM
-            case 81:  return format::bc4_snorm;
-            case 83:  return format::bc5_unorm;         // DXGI_FORMAT_BC5_UNORM
-            case 84:  return format::bc5_snorm;
-            case 87:  return format::bgra8_unorm;       // DXGI_FORMAT_B8G8R8A8_UNORM
-            case 91:  return format::bgra8_unorm_srgb;
-            case 95:  return format::bc6h_ufloat;       // DXGI_FORMAT_BC6H_UF16
-            case 96:  return format::bc6h_sfloat;       // DXGI_FORMAT_BC6H_SF16
-            case 98:  return format::bc7_unorm;         // DXGI_FORMAT_BC7_UNORM
-            case 99:  return format::bc7_unorm_srgb;
-            default:  return format::unknown;
+            case 2:
+                return format::rgba32_float; // DXGI_FORMAT_R32G32B32A32_FLOAT
+            case 6:
+                return format::rgb32_float; // DXGI_FORMAT_R32G32B32_FLOAT
+            case 10:
+                return format::rgba16_float; // DXGI_FORMAT_R16G16B16A16_FLOAT
+            case 16:
+                return format::rg32_float; // DXGI_FORMAT_R32G32_FLOAT
+            case 28:
+                return format::rgba8_unorm; // DXGI_FORMAT_R8G8B8A8_UNORM
+            case 29:
+                return format::rgba8_unorm_srgb; // DXGI_FORMAT_R8G8B8A8_UNORM_SRGB
+            case 34:
+                return format::rg16_float; // DXGI_FORMAT_R16G16_FLOAT
+            case 41:
+                return format::r32_float; // DXGI_FORMAT_R32_FLOAT
+            case 42:
+                return format::r32_uint; // DXGI_FORMAT_R32_UINT
+            case 43:
+                return format::r32_sint; // DXGI_FORMAT_R32_SINT
+            case 49:
+                return format::rg8_unorm; // DXGI_FORMAT_R8G8_UNORM
+            case 54:
+                return format::r16_float; // DXGI_FORMAT_R16_FLOAT
+            case 57:
+                return format::r16_uint; // DXGI_FORMAT_R16_UINT
+            case 61:
+                return format::r8_unorm; // DXGI_FORMAT_R8_UNORM
+            case 71:
+                return format::bc1_rgba_unorm; // DXGI_FORMAT_BC1_UNORM
+            case 72:
+                return format::bc1_rgba_unorm_srgb;
+            case 74:
+                return format::bc2_unorm; // DXGI_FORMAT_BC2_UNORM
+            case 75:
+                return format::bc2_unorm_srgb;
+            case 77:
+                return format::bc3_unorm; // DXGI_FORMAT_BC3_UNORM
+            case 78:
+                return format::bc3_unorm_srgb;
+            case 80:
+                return format::bc4_unorm; // DXGI_FORMAT_BC4_UNORM
+            case 81:
+                return format::bc4_snorm;
+            case 83:
+                return format::bc5_unorm; // DXGI_FORMAT_BC5_UNORM
+            case 84:
+                return format::bc5_snorm;
+            case 87:
+                return format::bgra8_unorm; // DXGI_FORMAT_B8G8R8A8_UNORM
+            case 91:
+                return format::bgra8_unorm_srgb;
+            case 95:
+                return format::bc6h_ufloat; // DXGI_FORMAT_BC6H_UF16
+            case 96:
+                return format::bc6h_sfloat; // DXGI_FORMAT_BC6H_SF16
+            case 98:
+                return format::bc7_unorm; // DXGI_FORMAT_BC7_UNORM
+            case 99:
+                return format::bc7_unorm_srgb;
+            default:
+                return format::unknown;
             }
         }
 
@@ -170,29 +201,43 @@ namespace catalyst::resource::detail
         {
             switch (code)
             {
-            case fourcc('D', 'X', 'T', '1'): return format::bc1_rgba_unorm;
+            case fourcc('D', 'X', 'T', '1'):
+                return format::bc1_rgba_unorm;
             case fourcc('D', 'X', 'T', '2'):
-            case fourcc('D', 'X', 'T', '3'): return format::bc2_unorm;
+            case fourcc('D', 'X', 'T', '3'):
+                return format::bc2_unorm;
             case fourcc('D', 'X', 'T', '4'):
-            case fourcc('D', 'X', 'T', '5'): return format::bc3_unorm;
+            case fourcc('D', 'X', 'T', '5'):
+                return format::bc3_unorm;
             case fourcc('A', 'T', 'I', '1'):
-            case fourcc('B', 'C', '4', 'U'): return format::bc4_unorm;
-            case fourcc('B', 'C', '4', 'S'): return format::bc4_snorm;
+            case fourcc('B', 'C', '4', 'U'):
+                return format::bc4_unorm;
+            case fourcc('B', 'C', '4', 'S'):
+                return format::bc4_snorm;
             case fourcc('A', 'T', 'I', '2'):
-            case fourcc('B', 'C', '5', 'U'): return format::bc5_unorm;
-            case fourcc('B', 'C', '5', 'S'): return format::bc5_snorm;
+            case fourcc('B', 'C', '5', 'U'):
+                return format::bc5_unorm;
+            case fourcc('B', 'C', '5', 'S'):
+                return format::bc5_snorm;
 
             // D3DFORMAT enumerators, written into the FourCC field as bare integers by tools that
             // predate the DX10 header. The float formats are the only ones of these worth carrying:
             // the rest are 16-bit packed layouts this project's format enum has no spelling for.
-            case 111: return format::r16_float;    // D3DFMT_R16F
-            case 112: return format::rg16_float;   // D3DFMT_G16R16F
-            case 113: return format::rgba16_float; // D3DFMT_A16B16G16R16F
-            case 114: return format::r32_float;    // D3DFMT_R32F
-            case 115: return format::rg32_float;   // D3DFMT_G32R32F
-            case 116: return format::rgba32_float; // D3DFMT_A32B32G32R32F
+            case 111:
+                return format::r16_float; // D3DFMT_R16F
+            case 112:
+                return format::rg16_float; // D3DFMT_G16R16F
+            case 113:
+                return format::rgba16_float; // D3DFMT_A16B16G16R16F
+            case 114:
+                return format::r32_float; // D3DFMT_R32F
+            case 115:
+                return format::rg32_float; // D3DFMT_G32R32F
+            case 116:
+                return format::rgba32_float; // D3DFMT_A32B32G32R32F
 
-            default: return format::unknown;
+            default:
+                return format::unknown;
             }
         }
 
@@ -248,7 +293,8 @@ namespace catalyst::resource::detail
                 if (pf.rgb_bit_count == 16 && pf.r_mask == 0x0000'00FF && pf.a_mask == 0x0000'FF00)
                     return format::rg8_unorm;
 
-                return std::unexpected(unsupported_dds("DDS declares a luminance layout this reader has no mapping for"));
+                return std::unexpected(
+                    unsupported_dds("DDS declares a luminance layout this reader has no mapping for"));
             }
 
             if ((pf.flags & ddpf_alpha) != 0)
@@ -299,8 +345,8 @@ namespace catalyst::resource::detail
                                            std::to_string(dds_header_bytes)));
 
         if (pf.size != dds_pixelformat_bytes)
-            return std::unexpected(bad_dds("DDS pixel format claims to be " + std::to_string(pf.size) +
-                                           " bytes, not " + std::to_string(dds_pixelformat_bytes)));
+            return std::unexpected(bad_dds("DDS pixel format claims to be " + std::to_string(pf.size) + " bytes, not " +
+                                           std::to_string(dds_pixelformat_bytes)));
 
         const bool has_dxt10 = (pf.flags & ddpf_fourcc) != 0 && pf.four_cc == fourcc('D', 'X', '1', '0');
 

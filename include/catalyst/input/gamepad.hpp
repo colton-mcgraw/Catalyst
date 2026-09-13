@@ -9,9 +9,8 @@
  * before both the snapshot and the events, so a resting stick produces no events at all. Learn one from a resting
  * controller with the calibrator in calibration.hpp rather than tuning it by hand.
  *
- * Unlike a keyboard or a mouse, a gamepad has no window, so it is not fed by the platform layer: input::context polls it
- * from its own backend (XInput on Windows) when you call poll().
- * License: MIT (see LICENSE).
+ * Unlike a keyboard or a mouse, a gamepad has no window, so it is not fed by the platform layer: input::context polls
+ * it from its own backend (XInput on Windows) when you call poll(). License: MIT (see LICENSE).
  */
 
 #pragma once
@@ -30,8 +29,9 @@ namespace catalyst::input
 
     /**
      * @enum gamepad_button
-     * @brief The digital inputs, named positionally after the Xbox layout: `a` is the bottom face button, `b` the right,
-     * `x` the left, `y` the top. `back`/`start` are "view"/"menu" on newer pads; `guide` is the platform/home button.
+     * @brief The digital inputs, named positionally after the Xbox layout: `a` is the bottom face button, `b` the
+     * right, `x` the left, `y` the top. `back`/`start` are "view"/"menu" on newer pads; `guide` is the platform/home
+     * button.
      */
     enum class gamepad_button : std::uint8_t
     {
@@ -99,8 +99,14 @@ namespace catalyst::input
         using u = std::underlying_type_t<gamepad_buttons>;
         return static_cast<gamepad_buttons>(static_cast<u>(~static_cast<u>(a) & 0x7FFFu));
     }
-    inline constexpr gamepad_buttons &operator|=(gamepad_buttons &a, gamepad_buttons b) noexcept { return a = (a | b); }
-    inline constexpr gamepad_buttons &operator&=(gamepad_buttons &a, gamepad_buttons b) noexcept { return a = (a & b); }
+    inline constexpr gamepad_buttons &operator|=(gamepad_buttons &a, gamepad_buttons b) noexcept
+    {
+        return a = (a | b);
+    }
+    inline constexpr gamepad_buttons &operator&=(gamepad_buttons &a, gamepad_buttons b) noexcept
+    {
+        return a = (a & b);
+    }
 
     /** @brief A single button as a bit set. */
     [[nodiscard]] inline constexpr gamepad_buttons to_gamepad_buttons(gamepad_button b) noexcept
@@ -191,8 +197,8 @@ namespace catalyst::input
     /**
      * @struct gamepad_state
      * @brief One gamepad's controls as of the last poll, in the shape most game code wants to read them.
-     * @note This is a *view* of the registry's control values, assembled on request. The registry is still the source of
-     * truth; nothing writes back through this.
+     * @note This is a *view* of the registry's control values, assembled on request. The registry is still the source
+     * of truth; nothing writes back through this.
      */
     struct gamepad_state
     {
@@ -212,9 +218,9 @@ namespace catalyst::input
     /**
      * @struct gamepad_deadzone
      * @brief The thresholds below which a resting control reads as zero.
-     * @details Sticks use a *radial* dead zone - the 2D magnitude is compared against `stick` and the remainder rescaled
-     * to [0, 1] - so a diagonal is not clipped into a square, which is what a per-axis threshold does. Triggers use a
-     * linear one. The defaults are the values Microsoft publishes for XInput.
+     * @details Sticks use a *radial* dead zone - the 2D magnitude is compared against `stick` and the remainder
+     * rescaled to [0, 1] - so a diagonal is not clipped into a square, which is what a per-axis threshold does.
+     * Triggers use a linear one. The defaults are the values Microsoft publishes for XInput.
      */
     struct gamepad_deadzone
     {
@@ -224,8 +230,8 @@ namespace catalyst::input
 
     /**
      * @fn apply_deadzone
-     * @brief A linear dead zone on a value in [-1, 1]: inside +/-@p threshold becomes 0, and the rest is rescaled so the
-     * output still reaches +/-1 rather than jumping at the boundary.
+     * @brief A linear dead zone on a value in [-1, 1]: inside +/-@p threshold becomes 0, and the rest is rescaled so
+     * the output still reaches +/-1 rather than jumping at the boundary.
      */
     [[nodiscard]] double apply_deadzone(double value, double threshold) noexcept;
 
@@ -239,7 +245,8 @@ namespace catalyst::input
     /**
      * @struct rumble_state
      * @brief The two vibration motors most pads have, each in [0, 1]. Zeroes stop them.
-     * @note `low_frequency` is the heavy motor and `high_frequency` the light one; a pad with one motor uses the larger.
+     * @note `low_frequency` is the heavy motor and `high_frequency` the light one; a pad with one motor uses the
+     * larger.
      */
     struct rumble_state
     {
@@ -258,7 +265,8 @@ namespace catalyst::input
      */
     struct gamepad_button_event : device_event<tags::gamepad_button>
     {
-        /** @brief The pad's slot, i.e. device_info::slot. Kept alongside `device` because it is what game code names. */
+        /** @brief The pad's slot, i.e. device_info::slot. Kept alongside `device` because it is what game code names.
+         */
         std::uint32_t slot{0};
         gamepad_button button{gamepad_button::a};
         button_action action{button_action::press};

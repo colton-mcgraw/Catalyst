@@ -68,7 +68,7 @@ namespace catalyst::logging
         {
             explicit chain_access() = default;
         };
-    }
+    } // namespace detail
 
     /**
      * @class next
@@ -89,8 +89,8 @@ namespace catalyst::logging
         void operator()(log_event &event) const { resume_(context_, event); }
 
     private:
-        void *context_;                          ///< Where in the chain to carry on from.
-        void (*resume_)(void *, log_event &);    ///< The router's chain runner.
+        void *context_;                       ///< Where in the chain to carry on from.
+        void (*resume_)(void *, log_event &); ///< The router's chain runner.
     };
 
     /**

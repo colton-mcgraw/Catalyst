@@ -17,12 +17,12 @@
 
 #pragma once
 
+#include "charset.hpp"
+#include "error.hpp"
+
 #include <cstddef>
 #include <expected>
 #include <string_view>
-
-#include "charset.hpp"
-#include "error.hpp"
 
 namespace catalyst::resource
 {
@@ -41,7 +41,7 @@ namespace catalyst::resource
          */
         template <class Predicate>
         [[nodiscard]] inline std::expected<void, uri_error> validate_escaped(std::string_view s, std::size_t base,
-                                                                            Predicate allowed, uri_error_code bad)
+                                                                             Predicate allowed, uri_error_code bad)
         {
             using namespace uri_chars;
 

@@ -37,8 +37,8 @@ namespace catalyst::resource
                 if (text.empty() || text == "." || text == "/" || text == "\\")
                     continue;
                 if (text == "..")
-                    return std::unexpected(make_error(error_code::access_denied, location.string(),
-                                                      "path escapes the mount root"));
+                    return std::unexpected(
+                        make_error(error_code::access_denied, location.string(), "path escapes the mount root"));
                 rel /= segment;
             }
 
@@ -75,16 +75,15 @@ namespace catalyst::resource
 
                 std::ifstream in(full, std::ios::binary);
                 if (!in)
-                    return std::unexpected(make_error(error_code::access_denied, location.string(),
-                                                      "could not open for reading"));
+                    return std::unexpected(
+                        make_error(error_code::access_denied, location.string(), "could not open for reading"));
 
                 std::vector<std::byte> storage(static_cast<std::size_t>(size));
                 if (size != 0)
                 {
                     in.read(reinterpret_cast<char *>(storage.data()), static_cast<std::streamsize>(size));
                     if (in.gcount() != static_cast<std::streamsize>(size))
-                        return std::unexpected(make_error(error_code::io_error, location.string(),
-                                                          "short read"));
+                        return std::unexpected(make_error(error_code::io_error, location.string(), "short read"));
                 }
 
                 return blob::adopt(std::move(storage));
@@ -114,8 +113,7 @@ namespace catalyst::resource
                     return std::unexpected(make_error(error_code::not_found, location.string(), ec.message()));
 
                 const auto written = std::filesystem::last_write_time(full, ec);
-                const std::uint64_t revision =
-                    ec ? 0 : static_cast<std::uint64_t>(written.time_since_epoch().count());
+                const std::uint64_t revision = ec ? 0 : static_cast<std::uint64_t>(written.time_since_epoch().count());
 
                 return entry_info{static_cast<std::uint64_t>(size), revision};
             }
@@ -139,8 +137,7 @@ namespace catalyst::resource
                     if (!entry.is_regular_file(ec))
                         continue;
 
-                    const std::string relative =
-                        std::filesystem::relative(entry.path(), root_, ec).generic_string();
+                    const std::string relative = std::filesystem::relative(entry.path(), root_, ec).generic_string();
                     if (ec)
                         continue;
 
@@ -186,10 +183,7 @@ namespace catalyst::resource
                     std::span<std::byte>{const_cast<std::byte *>(it->second.data()), it->second.size()});
             }
 
-            [[nodiscard]] bool exists(const uri &location) override
-            {
-                return entries_.contains(key_of(location));
-            }
+            [[nodiscard]] bool exists(const uri &location) override { return entries_.contains(key_of(location)); }
 
             [[nodiscard]] std::expected<entry_info, error> stat(const uri &location) override
             {
@@ -246,14 +240,14 @@ namespace catalyst::resource
 
     std::expected<entry_info, error> source::stat(const uri &location)
     {
-        return std::unexpected(make_error(error_code::unsupported_format, location.string(),
-                                          "source does not support stat"));
+        return std::unexpected(
+            make_error(error_code::unsupported_format, location.string(), "source does not support stat"));
     }
 
     std::expected<std::vector<uri>, error> source::list(const uri &prefix)
     {
-        return std::unexpected(make_error(error_code::unsupported_format, prefix.string(),
-                                          "source does not support enumeration"));
+        return std::unexpected(
+            make_error(error_code::unsupported_format, prefix.string(), "source does not support enumeration"));
     }
 
     // -----------------------------------------------------------------------------
@@ -265,8 +259,7 @@ namespace catalyst::resource
         return std::make_unique<file_source>(std::move(root));
     }
 
-    std::unique_ptr<source>
-    make_memory_source(std::vector<std::pair<std::string, std::span<const std::byte>>> entries)
+    std::unique_ptr<source> make_memory_source(std::vector<std::pair<std::string, std::span<const std::byte>>> entries)
     {
         return std::make_unique<memory_source>(std::move(entries));
     }

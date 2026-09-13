@@ -63,9 +63,12 @@ namespace catalyst::input
     {
         switch (k)
         {
-        case action_kind::axis2d: return 2;
-        case action_kind::axis3d: return 3;
-        default: return 1;
+        case action_kind::axis2d:
+            return 2;
+        case action_kind::axis3d:
+            return 3;
+        default:
+            return 1;
         }
     }
 
@@ -110,9 +113,12 @@ namespace catalyst::input
         {
             switch (kind)
             {
-            case action_kind::axis2d: return std::sqrt(x * x + y * y);
-            case action_kind::axis3d: return std::sqrt(x * x + y * y + z * z);
-            default: return std::fabs(x);
+            case action_kind::axis2d:
+                return std::sqrt(x * x + y * y);
+            case action_kind::axis3d:
+                return std::sqrt(x * x + y * y + z * z);
+            default:
+                return std::fabs(x);
             }
         }
 
@@ -240,11 +246,11 @@ namespace catalyst::input
          * clock and get identical results.
          * @param bus Where to publish action_event, or nullptr to evaluate silently.
          * @param map_name Goes into the published events.
-         * @param suppressed Primary controls currently claimed by an active chord elsewhere in the map; a binding on one
-         * of them with no modifiers of its own produces nothing this frame.
+         * @param suppressed Primary controls currently claimed by an active chord elsewhere in the map; a binding on
+         * one of them with no modifiers of its own produces nothing this frame.
          */
-        void evaluate(const device_registry &registry, input_time now, events::bus *bus,
-                      std::string_view map_name, std::span<const control_id> suppressed);
+        void evaluate(const device_registry &registry, input_time now, events::bus *bus, std::string_view map_name,
+                      std::span<const control_id> suppressed);
 
         /** @brief The primary controls of every binding whose chord is currently satisfied. Fills the `suppressed` list
          *  action_map passes back into evaluate(). */
@@ -274,13 +280,13 @@ namespace catalyst::input
         };
 
         [[nodiscard]] evaluation read_binding(const device_registry &registry, const binding &b) const;
-        [[nodiscard]] static float read_part(const device_registry &registry, const binding_part &p, device_id &device_out);
+        [[nodiscard]] static float read_part(const device_registry &registry, const binding_part &p,
+                                             device_id &device_out);
         [[nodiscard]] static bool modifiers_satisfied(const device_registry &registry, const binding &b);
         [[nodiscard]] action_value shape_to_kind(const action_value &in, std::size_t source_dims) const noexcept;
 
-        void emit(events::bus *bus, std::string_view map_name, action_phase phase,
-                  std::size_t binding_index, control_id control, device_id device,
-                  std::chrono::milliseconds elapsed, input_time now);
+        void emit(events::bus *bus, std::string_view map_name, action_phase phase, std::size_t binding_index,
+                  control_id control, device_id device, std::chrono::milliseconds elapsed, input_time now);
 
         std::string m_name;
         action_kind m_kind{action_kind::button};

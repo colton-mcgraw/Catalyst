@@ -1,3 +1,5 @@
+#include <catalyst/events/bus.hpp>
+
 #include <benchmark.hpp>
 
 #include <atomic>
@@ -16,8 +18,6 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
-
-#include <catalyst/events/bus.hpp>
 
 namespace
 {
@@ -53,16 +53,15 @@ namespace
     }
 
     template <int... Is>
-    void add_idle_listeners(catalyst::events::bus &bus,
-                            std::vector<catalyst::events::token> &tokens,
-                            int listeners_per_type,
-                            std::integer_sequence<int, Is...>)
+    void add_idle_listeners(catalyst::events::bus &bus, std::vector<catalyst::events::token> &tokens,
+                            int listeners_per_type, std::integer_sequence<int, Is...>)
     {
-        ((void)[&]
-        {
-            for (int listener = 0; listener < listeners_per_type; ++listener)
-                tokens.push_back(bus.add_listener<idle_event<Is>>([](const idle_event<Is> &) {}));
-        }(), ...);
+        (
+            (void)[&] {
+                for (int listener = 0; listener < listeners_per_type; ++listener)
+                    tokens.push_back(bus.add_listener<idle_event<Is>>([](const idle_event<Is> &) {}));
+            }(),
+            ...);
     }
 
     template <typename Body>
@@ -74,11 +73,12 @@ namespace
         std::vector<std::thread> workers;
         workers.reserve(threads);
         for (unsigned thread = 0u; thread < threads; ++thread)
-            workers.emplace_back([&]
-            {
-                start_gate.arrive_and_wait();
-                body(per_thread);
-            });
+            workers.emplace_back(
+                [&]
+                {
+                    start_gate.arrive_and_wait();
+                    body(per_thread);
+                });
 
         const auto start = clock::now();
         start_gate.arrive_and_wait();
@@ -92,7 +92,8 @@ namespace
         std::cout << name << '\n'
                   << "  iterations: " << static_cast<std::size_t>(total) << " (" << threads << " threads)\n"
                   << "  total:      " << std::fixed << std::setprecision(3) << (elapsed_seconds * 1'000.0) << " ms\n"
-                  << "  average:    " << (std::chrono::duration<double, std::nano>(elapsed).count() / total) << " ns/op\n"
+                  << "  average:    " << (std::chrono::duration<double, std::nano>(elapsed).count() / total)
+                  << " ns/op\n"
                   << "  throughput: " << (total / elapsed_seconds) << " op/s\n";
     }
 } // namespace
@@ -101,28 +102,27 @@ int main()
 {
     constexpr std::size_t iterations = 1'000'000u;
 
-    catalyst::bench::run("steady_clock::now() (cost of one timestamp)", iterations, []
-    {
-        handled_events.fetch_add(static_cast<std::size_t>(std::chrono::steady_clock::now().time_since_epoch().count() & 1),
-                                 std::memory_order_relaxed);
-    });
+    catalyst::bench::run(
+        "steady_clock::now() (cost of one timestamp)", iterations,
+        []
+        {
+            handled_events.fetch_add(
+                static_cast<std::size_t>(std::chrono::steady_clock::now().time_since_epoch().count() & 1),
+                std::memory_order_relaxed);
+        });
 
     {
         catalyst::events::bus bus;
-        catalyst::bench::run("bus.dispatch (no listeners or middleware)", iterations, [&]
-        {
-            bus.dispatch(benchmark_event{1u});
-        });
+        catalyst::bench::run("bus.dispatch (no listeners or middleware)", iterations,
+                             [&] { bus.dispatch(benchmark_event{1u}); });
     }
 
     {
         catalyst::events::bus bus;
         const auto listener = bus.add_listener<benchmark_event>(handle_event);
 
-        catalyst::bench::run("bus.dispatch (one synchronous listener)", iterations, [&]
-        {
-            bus.dispatch(benchmark_event{1u});
-        });
+        catalyst::bench::run("bus.dispatch (one synchronous listener)", iterations,
+                             [&] { bus.dispatch(benchmark_event{1u}); });
     }
 
     {
@@ -131,16 +131,15 @@ int main()
         std::vector<catalyst::events::token> idle;
         add_idle_listeners(bus, idle, 8, std::make_integer_sequence<int, 256>{});
 
-        catalyst::bench::run("bus.dispatch (one listener + 256 idle types x 8 listeners)", iterations, [&]
-        {
-            bus.dispatch(benchmark_event{1u});
-        });
+        catalyst::bench::run("bus.dispatch (one listener + 256 idle types x 8 listeners)", iterations,
+                             [&] { bus.dispatch(benchmark_event{1u}); });
 
-        catalyst::bench::run("bus.add_listener + token.remove (with idle types present)", iterations, [&]
-        {
-            auto transient = bus.add_listener<benchmark_event>([](const benchmark_event &) {});
-            transient.remove();
-        });
+        catalyst::bench::run("bus.add_listener + token.remove (with idle types present)", iterations,
+                             [&]
+                             {
+                                 auto transient = bus.add_listener<benchmark_event>([](const benchmark_event &) {});
+                                 transient.remove();
+                             });
     }
 
     {
@@ -149,24 +148,18 @@ int main()
         for (int listener = 0; listener < 64; ++listener)
             listeners.push_back(bus.add_listener<benchmark_event>(handle_event));
 
-        catalyst::bench::run("bus.dispatch (64 synchronous listeners)", iterations / 10u, [&]
-        {
-            bus.dispatch(benchmark_event{1u});
-        });
+        catalyst::bench::run("bus.dispatch (64 synchronous listeners)", iterations / 10u,
+                             [&] { bus.dispatch(benchmark_event{1u}); });
     }
 
     {
         catalyst::events::bus bus;
         const auto listener = bus.add_listener<benchmark_event>(handle_event);
-        const auto middleware = bus.add_middleware<benchmark_event>([](benchmark_event &event, const auto &next)
-        {
-            next(event);
-        });
+        const auto middleware =
+            bus.add_middleware<benchmark_event>([](benchmark_event &event, const auto &next) { next(event); });
 
-        catalyst::bench::run("bus.dispatch (one chain middleware + one listener)", iterations, [&]
-        {
-            bus.dispatch(benchmark_event{1u});
-        });
+        catalyst::bench::run("bus.dispatch (one chain middleware + one listener)", iterations,
+                             [&] { bus.dispatch(benchmark_event{1u}); });
     }
 
     {
@@ -174,49 +167,38 @@ int main()
         const auto listener = bus.add_listener<benchmark_event>(handle_event);
         const auto middleware = bus.add_middleware<benchmark_event>([](benchmark_event &) { return false; });
 
-        catalyst::bench::run("bus.dispatch (middleware stops before one listener)", iterations, [&]
-        {
-            bus.dispatch(benchmark_event{1u});
-        });
+        catalyst::bench::run("bus.dispatch (middleware stops before one listener)", iterations,
+                             [&] { bus.dispatch(benchmark_event{1u}); });
     }
 
     {
         catalyst::events::bus bus;
         const auto listener = bus.add_listener<benchmark_event>(handle_event_async);
 
-        catalyst::bench::run("bus.dispatch_async (one asynchronous listener)", iterations / 10u, [&]
-        {
-            bus.dispatch_async(benchmark_event{1u}).get();
-        });
+        catalyst::bench::run("bus.dispatch_async (one asynchronous listener)", iterations / 10u,
+                             [&] { bus.dispatch_async(benchmark_event{1u}).get(); });
     }
 
     {
         catalyst::events::bus bus;
         const auto listener = bus.add_listener<benchmark_event>(handle_event_async);
-        const auto middleware = bus.add_async_middleware<benchmark_event>([](benchmark_event &event, const auto &next) -> catalyst::events::task<void>
-        {
-            co_await next(event);
-        });
+        const auto middleware = bus.add_async_middleware<benchmark_event>(
+            [](benchmark_event &event, const auto &next) -> catalyst::events::task<void> { co_await next(event); });
 
-        catalyst::bench::run("bus.dispatch_async (one chain middleware + one listener)", iterations / 10u, [&]
-        {
-            bus.dispatch_async(benchmark_event{1u}).get();
-        });
+        catalyst::bench::run("bus.dispatch_async (one chain middleware + one listener)", iterations / 10u,
+                             [&] { bus.dispatch_async(benchmark_event{1u}).get(); });
     }
 
     {
         catalyst::events::bus bus;
         const auto listener = bus.add_listener<benchmark_event>(handle_event_thread_local);
 
-        catalyst::bench::run("bus.dispatch (1 thread, thread-local listener)", iterations, [&]
-        {
-            bus.dispatch(benchmark_event{1u});
-        });
+        catalyst::bench::run("bus.dispatch (1 thread, thread-local listener)", iterations,
+                             [&] { bus.dispatch(benchmark_event{1u}); });
 
         for (const unsigned threads : {2u, 4u, 8u})
         {
-            run_parallel("bus.dispatch (" + std::to_string(threads) + " threads, one listener)",
-                         threads,
+            run_parallel("bus.dispatch (" + std::to_string(threads) + " threads, one listener)", threads,
                          iterations / threads,
                          [&](std::size_t count)
                          {
@@ -231,18 +213,17 @@ int main()
         const auto listener = bus.add_listener<benchmark_event>(handle_event_thread_local);
         std::atomic<bool> churning{true};
 
-        std::thread churn([&]
-        {
-            while (churning.load(std::memory_order_acquire))
+        std::thread churn(
+            [&]
             {
-                auto transient = bus.add_listener<benchmark_event>([](const benchmark_event &) {});
-                transient.remove();
-            }
-        });
+                while (churning.load(std::memory_order_acquire))
+                {
+                    auto transient = bus.add_listener<benchmark_event>([](const benchmark_event &) {});
+                    transient.remove();
+                }
+            });
 
-        run_parallel("bus.dispatch (4 threads + add/remove churn thread)",
-                     4u,
-                     iterations / 4u,
+        run_parallel("bus.dispatch (4 threads + add/remove churn thread)", 4u, iterations / 4u,
                      [&](std::size_t count)
                      {
                          for (std::size_t iteration = 0u; iteration < count; ++iteration)

@@ -125,8 +125,8 @@ namespace catalyst::resource::detail
         // possibility for a texture pack, and truncating the length would hand a decoder a
         // deliberately short buffer, so refuse rather than narrow.
         if (bytes.size() > static_cast<std::size_t>(std::numeric_limits<int>::max()))
-            return std::unexpected(make_error(error_code::decode_failed, {},
-                                              "encoded image exceeds the decoder's 2 GiB limit"));
+            return std::unexpected(
+                make_error(error_code::decode_failed, {}, "encoded image exceeds the decoder's 2 GiB limit"));
 
         const auto *data = reinterpret_cast<const stbi_uc *>(bytes.data());
         const auto length = static_cast<int>(bytes.size());

@@ -1,6 +1,6 @@
-#include "../test_common.hpp"
-
 #include <catalyst/resource/json/json.hpp>
+
+#include "../test_common.hpp"
 
 #include <cmath>
 #include <cstdint>
@@ -134,7 +134,7 @@ namespace
         CT_REQUIRE(must_parse(R"("\u0041\u00e9\u4e2d")").as_string() == "A\xC3\xA9\xE4\xB8\xAD");
         CT_REQUIRE(must_parse(R"("\ud83d\ude00")").as_string() == "\xF0\x9F\x98\x80"); // U+1F600
         CT_REQUIRE(must_parse(R"("\uD83D\uDE00")").as_string() == "\xF0\x9F\x98\x80"); // upper-case hex
-        CT_REQUIRE(must_parse("\"h\xC3\xA9\"").as_string() == "h\xC3\xA9");           // raw UTF-8 passthrough
+        CT_REQUIRE(must_parse("\"h\xC3\xA9\"").as_string() == "h\xC3\xA9");            // raw UTF-8 passthrough
         CT_REQUIRE(must_parse(R"("\u0000")").as_string() == std::string(1, '\0'));
 
         // Long enough to exercise the SWAR loop on both sides of an escape.
@@ -479,8 +479,9 @@ namespace
         CT_REQUIRE(dump(empty).empty());
 
         CT_REQUIRE(!parse_document("[1,").has_value());
-        CT_REQUIRE(parse_document("\"\\ud83d\\ude00 and a long string that spans several words\"")->root().as_string() ==
-                   "\xF0\x9F\x98\x80 and a long string that spans several words");
+        CT_REQUIRE(
+            parse_document("\"\\ud83d\\ude00 and a long string that spans several words\"")->root().as_string() ==
+            "\xF0\x9F\x98\x80 and a long string that spans several words");
     }
 
     void test_document_matches_value()

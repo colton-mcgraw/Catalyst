@@ -8,9 +8,9 @@
  * License: MIT (see LICENSE).
  */
 
-#include "../test_common.hpp"
-
 #include <catalyst/text/utf8.hpp>
+
+#include "../test_common.hpp"
 
 #include <string>
 
@@ -133,7 +133,8 @@ namespace
         // Non-ASCII is spelled with escapes, never as literal bytes: the repo's sources are ASCII,
         // and MSVC without /utf-8 would otherwise read these files in the active code page.
         CT_REQUIRE(utf8::encode(U"caf\u00E9") == "caf\xC3\xA9");
-        CT_REQUIRE(utf8::encode(U"a\U0001F600b") == "a\xF0\x9F\x98\x80" "b");
+        CT_REQUIRE(utf8::encode(U"a\U0001F600b") == "a\xF0\x9F\x98\x80"
+                                                    "b");
 
         // The appending overload keeps what is already there.
         std::string out = "prefix:";
@@ -142,7 +143,8 @@ namespace
 
         // An invalid code point mid-run is substituted without disturbing its neighbours.
         const std::u32string bad = U"a" + std::u32string(1, 0xD800) + U"b";
-        CT_REQUIRE(utf8::encode(bad) == "a\xEF\xBF\xBD" "b");
+        CT_REQUIRE(utf8::encode(bad) == "a\xEF\xBF\xBD"
+                                        "b");
     }
 
     /// The classification helpers are constexpr, so they must be usable at compile time.

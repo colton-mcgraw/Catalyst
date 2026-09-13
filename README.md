@@ -1,16 +1,50 @@
 # Catalyst v0.1.0
 
-Catalyst is a high-performance rendering framework for C++ designed to simplify the development of applications. It provides a robust set of features, including 2D and 3D rendering, UI components, and cross-platform support.
+Catalyst is a C++23 multimedia library: audio, rendering, input, windowing, asset loading, UI
+layout, logging and maths, as modules you can take individually or together.
 
-The goal of Catalyst is to offer developers a powerful yet easy-to-use toolkit for building visually rich applications. Whether you're creating games, simulations, desktop applications, or data visualization tools, Catalyst has you covered.
+It is version 0.1.0 and under active development. The table below says plainly which parts are
+real, because a list of ambitions is no use to someone deciding whether to build against it.
 
-## Features
+## Status
 
-- High-performance 2D and 3D rendering
-- Easy-to-use UI components
-- Cross-platform support (Windows, macOS, Linux, iOS, Android)
-- Modular architecture for easy extension
-- Comprehensive documentation and examples
+| Module | State | What it is |
+| --- | --- | --- |
+| `rendering` | Working | Device, queues, timeline sync, buffers, textures, pipelines, swapchain, transfer. Vulkan backend is real; d3d12 and metal are stubs. |
+| `resource` | Working | VFS, loaders, URIs, JSON, CSV, OBJ, images (PNG/JPEG via stb, KTX2 and DDS natively), mip generation. |
+| `audio` | Working | Device enumeration, streams, mixing, offline rendering. WASAPI and ASIO backends. |
+| `input` | Working | Keyboard, text, mouse with raw motion and capture, gamepads, action maps, calibration. |
+| `logging` | Working | Levels, filters, middleware, routing, and console, terminal, file, ring-buffer, callback, async and queued sinks. |
+| `platform` | Working | Windows, monitors, the event loop. Win32 backend. |
+| `math` | Working | Vectors, matrices, quaternions, transforms, fractions, geometry. Header-only. |
+| `ui` | Working | Retained tree of styled nodes, CSS-like units, flexbox layout, backend-agnostic draw list. |
+| `events` | Working | The bus every other module publishes on. Header-only. |
+| `text` | Working | UTF-8 decoding and the scanner the parsers are built on. Header-only. |
+| `core` | Minimal | Shared vocabulary. Currently just what more than one module needs. |
+| `animation` | **Planned** | Not implemented. The module is a placeholder and defaults to `OFF`. |
+| `net` | **Planned** | Not implemented. The module is a placeholder and defaults to `OFF`. |
+| `physics` | **Planned** | Not implemented. The module is a placeholder and defaults to `OFF`. |
+| `scene` | **Planned** | Not implemented. The module is a placeholder and defaults to `OFF`. |
+| `utils` | **Planned** | Not implemented. The module is a placeholder and defaults to `OFF`. |
+
+Not started, and not currently planned for 0.1: scripting, a plugin system, and profiling tools.
+
+## Platform support
+
+| Platform | Window / input / audio | Rendering |
+| --- | --- | --- |
+| Windows | Win32, XInput, WASAPI + ASIO | Vulkan (real), d3d12 (stub) |
+| Linux | **None yet** — the null backends build and test, but open no window and make no sound | Vulkan (real) |
+| macOS | **None yet** | metal (stub) — and the library does not currently build with libc++; see Requirements |
+| iOS, Android | Not started | Not started |
+
+The renderer is platform-independent and the Vulkan backend works anywhere Vulkan does. What Linux
+and macOS lack is the layer underneath: there is no X11, Wayland, Cocoa, ALSA, PulseAudio or
+CoreAudio backend yet. On those platforms you get a real Vulkan renderer with no window to present
+to, which is useful for offline and headless work and not much else.
+
+Every module also has a `null` backend that builds and runs everywhere, which is what the test
+suite uses.
 
 ## Requirements
 
@@ -46,7 +80,7 @@ To get started with Catalyst, follow these steps:
 1. Clone the repository:
 
    ```bash
-   git clone https://github.com/yourusername/Catalyst.git
+   git clone https://github.com/colton-mcgraw/Catalyst.git
    ```
 
 2. Navigate to the project directory:
@@ -62,10 +96,14 @@ To get started with Catalyst, follow these steps:
     cmake --build build --config Release
     ```
 
-4. Run the example application:
+4. Run an example:
 
     ```bash
-    ./build/examples/audio_playback/Release/catalyst_audio_playback.exe
+    # Linux / macOS
+    ./build/examples/audio_playback/catalyst_audio_playback
+
+    # Windows
+    .\build\examples\audio_playback\Release\catalyst_audio_playback.exe
     ```
 
 ### Multi-compiler builds (Windows)
@@ -301,31 +339,11 @@ math::vec3f up{0.0f, 1.0f, 0.0f};
 Never include that header from a public header of your own: a namespace alias at global scope
 reaches everything that includes it, transitively.
 
-## Components
-
-Catalyst is composed of several key components that can be used independently or together:
-
-- **Renderer**: Handles all rendering operations, supporting both 2D and 3D graphics.
-- **UI System**: A retained tree of styled nodes with CSS-like units and a flexbox layout engine, emitting a backend-agnostic draw list. See [docs/ui.md](docs/ui.md) for the architecture and roadmap.
-- **Input Handling**: Layout-independent keyboard events, text input, mouse (including raw motion and cursor capture) and gamepads, with an event stream and a polled `input_state` view.
-- **Math Library**: Offers a collection of mathematical functions and data structures commonly used in graphics programming.
-- **Utilities**: A set of helper functions and classes to simplify common tasks.
-- **Platform Abstraction**: Ensures compatibility across different operating systems and hardware.
-- **Resource Management**: Efficiently loads and manages assets such as textures, models, and shaders.
-- **Scene Graph**: Organizes and manages the hierarchical structure of objects in a scene.
-- **Animation System**: Provides tools for creating and managing animations for objects within the framework.
-- **Networking Module**: Enables network communication for multiplayer applications or data synchronization.
-- **Audio System**: Supports audio playback and manipulation for immersive experiences.
-- **Scripting Support**: Integrates scripting languages for dynamic behavior and rapid prototyping.
-- **Physics Engine**: Offers basic physics simulation capabilities for realistic object interactions.
-- **Plugin System**: Allows for easy extension of the framework through plugins.
-- **Debugging Tools**: Includes tools for profiling and debugging applications built with Catalyst.
-- **Documentation Generator**: Facilitates the creation of documentation for projects using Catalyst.
-- **Testing Framework**: Provides a suite of tools for unit testing and integration testing of applications.
-
 ## Documentation
 
-Comprehensive documentation is available in the `docs` directory. You can also generate the latest documentation using Doxygen:
+Module documentation lives in the `docs` directory: [audio](docs/audio.md), [input](docs/input.md),
+[rendering](docs/rendering.md), [resource](docs/resource.md) and [ui](docs/ui.md). The remaining
+modules are documented in their headers only. You can also generate the latest documentation using Doxygen:
 
 ```bash
 doxygen Doxyfile
@@ -333,11 +351,12 @@ doxygen Doxyfile
 
 This will create HTML documentation in the `docs/html` directory.
 
-You can also view the documentation online at [https://colton_mcgraw.github.io/Catalyst/docs](https://colton_mcgraw.github.io/Catalyst/docs).
+You can also view the documentation online at [https://colton-mcgraw.github.io/Catalyst/docs](https://colton-mcgraw.github.io/Catalyst/docs).
 
 ## Contributing
 
-Contributions are welcome! Please read the `CONTRIBUTING.md` file for guidelines on how to contribute to the project.
+Contributions are welcome. [CONTRIBUTING.md](CONTRIBUTING.md) covers the toolchain requirements,
+how to build and test, the code style, and what CI checks.
 
 ## License
 

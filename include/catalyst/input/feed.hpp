@@ -6,8 +6,9 @@
  * sink itself, which meant input events could reach the bus without the input module ever seeing them - and the
  * tracker that folded them could, and did, drift from the poller.
  *
- * Now the platform calls a `event_feed` instead, `input::context` implements it, and *every* input event reaches the bus
- * from the registry. The platform's job shrinks to translating window messages, which is the job it should have had.
+ * Now the platform calls a `event_feed` instead, `input::context` implements it, and *every* input event reaches the
+ * bus from the registry. The platform's job shrinks to translating window messages, which is the job it should have
+ * had.
  *
  * A caller fills in everything it knows and leaves `device` null; the feed assigns the device, creating one on first
  * use. `time` is stamped if left at its default.
@@ -48,7 +49,8 @@ namespace catalyst::input
         /** @brief The user committed text. Control characters must not be delivered here; send those as keys. */
         virtual void feed_text(const text_input_event &e) = 0;
 
-        /** @brief An input method's provisional text changed. Optional: a platform without IME support never calls it. */
+        /** @brief An input method's provisional text changed. Optional: a platform without IME support never calls it.
+         */
         virtual void feed_composition(const text_composition_event &e) = 0;
 
         /**

@@ -27,13 +27,12 @@
 #include "../detail_render.hpp"
 #include "../win32/detail_win32.hpp"
 
-#include <mmdeviceapi.h>
 #include <audioclient.h>
-#include <functiondiscoverykeys_devpkey.h>
 #include <avrt.h>
-
+#include <functiondiscoverykeys_devpkey.h>
 #include <ks.h>
 #include <ksmedia.h>
+#include <mmdeviceapi.h>
 
 #include <algorithm>
 #include <atomic>
@@ -51,9 +50,9 @@ namespace catalyst::audio::detail
 
     namespace
     {
+        using win32::co_task_ptr;
         using win32::com_apartment;
         using win32::com_ptr;
-        using win32::co_task_ptr;
         using win32::error_from_hresult;
         using win32::wide_to_utf8;
 
@@ -79,10 +78,7 @@ namespace catalyst::audio::detail
             {
             }
 
-            ULONG STDMETHODCALLTYPE AddRef() override
-            {
-                return refs_.fetch_add(1, std::memory_order_relaxed) + 1;
-            }
+            ULONG STDMETHODCALLTYPE AddRef() override { return refs_.fetch_add(1, std::memory_order_relaxed) + 1; }
 
             ULONG STDMETHODCALLTYPE Release() override
             {
@@ -108,8 +104,7 @@ namespace catalyst::audio::detail
                 return E_NOINTERFACE;
             }
 
-            HRESULT STDMETHODCALLTYPE OnDefaultDeviceChanged(
-                EDataFlow flow, ERole role, LPCWSTR device_id) override
+            HRESULT STDMETHODCALLTYPE OnDefaultDeviceChanged(EDataFlow flow, ERole role, LPCWSTR device_id) override
             {
                 (void)flow;
                 if (role == eConsole)
@@ -142,10 +137,7 @@ namespace catalyst::audio::detail
                 return S_OK;
             }
 
-            HRESULT STDMETHODCALLTYPE OnPropertyValueChanged(LPCWSTR, const PROPERTYKEY) override
-            {
-                return S_OK;
-            }
+            HRESULT STDMETHODCALLTYPE OnPropertyValueChanged(LPCWSTR, const PROPERTYKEY) override { return S_OK; }
 
         private:
             ~notification_client() = default;
@@ -180,8 +172,7 @@ namespace catalyst::audio::detail
             case 2:
                 return SPEAKER_FRONT_LEFT | SPEAKER_FRONT_RIGHT;
             case 4:
-                return SPEAKER_FRONT_LEFT | SPEAKER_FRONT_RIGHT |
-                       SPEAKER_BACK_LEFT | SPEAKER_BACK_RIGHT;
+                return SPEAKER_FRONT_LEFT | SPEAKER_FRONT_RIGHT | SPEAKER_BACK_LEFT | SPEAKER_BACK_RIGHT;
             case 6:
                 return KSAUDIO_SPEAKER_5POINT1;
             case 8:
@@ -207,8 +198,7 @@ namespace catalyst::audio::detail
 
             WORD tag = format->wFormatTag;
 
-            if (tag == WAVE_FORMAT_EXTENSIBLE &&
-                format->cbSize >= sizeof(WAVEFORMATEXTENSIBLE) - sizeof(WAVEFORMATEX))
+            if (tag == WAVE_FORMAT_EXTENSIBLE && format->cbSize >= sizeof(WAVEFORMATEXTENSIBLE) - sizeof(WAVEFORMATEX))
             {
                 const auto *extensible = reinterpret_cast<const WAVEFORMATEXTENSIBLE *>(format);
 
@@ -258,8 +248,7 @@ namespace catalyst::audio::detail
             if (width == 0 || channels == 0)
                 return nullptr;
 
-            auto *extensible =
-                static_cast<WAVEFORMATEXTENSIBLE *>(CoTaskMemAlloc(sizeof(WAVEFORMATEXTENSIBLE)));
+            auto *extensible = static_cast<WAVEFORMATEXTENSIBLE *>(CoTaskMemAlloc(sizeof(WAVEFORMATEXTENSIBLE)));
             if (!extensible)
                 return nullptr;
 
@@ -278,10 +267,9 @@ namespace catalyst::audio::detail
 
             extensible->Samples.wValidBitsPerSample = bits;
             extensible->dwChannelMask = channel_mask_for(channels);
-            extensible->SubFormat =
-                (layout == sample_format::float32 || layout == sample_format::float64)
-                    ? KSDATAFORMAT_SUBTYPE_IEEE_FLOAT
-                    : KSDATAFORMAT_SUBTYPE_PCM;
+            extensible->SubFormat = (layout == sample_format::float32 || layout == sample_format::float64)
+                                        ? KSDATAFORMAT_SUBTYPE_IEEE_FLOAT
+                                        : KSDATAFORMAT_SUBTYPE_PCM;
 
             return format_ptr(reinterpret_cast<WAVEFORMATEX *>(extensible));
         }
@@ -326,8 +314,8 @@ namespace catalyst::audio::detail
             PropVariantInit(&value);
 
             std::string name;
-            if (SUCCEEDED(properties->GetValue(PKEY_Device_FriendlyName, &value)) &&
-                value.vt == VT_LPWSTR && value.pwszVal)
+            if (SUCCEEDED(properties->GetValue(PKEY_Device_FriendlyName, &value)) && value.vt == VT_LPWSTR &&
+                value.pwszVal)
             {
                 name = wide_to_utf8(value.pwszVal);
             }
@@ -339,8 +327,7 @@ namespace catalyst::audio::detail
         EDataFlow flow_of(IMMDevice *device) noexcept
         {
             com_ptr<IMMEndpoint> endpoint;
-            if (device && SUCCEEDED(device->QueryInterface(__uuidof(IMMEndpoint), endpoint.put_void())) &&
-                endpoint)
+            if (device && SUCCEEDED(device->QueryInterface(__uuidof(IMMEndpoint), endpoint.put_void())) && endpoint)
             {
                 EDataFlow flow = eRender;
                 if (SUCCEEDED(endpoint->GetDataFlow(&flow)))
@@ -352,8 +339,7 @@ namespace catalyst::audio::detail
         std::wstring default_endpoint_id(IMMDeviceEnumerator *enumerator, EDataFlow flow)
         {
             com_ptr<IMMDevice> device;
-            if (!enumerator ||
-                FAILED(enumerator->GetDefaultAudioEndpoint(flow, eConsole, device.put())) || !device)
+            if (!enumerator || FAILED(enumerator->GetDefaultAudioEndpoint(flow, eConsole, device.put())) || !device)
             {
                 return {};
             }
@@ -363,20 +349,15 @@ namespace catalyst::audio::detail
         com_ptr<IMMDeviceEnumerator> make_enumerator() noexcept
         {
             com_ptr<IMMDeviceEnumerator> enumerator;
-            (void)CoCreateInstance(
-                __uuidof(MMDeviceEnumerator),
-                nullptr,
-                CLSCTX_ALL,
-                __uuidof(IMMDeviceEnumerator),
-                enumerator.put_void());
+            (void)CoCreateInstance(__uuidof(MMDeviceEnumerator), nullptr, CLSCTX_ALL, __uuidof(IMMDeviceEnumerator),
+                                   enumerator.put_void());
             return enumerator;
         }
 
         class wasapi_backend_win32 final : public backend_base
         {
         public:
-            explicit wasapi_backend_win32(open_request request)
-                : backend_base(backend_kind::wasapi, std::move(request))
+            explicit wasapi_backend_win32(open_request request) : backend_base(backend_kind::wasapi, std::move(request))
             {
             }
 
@@ -395,8 +376,7 @@ namespace catalyst::audio::detail
                 const EDataFlow flow = enumeration_flow();
 
                 com_ptr<IMMDeviceCollection> collection;
-                if (FAILED(enumerator->EnumAudioEndpoints(flow, DEVICE_STATE_ACTIVE, collection.put())) ||
-                    !collection)
+                if (FAILED(enumerator->EnumAudioEndpoints(flow, DEVICE_STATE_ACTIVE, collection.put())) || !collection)
                 {
                     return failure(error_code::platform_error);
                 }
@@ -435,8 +415,7 @@ namespace catalyst::audio::detail
                     // Activating the client is the only reliable way to learn the endpoint's
                     // channel count and rate. Enumeration is not a hot path.
                     com_ptr<IAudioClient> client;
-                    if (SUCCEEDED(device->Activate(
-                            __uuidof(IAudioClient), CLSCTX_ALL, nullptr, client.put_void())) &&
+                    if (SUCCEEDED(device->Activate(__uuidof(IAudioClient), CLSCTX_ALL, nullptr, client.put_void())) &&
                         client)
                     {
                         WAVEFORMATEX *raw = nullptr;
@@ -626,8 +605,7 @@ namespace catalyst::audio::detail
                 if (request_.device.by != device_selector::match::system_default)
                 {
                     com_ptr<IMMDeviceCollection> collection;
-                    if (SUCCEEDED(enumerator_->EnumAudioEndpoints(
-                            flow, DEVICE_STATE_ACTIVE, collection.put())) &&
+                    if (SUCCEEDED(enumerator_->EnumAudioEndpoints(flow, DEVICE_STATE_ACTIVE, collection.put())) &&
                         collection)
                     {
                         UINT count = 0;
@@ -657,8 +635,7 @@ namespace catalyst::audio::detail
 
                 if (!device_)
                 {
-                    if (FAILED(enumerator_->GetDefaultAudioEndpoint(flow, eConsole, device_.put())) ||
-                        !device_)
+                    if (FAILED(enumerator_->GetDefaultAudioEndpoint(flow, eConsole, device_.put())) || !device_)
                     {
                         return failure(error_code::no_device);
                     }
@@ -671,8 +648,7 @@ namespace catalyst::audio::detail
 
             std::expected<void, error> activate_client()
             {
-                if (FAILED(device_->Activate(
-                        __uuidof(IAudioClient), CLSCTX_ALL, nullptr, client_.put_void())) ||
+                if (FAILED(device_->Activate(__uuidof(IAudioClient), CLSCTX_ALL, nullptr, client_.put_void())) ||
                     !client_)
                 {
                     return failure(error_code::platform_error);
@@ -700,15 +676,13 @@ namespace catalyst::audio::detail
                 const AUDCLNT_SHAREMODE share_mode =
                     exclusive_ ? AUDCLNT_SHAREMODE_EXCLUSIVE : AUDCLNT_SHAREMODE_SHARED;
 
-                format_ptr desired =
-                    make_format(request_.sample_rate, requested_channels(), sample_format::float32);
+                format_ptr desired = make_format(request_.sample_rate, requested_channels(), sample_format::float32);
                 if (!desired)
                     return failure(error_code::platform_error);
 
                 const REFERENCE_TIME requested_duration =
-                    request_.block_frames
-                        ? hns_from_frames(request_.block_frames, request_.sample_rate)
-                        : (exclusive_ ? minimum_period : default_period);
+                    request_.block_frames ? hns_from_frames(request_.block_frames, request_.sample_rate)
+                                          : (exclusive_ ? minimum_period : default_period);
 
                 const DWORD flags = AUDCLNT_STREAMFLAGS_EVENTCALLBACK;
 
@@ -738,9 +712,8 @@ namespace catalyst::audio::detail
                 if (!exclusive_)
                 {
                     // Let the audio engine resample and remix on our behalf.
-                    const DWORD convert_flags = flags |
-                                                AUDCLNT_STREAMFLAGS_AUTOCONVERTPCM |
-                                                AUDCLNT_STREAMFLAGS_SRC_DEFAULT_QUALITY;
+                    const DWORD convert_flags =
+                        flags | AUDCLNT_STREAMFLAGS_AUTOCONVERTPCM | AUDCLNT_STREAMFLAGS_SRC_DEFAULT_QUALITY;
 
                     hr = try_initialize(share_mode, convert_flags, requested_duration, desired.get());
                     if (SUCCEEDED(hr))
@@ -756,9 +729,8 @@ namespace catalyst::audio::detail
                     return failure(error_code::format_unsupported);
 
                 const REFERENCE_TIME fallback_duration =
-                    request_.block_frames
-                        ? hns_from_frames(request_.block_frames, fallback->nSamplesPerSec)
-                        : (exclusive_ ? minimum_period : default_period);
+                    request_.block_frames ? hns_from_frames(request_.block_frames, fallback->nSamplesPerSec)
+                                          : (exclusive_ ? minimum_period : default_period);
 
                 hr = try_initialize(share_mode, flags, fallback_duration, fallback.get());
                 if (FAILED(hr))
@@ -775,36 +747,26 @@ namespace catalyst::audio::detail
 
             /// Runs `IAudioClient::Initialize`, retrying once on the exclusive-mode alignment
             /// error with the buffer size the driver reports it actually wants.
-            HRESULT try_initialize(
-                AUDCLNT_SHAREMODE share_mode,
-                DWORD flags,
-                REFERENCE_TIME duration,
-                const WAVEFORMATEX *format)
+            HRESULT try_initialize(AUDCLNT_SHAREMODE share_mode, DWORD flags, REFERENCE_TIME duration,
+                                   const WAVEFORMATEX *format)
             {
-                const REFERENCE_TIME periodicity =
-                    share_mode == AUDCLNT_SHAREMODE_EXCLUSIVE ? duration : 0;
+                const REFERENCE_TIME periodicity = share_mode == AUDCLNT_SHAREMODE_EXCLUSIVE ? duration : 0;
 
-                HRESULT hr =
-                    client_->Initialize(share_mode, flags, duration, periodicity, format, nullptr);
+                HRESULT hr = client_->Initialize(share_mode, flags, duration, periodicity, format, nullptr);
 
                 if (hr == AUDCLNT_E_BUFFER_SIZE_NOT_ALIGNED)
                 {
                     UINT32 aligned = 0;
                     if (SUCCEEDED(client_->GetBufferSize(&aligned)) && aligned > 0)
                     {
-                        const REFERENCE_TIME aligned_duration =
-                            hns_from_frames(aligned, format->nSamplesPerSec);
+                        const REFERENCE_TIME aligned_duration = hns_from_frames(aligned, format->nSamplesPerSec);
 
                         // The client is unusable after this error and must be recreated.
                         if (activate_client())
                         {
-                            hr = client_->Initialize(
-                                share_mode,
-                                flags,
-                                aligned_duration,
-                                share_mode == AUDCLNT_SHAREMODE_EXCLUSIVE ? aligned_duration : 0,
-                                format,
-                                nullptr);
+                            hr = client_->Initialize(share_mode, flags, aligned_duration,
+                                                     share_mode == AUDCLNT_SHAREMODE_EXCLUSIVE ? aligned_duration : 0,
+                                                     format, nullptr);
                         }
                     }
                 }
@@ -828,8 +790,7 @@ namespace catalyst::audio::detail
 
             bool supported_exclusive(const WAVEFORMATEX *format) noexcept
             {
-                return format &&
-                       client_->IsFormatSupported(AUDCLNT_SHAREMODE_EXCLUSIVE, format, nullptr) == S_OK;
+                return format && client_->IsFormatSupported(AUDCLNT_SHAREMODE_EXCLUSIVE, format, nullptr) == S_OK;
             }
 
             /// In exclusive mode the engine performs no conversion, so the only formats that can
@@ -838,8 +799,7 @@ namespace catalyst::audio::detail
             /// mode reachable at all on interfaces that offer no float format.
             format_ptr device_native_format()
             {
-                if (format_ptr candidate = mix_format();
-                    candidate && supported_exclusive(candidate.get()))
+                if (format_ptr candidate = mix_format(); candidate && supported_exclusive(candidate.get()))
                 {
                     return candidate;
                 }
@@ -854,8 +814,7 @@ namespace catalyst::audio::detail
                 // The shape the caller asked for, before anything else.
                 for (const sample_format layout : layouts)
                 {
-                    format_ptr probe =
-                        make_format(request_.sample_rate, requested_channels(), layout);
+                    format_ptr probe = make_format(request_.sample_rate, requested_channels(), layout);
                     if (probe && supported_exclusive(probe.get()))
                         return probe;
                 }
@@ -926,8 +885,7 @@ namespace catalyst::audio::detail
 
             channel_count requested_channels() const noexcept
             {
-                const channel_count channels =
-                    capture_ ? request_.input_channels : request_.output_channels;
+                const channel_count channels = capture_ ? request_.input_channels : request_.output_channels;
                 return channels ? channels : 2;
             }
 
@@ -942,8 +900,7 @@ namespace catalyst::audio::detail
 
                 if (capture_)
                 {
-                    if (FAILED(client_->GetService(
-                            __uuidof(IAudioCaptureClient), capture_client_.put_void())) ||
+                    if (FAILED(client_->GetService(__uuidof(IAudioCaptureClient), capture_client_.put_void())) ||
                         !capture_client_)
                     {
                         return failure(error_code::platform_error);
@@ -951,8 +908,7 @@ namespace catalyst::audio::detail
                 }
                 else
                 {
-                    if (FAILED(client_->GetService(
-                            __uuidof(IAudioRenderClient), render_client_.put_void())) ||
+                    if (FAILED(client_->GetService(__uuidof(IAudioRenderClient), render_client_.put_void())) ||
                         !render_client_)
                     {
                         return failure(error_code::platform_error);
@@ -970,8 +926,7 @@ namespace catalyst::audio::detail
 
             void register_notifications()
             {
-                auto *client =
-                    new (std::nothrow) notification_client(publisher(), wide_device_id_);
+                auto *client = new (std::nothrow) notification_client(publisher(), wide_device_id_);
                 if (!client)
                     return;
 
@@ -1091,23 +1046,13 @@ namespace catalyst::audio::detail
                     {
                         // The device's own buffer *is* a float32 block, so the renderer writes
                         // straight into it and nothing is copied.
-                        dispatcher_.dispatch(
-                            std::span<sample>(reinterpret_cast<sample *>(data), samples),
-                            {},
-                            chunk,
-                            channels_,
-                            0,
-                            stream_rate);
+                        dispatcher_.dispatch(std::span<sample>(reinterpret_cast<sample *>(data), samples), {}, chunk,
+                                             channels_, 0, stream_rate);
                     }
                     else if (samples <= scratch_.size())
                     {
-                        dispatcher_.dispatch(
-                            std::span<sample>(scratch_.data(), samples),
-                            {},
-                            chunk,
-                            channels_,
-                            0,
-                            stream_rate);
+                        dispatcher_.dispatch(std::span<sample>(scratch_.data(), samples), {}, chunk, channels_, 0,
+                                             stream_rate);
 
                         pack_(reinterpret_cast<std::byte *>(data), scratch_.data(), samples, 1);
                     }
@@ -1145,8 +1090,7 @@ namespace catalyst::audio::detail
                     UINT32 frames = 0;
                     DWORD flags = 0;
 
-                    const HRESULT hr =
-                        capture_client_->GetBuffer(&data, &frames, &flags, nullptr, nullptr);
+                    const HRESULT hr = capture_client_->GetBuffer(&data, &frames, &flags, nullptr, nullptr);
                     if (hr == AUDCLNT_S_BUFFER_EMPTY)
                         return {};
                     if (FAILED(hr))
@@ -1177,11 +1121,7 @@ namespace catalyst::audio::detail
                     }
                     else
                     {
-                        unpack_(
-                            scratch_.data(),
-                            reinterpret_cast<const std::byte *>(data),
-                            samples,
-                            1);
+                        unpack_(scratch_.data(), reinterpret_cast<const std::byte *>(data), samples, 1);
                         input = std::span<const sample>(scratch_.data(), samples);
                     }
 

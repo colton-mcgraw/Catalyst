@@ -7,9 +7,8 @@
  * License: MIT (see LICENSE).
  */
 
-#include <catalyst/logging/sink.hpp>
-
 #include <catalyst/logging/router.hpp>
+#include <catalyst/logging/sink.hpp>
 
 #include <utility>
 

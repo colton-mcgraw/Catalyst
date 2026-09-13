@@ -83,31 +83,16 @@ namespace catalyst::core::detail
          * `std::move_only_function` and `std::function`'s call operator. Check with `operator bool`
          * where emptiness is possible.
          */
-        R operator()(Args... args)
-        {
-            return held_->call(std::forward<Args>(args)...);
-        }
+        R operator()(Args... args) { return held_->call(std::forward<Args>(args)...); }
 
         /** @brief True when a callable is held. */
-        [[nodiscard]] explicit operator bool() const noexcept
-        {
-            return held_ != nullptr;
-        }
+        [[nodiscard]] explicit operator bool() const noexcept { return held_ != nullptr; }
 
-        void swap(move_only_function &other) noexcept
-        {
-            held_.swap(other.held_);
-        }
+        void swap(move_only_function &other) noexcept { held_.swap(other.held_); }
 
-        friend void swap(move_only_function &a, move_only_function &b) noexcept
-        {
-            a.swap(b);
-        }
+        friend void swap(move_only_function &a, move_only_function &b) noexcept { a.swap(b); }
 
-        [[nodiscard]] friend bool operator==(const move_only_function &fn, std::nullptr_t) noexcept
-        {
-            return !fn;
-        }
+        [[nodiscard]] friend bool operator==(const move_only_function &fn, std::nullptr_t) noexcept { return !fn; }
 
     private:
         struct callable_base

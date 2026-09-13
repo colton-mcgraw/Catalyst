@@ -107,7 +107,8 @@ namespace catalyst::input
     /** @brief Total number of controls a MIDI device has. */
     inline constexpr std::size_t midi_control_count = midi_pressure_control + 1;
 
-    /** @brief The slot note @p note occupies, or no_control if @p note is out of range. Value is velocity while held. */
+    /** @brief The slot note @p note occupies, or no_control if @p note is out of range. Value is velocity while held.
+     */
     [[nodiscard]] inline constexpr control_id midi_note_control(std::size_t note) noexcept
     {
         return note < midi_note_count ? control_at(midi_note_control_base + note) : no_control;

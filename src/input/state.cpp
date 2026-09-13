@@ -38,24 +38,23 @@ namespace catalyst::input
         events::bus &bus = registry.bus();
         m_tokens.reserve(9);
 
-        m_tokens.emplace_back(bus.add_listener<control_changed_event>(
-            [this](const control_changed_event &e) { on_control_changed(e); }, priority));
-        m_tokens.emplace_back(bus.add_listener<device_connected_event>(
-            [this](const device_connected_event &e) { on_device_connected(e); }, priority));
-        m_tokens.emplace_back(bus.add_listener<device_disconnected_event>(
-            [this](const device_disconnected_event &e) { on_device_disconnected(e); }, priority));
-        m_tokens.emplace_back(bus.add_listener<key_event>(
-            [this](const key_event &e) { on_key(e); }, priority));
-        m_tokens.emplace_back(bus.add_listener<text_input_event>(
-            [this](const text_input_event &e) { on_text(e); }, priority));
-        m_tokens.emplace_back(bus.add_listener<mouse_button_event>(
-            [this](const mouse_button_event &e) { on_mouse_button(e); }, priority));
-        m_tokens.emplace_back(bus.add_listener<mouse_move_event>(
-            [this](const mouse_move_event &e) { on_mouse_move(e); }, priority));
-        m_tokens.emplace_back(bus.add_listener<mouse_enter_event>(
-            [this](const mouse_enter_event &e) { on_mouse_enter(e); }, priority));
-        m_tokens.emplace_back(bus.add_listener<mouse_leave_event>(
-            [this](const mouse_leave_event &e) { on_mouse_leave(e); }, priority));
+        m_tokens.emplace_back(bus.add_listener<control_changed_event>([this](const control_changed_event &e)
+                                                                      { on_control_changed(e); }, priority));
+        m_tokens.emplace_back(bus.add_listener<device_connected_event>([this](const device_connected_event &e)
+                                                                       { on_device_connected(e); }, priority));
+        m_tokens.emplace_back(bus.add_listener<device_disconnected_event>([this](const device_disconnected_event &e)
+                                                                          { on_device_disconnected(e); }, priority));
+        m_tokens.emplace_back(bus.add_listener<key_event>([this](const key_event &e) { on_key(e); }, priority));
+        m_tokens.emplace_back(
+            bus.add_listener<text_input_event>([this](const text_input_event &e) { on_text(e); }, priority));
+        m_tokens.emplace_back(bus.add_listener<mouse_button_event>([this](const mouse_button_event &e)
+                                                                   { on_mouse_button(e); }, priority));
+        m_tokens.emplace_back(
+            bus.add_listener<mouse_move_event>([this](const mouse_move_event &e) { on_mouse_move(e); }, priority));
+        m_tokens.emplace_back(
+            bus.add_listener<mouse_enter_event>([this](const mouse_enter_event &e) { on_mouse_enter(e); }, priority));
+        m_tokens.emplace_back(
+            bus.add_listener<mouse_leave_event>([this](const mouse_leave_event &e) { on_mouse_leave(e); }, priority));
     }
 
     void input_state::detach() noexcept
@@ -308,11 +307,13 @@ namespace catalyst::input
             return 0;
 
         std::size_t count = 0;
-        m_registry->for_each(device_selector::of(device_kind::keyboard), [&](device_id id)
+        m_registry->for_each(device_selector::of(device_kind::keyboard),
+                             [&](device_id id)
                              {
-            for (const float v : m_registry->values(id))
-                if (v >= k_press_point)
-                    ++count; });
+                                 for (const float v : m_registry->values(id))
+                                     if (v >= k_press_point)
+                                         ++count;
+                             });
         return count;
     }
 
@@ -447,8 +448,8 @@ namespace catalyst::input
     bool input_state::was_gamepad_disconnected(std::uint32_t slot) const noexcept
     {
         // The device is already gone, so it cannot be looked up by slot any more; the frame's record is all there is.
-        return std::any_of(m_disconnected.begin(), m_disconnected.end(), [&](const auto &d)
-                           { return d.first == device_kind::gamepad && d.second == slot; });
+        return std::any_of(m_disconnected.begin(), m_disconnected.end(),
+                           [&](const auto &d) { return d.first == device_kind::gamepad && d.second == slot; });
     }
 
     // ----------------------------------------------------------------------------------------------------------------

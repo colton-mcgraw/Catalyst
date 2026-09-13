@@ -153,8 +153,7 @@ namespace catalyst::rendering
         return batch->submit();
     }
 
-    std::expected<timeline_point, error> upload(const device &dev, const texture &dst,
-                                                std::span<const std::byte> data)
+    std::expected<timeline_point, error> upload(const device &dev, const texture &dst, std::span<const std::byte> data)
     {
         auto batch = transfer_batch::begin(dev);
         if (!batch)

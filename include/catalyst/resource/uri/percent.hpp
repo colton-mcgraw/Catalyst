@@ -11,11 +11,11 @@
 
 #pragma once
 
+#include "error.hpp"
+
 #include <expected>
 #include <string>
 #include <string_view>
-
-#include "error.hpp"
 
 namespace catalyst::resource
 {
@@ -49,6 +49,6 @@ namespace catalyst::resource
      *         the offending `%`.
      */
     [[nodiscard]] std::expected<std::string, uri_error> percent_decode(std::string_view text,
-                                                                      bool plus_is_space = false);
+                                                                       bool plus_is_space = false);
 
 } // namespace catalyst::resource

@@ -38,16 +38,13 @@ namespace catalyst::math
     // const element access. Satisfied by cv/ref-qualified vectors too, so it can
     // constrain forwarding references.
     template <typename V>
-    concept vector_like =
-        requires {
-            typename detail::bare<V>::value_type;
-            { detail::bare<V>::length } -> std::convertible_to<std::size_t>;
-            requires(detail::bare<V>::length > 0);
-        } &&
-        requires(const detail::bare<V> &v, std::size_t i) {
-            { v[i] } -> std::convertible_to<typename detail::bare<V>::value_type>;
-        } &&
-        scalar_like<typename detail::bare<V>::value_type>;
+    concept vector_like = requires {
+        typename detail::bare<V>::value_type;
+        { detail::bare<V>::length } -> std::convertible_to<std::size_t>;
+        requires(detail::bare<V>::length > 0);
+    } && requires(const detail::bare<V> &v, std::size_t i) {
+        { v[i] } -> std::convertible_to<typename detail::bare<V>::value_type>;
+    } && scalar_like<typename detail::bare<V>::value_type>;
 
     // ---------------------------------------------------------------------
     // vector
@@ -382,38 +379,32 @@ namespace catalyst::math
         constexpr vector<T, N> generate(auto &&f)
         {
             return [&]<std::size_t... I>(std::index_sequence<I...>)
-            {
-                return vector<T, N>{static_cast<T>(f(I))...};
-            }(std::make_index_sequence<N>{});
+            { return vector<T, N>{static_cast<T>(f(I))...}; }(std::make_index_sequence<N>{});
         }
 
         template <vector_like L, vector_like R>
         constexpr auto zip(const L &lhs, const R &rhs, auto op)
         {
-            return generate<common_element_t<L, R>, L::length>([&](std::size_t i)
-                                                               { return op(lhs[i], rhs[i]); });
+            return generate<common_element_t<L, R>, L::length>([&](std::size_t i) { return op(lhs[i], rhs[i]); });
         }
 
         template <vector_like V, scalar_like S>
         constexpr auto zip(const V &v, S s, auto op)
         {
-            return generate<common_element_t<V, S>, V::length>([&](std::size_t i)
-                                                               { return op(v[i], s); });
+            return generate<common_element_t<V, S>, V::length>([&](std::size_t i) { return op(v[i], s); });
         }
 
         template <typename S, vector_like V>
             requires scalar_like<S>
         constexpr auto zip(S s, const V &v, auto op)
         {
-            return generate<common_element_t<S, V>, V::length>([&](std::size_t i)
-                                                               { return op(s, v[i]); });
+            return generate<common_element_t<S, V>, V::length>([&](std::size_t i) { return op(s, v[i]); });
         }
 
         template <vector_like V>
         constexpr auto map(const V &v, auto op)
         {
-            return generate<typename element<V>::type, V::length>([&](std::size_t i)
-                                                                  { return op(v[i]); });
+            return generate<typename element<V>::type, V::length>([&](std::size_t i) { return op(v[i]); });
         }
     } // namespace detail
 
@@ -434,15 +425,13 @@ namespace catalyst::math
     template <vector_like V>
     constexpr auto operator+(const V &v)
     {
-        return detail::map(v, [](auto e)
-                           { return +e; });
+        return detail::map(v, [](auto e) { return +e; });
     }
 
     template <vector_like V>
     constexpr auto operator-(const V &v)
     {
-        return detail::map(v, [](auto e)
-                           { return -e; });
+        return detail::map(v, [](auto e) { return -e; });
     }
 
     template <vector_like L, vector_like R>
@@ -574,4 +563,3 @@ namespace std
         }
     };
 } // namespace std
-

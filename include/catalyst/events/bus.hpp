@@ -59,9 +59,7 @@ namespace catalyst::events
         {
             return install(&detail::state::sync_listeners, detail::kind::sync_listener, event_id<Event>(), priority,
                            [fn = std::forward<F>(f)](const void *ptr) mutable
-                           {
-                               fn(*static_cast<const Event *>(ptr));
-                           });
+                           { fn(*static_cast<const Event *>(ptr)); });
         }
 
         template <typename Event, typename F>
@@ -70,9 +68,7 @@ namespace catalyst::events
         {
             return install(&detail::state::async_listeners, detail::kind::async_listener, event_id<Event>(), priority,
                            [fn = std::forward<F>(f)](const void *ptr) mutable -> task<void>
-                           {
-                               return fn(*static_cast<const Event *>(ptr));
-                           });
+                           { return fn(*static_cast<const Event *>(ptr)); });
         }
 
         // --------------------------------------------------------
@@ -85,9 +81,7 @@ namespace catalyst::events
         {
             return install(&detail::state::sync_middleware, detail::kind::sync_middleware, event_id<Event>(), priority,
                            [fn = std::forward<F>(f)](void *ev, void *ctx, void (*resume)(void *, void *)) mutable
-                           {
-                               fn(*static_cast<Event *>(ev), next<Event>{detail::chain_access{}, ctx, resume});
-                           });
+                           { fn(*static_cast<Event *>(ev), next<Event>{detail::chain_access{}, ctx, resume}); });
         }
 
         template <typename Event, typename F>
@@ -107,11 +101,13 @@ namespace catalyst::events
             requires async_chain_middleware_for<F, Event>
         token add_async_middleware(F &&f, int priority = 0)
         {
-            return install(&detail::state::async_middleware, detail::kind::async_middleware, event_id<Event>(), priority,
+            return install(&detail::state::async_middleware, detail::kind::async_middleware, event_id<Event>(),
+                           priority,
                            // A coroutine rather than a plain forwarder so that the
                            // async_next outlives the user's coroutine, which only
                            // holds a reference to it.
-                           [fn = std::forward<F>(f)](void *ev, void *ctx, task<void> (*resume)(void *, void *)) mutable -> task<void>
+                           [fn = std::forward<F>(f)](void *ev, void *ctx,
+                                                     task<void> (*resume)(void *, void *)) mutable -> task<void>
                            {
                                async_next<Event> n{detail::chain_access{}, ctx, resume};
                                co_await fn(*static_cast<Event *>(ev), n);
@@ -167,10 +163,7 @@ namespace catalyst::events
 
     private:
         template <typename Fn, typename Callable>
-        token install(detail::registry<Fn> detail::state::*reg,
-                      detail::kind k,
-                      event_key type,
-                      int priority,
+        token install(detail::registry<Fn> detail::state::*reg, detail::kind k, event_key type, int priority,
                       Callable &&callable)
         {
             auto s = std::make_shared<detail::slot<Fn>>(state_->next_id++, priority, std::forward<Callable>(callable));

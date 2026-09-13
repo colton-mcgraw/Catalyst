@@ -37,7 +37,8 @@ namespace catalyst::input
             // Same name and same kind is the caller setting up twice; same name and a different kind is a mistake worth
             // hearing about rather than a silently reshaped action.
             if (existing->kind() != kind)
-                throw std::invalid_argument("catalyst::input::action_map::add: '" + name + "' already exists with a different kind");
+                throw std::invalid_argument("catalyst::input::action_map::add: '" + name +
+                                            "' already exists with a different kind");
             return *existing;
         }
 

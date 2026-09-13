@@ -121,7 +121,10 @@ namespace catalyst::input
         bool primary{false};
 
         /** @brief The slot @p c of this event's contact. */
-        [[nodiscard]] constexpr control_id control(touch_control c) const noexcept { return touch_control_of(index, c); }
+        [[nodiscard]] constexpr control_id control(touch_control c) const noexcept
+        {
+            return touch_control_of(index, c);
+        }
         /** @brief True while the finger is still on the glass. */
         [[nodiscard]] constexpr bool active() const noexcept { return is_active_phase(phase); }
     };

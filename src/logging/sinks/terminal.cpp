@@ -18,7 +18,7 @@
 // once, during the initialisation of a function-local static, and copies nothing out of it. Scoped
 // to this file rather than set for the build, so the warning stays live everywhere else.
 #if defined(_MSC_VER) && !defined(_CRT_SECURE_NO_WARNINGS)
-#  define _CRT_SECURE_NO_WARNINGS
+#define _CRT_SECURE_NO_WARNINGS
 #endif
 
 #include <catalyst/logging/sinks/console.hpp>
@@ -29,15 +29,15 @@
 #include <ostream>
 
 #if defined(_WIN32)
-#  include <io.h>
+#include <win32/windows_lean.hpp>
 
-#  include <win32/windows_lean.hpp>
+#include <io.h>
 
-#  ifndef ENABLE_VIRTUAL_TERMINAL_PROCESSING
-#    define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
-#  endif
+#ifndef ENABLE_VIRTUAL_TERMINAL_PROCESSING
+#define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
+#endif
 #else
-#  include <unistd.h>
+#include <unistd.h>
 #endif
 
 namespace catalyst::logging

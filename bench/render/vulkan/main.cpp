@@ -17,9 +17,9 @@
  * License: MIT (see LICENSE).
  */
 
-#include "render_bench.hpp"
-
 #include <catalyst/rendering/rendering.hpp>
+
+#include "render_bench.hpp"
 
 #include <iostream>
 
@@ -40,14 +40,12 @@ int main(int argc, char **argv)
 
     std::cout << "Catalyst rendering benchmarks\n"
               << "  backend:    " << catalyst::rendering::to_string(info.backend) << '\n'
-              << "  adapter:    " << info.adapter_name << " ("
-              << (info.dedicated_video_memory_bytes >> 20) << " MiB device-local, "
-              << (info.unified_memory ? "unified memory" : "discrete memory") << ")\n"
+              << "  adapter:    " << info.adapter_name << " (" << (info.dedicated_video_memory_bytes >> 20)
+              << " MiB device-local, " << (info.unified_memory ? "unified memory" : "discrete memory") << ")\n"
               << "  alloc cap:  " << info.max_memory_allocation_count
               << " simultaneous allocations (one per buffer and texture)\n"
               << "  target:     " << (ctx.windowed() ? "window" : "off-screen") << ' ' << sd.extent.width << 'x'
-              << sd.extent.height << ", " << sd.image_count << " images, vsync "
-              << (sd.vsync ? "on" : "off") << '\n'
+              << sd.extent.height << ", " << sd.image_count << " images, vsync " << (sd.vsync ? "on" : "off") << '\n'
               << "  pacing:     " << (opt.serialize ? "serialized (wait_idle every frame)" : "pipelined") << '\n';
 
     if (!ctx.executes_gpu_work())

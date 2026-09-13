@@ -58,48 +58,85 @@ namespace catalyst::resource::detail
         {
             switch (vk_format)
             {
-            case 9:   return format::r8_unorm;                  // VK_FORMAT_R8_UNORM
-            case 16:  return format::rg8_unorm;                 // VK_FORMAT_R8G8_UNORM
-            case 37:  return format::rgba8_unorm;               // VK_FORMAT_R8G8B8A8_UNORM
-            case 43:  return format::rgba8_unorm_srgb;          // VK_FORMAT_R8G8B8A8_SRGB
-            case 44:  return format::bgra8_unorm;               // VK_FORMAT_B8G8R8A8_UNORM
-            case 50:  return format::bgra8_unorm_srgb;          // VK_FORMAT_B8G8R8A8_SRGB
+            case 9:
+                return format::r8_unorm; // VK_FORMAT_R8_UNORM
+            case 16:
+                return format::rg8_unorm; // VK_FORMAT_R8G8_UNORM
+            case 37:
+                return format::rgba8_unorm; // VK_FORMAT_R8G8B8A8_UNORM
+            case 43:
+                return format::rgba8_unorm_srgb; // VK_FORMAT_R8G8B8A8_SRGB
+            case 44:
+                return format::bgra8_unorm; // VK_FORMAT_B8G8R8A8_UNORM
+            case 50:
+                return format::bgra8_unorm_srgb; // VK_FORMAT_B8G8R8A8_SRGB
 
-            case 74:  return format::r16_uint;                  // VK_FORMAT_R16_UINT
-            case 76:  return format::r16_float;                 // VK_FORMAT_R16_SFLOAT
-            case 83:  return format::rg16_float;                // VK_FORMAT_R16G16_SFLOAT
-            case 97:  return format::rgba16_float;              // VK_FORMAT_R16G16B16A16_SFLOAT
+            case 74:
+                return format::r16_uint; // VK_FORMAT_R16_UINT
+            case 76:
+                return format::r16_float; // VK_FORMAT_R16_SFLOAT
+            case 83:
+                return format::rg16_float; // VK_FORMAT_R16G16_SFLOAT
+            case 97:
+                return format::rgba16_float; // VK_FORMAT_R16G16B16A16_SFLOAT
 
-            case 98:  return format::r32_uint;                  // VK_FORMAT_R32_UINT
-            case 99:  return format::r32_sint;                  // VK_FORMAT_R32_SINT
-            case 100: return format::r32_float;                 // VK_FORMAT_R32_SFLOAT
-            case 103: return format::rg32_float;                // VK_FORMAT_R32G32_SFLOAT
-            case 106: return format::rgb32_float;               // VK_FORMAT_R32G32B32_SFLOAT
-            case 109: return format::rgba32_float;              // VK_FORMAT_R32G32B32A32_SFLOAT
+            case 98:
+                return format::r32_uint; // VK_FORMAT_R32_UINT
+            case 99:
+                return format::r32_sint; // VK_FORMAT_R32_SINT
+            case 100:
+                return format::r32_float; // VK_FORMAT_R32_SFLOAT
+            case 103:
+                return format::rg32_float; // VK_FORMAT_R32G32_SFLOAT
+            case 106:
+                return format::rgb32_float; // VK_FORMAT_R32G32B32_SFLOAT
+            case 109:
+                return format::rgba32_float; // VK_FORMAT_R32G32B32A32_SFLOAT
 
-            case 124: return format::d16_unorm;                 // VK_FORMAT_D16_UNORM
-            case 126: return format::d32_float;                 // VK_FORMAT_D32_SFLOAT
-            case 129: return format::d24_unorm_s8_uint;         // VK_FORMAT_D24_UNORM_S8_UINT
-            case 130: return format::d32_float_s8_uint;         // VK_FORMAT_D32_SFLOAT_S8_UINT
+            case 124:
+                return format::d16_unorm; // VK_FORMAT_D16_UNORM
+            case 126:
+                return format::d32_float; // VK_FORMAT_D32_SFLOAT
+            case 129:
+                return format::d24_unorm_s8_uint; // VK_FORMAT_D24_UNORM_S8_UINT
+            case 130:
+                return format::d32_float_s8_uint; // VK_FORMAT_D32_SFLOAT_S8_UINT
 
-            case 131: return format::bc1_rgba_unorm;            // VK_FORMAT_BC1_RGB_UNORM_BLOCK
-            case 132: return format::bc1_rgba_unorm_srgb;       // VK_FORMAT_BC1_RGB_SRGB_BLOCK
-            case 133: return format::bc1_rgba_unorm;            // VK_FORMAT_BC1_RGBA_UNORM_BLOCK
-            case 134: return format::bc1_rgba_unorm_srgb;       // VK_FORMAT_BC1_RGBA_SRGB_BLOCK
-            case 135: return format::bc2_unorm;                 // VK_FORMAT_BC2_UNORM_BLOCK
-            case 136: return format::bc2_unorm_srgb;            // VK_FORMAT_BC2_SRGB_BLOCK
-            case 137: return format::bc3_unorm;                 // VK_FORMAT_BC3_UNORM_BLOCK
-            case 138: return format::bc3_unorm_srgb;            // VK_FORMAT_BC3_SRGB_BLOCK
-            case 139: return format::bc4_unorm;                 // VK_FORMAT_BC4_UNORM_BLOCK
-            case 140: return format::bc4_snorm;                 // VK_FORMAT_BC4_SNORM_BLOCK
-            case 141: return format::bc5_unorm;                 // VK_FORMAT_BC5_UNORM_BLOCK
-            case 142: return format::bc5_snorm;                 // VK_FORMAT_BC5_SNORM_BLOCK
-            case 143: return format::bc6h_ufloat;               // VK_FORMAT_BC6H_UFLOAT_BLOCK
-            case 144: return format::bc6h_sfloat;               // VK_FORMAT_BC6H_SFLOAT_BLOCK
-            case 145: return format::bc7_unorm;                 // VK_FORMAT_BC7_UNORM_BLOCK
-            case 146: return format::bc7_unorm_srgb;            // VK_FORMAT_BC7_SRGB_BLOCK
+            case 131:
+                return format::bc1_rgba_unorm; // VK_FORMAT_BC1_RGB_UNORM_BLOCK
+            case 132:
+                return format::bc1_rgba_unorm_srgb; // VK_FORMAT_BC1_RGB_SRGB_BLOCK
+            case 133:
+                return format::bc1_rgba_unorm; // VK_FORMAT_BC1_RGBA_UNORM_BLOCK
+            case 134:
+                return format::bc1_rgba_unorm_srgb; // VK_FORMAT_BC1_RGBA_SRGB_BLOCK
+            case 135:
+                return format::bc2_unorm; // VK_FORMAT_BC2_UNORM_BLOCK
+            case 136:
+                return format::bc2_unorm_srgb; // VK_FORMAT_BC2_SRGB_BLOCK
+            case 137:
+                return format::bc3_unorm; // VK_FORMAT_BC3_UNORM_BLOCK
+            case 138:
+                return format::bc3_unorm_srgb; // VK_FORMAT_BC3_SRGB_BLOCK
+            case 139:
+                return format::bc4_unorm; // VK_FORMAT_BC4_UNORM_BLOCK
+            case 140:
+                return format::bc4_snorm; // VK_FORMAT_BC4_SNORM_BLOCK
+            case 141:
+                return format::bc5_unorm; // VK_FORMAT_BC5_UNORM_BLOCK
+            case 142:
+                return format::bc5_snorm; // VK_FORMAT_BC5_SNORM_BLOCK
+            case 143:
+                return format::bc6h_ufloat; // VK_FORMAT_BC6H_UFLOAT_BLOCK
+            case 144:
+                return format::bc6h_sfloat; // VK_FORMAT_BC6H_SFLOAT_BLOCK
+            case 145:
+                return format::bc7_unorm; // VK_FORMAT_BC7_UNORM_BLOCK
+            case 146:
+                return format::bc7_unorm_srgb; // VK_FORMAT_BC7_SRGB_BLOCK
 
-            default:  return format::unknown;
+            default:
+                return format::unknown;
             }
         }
 
@@ -108,10 +145,14 @@ namespace catalyst::resource::detail
         {
             switch (scheme)
             {
-            case 1:  return "BasisLZ";
-            case 2:  return "Zstandard";
-            case 3:  return "ZLIB";
-            default: return "an unrecognised scheme";
+            case 1:
+                return "BasisLZ";
+            case 2:
+                return "Zstandard";
+            case 3:
+                return "ZLIB";
+            default:
+                return "an unrecognised scheme";
             }
         }
 
@@ -174,9 +215,9 @@ namespace catalyst::resource::detail
 
         format fmt = format_from_vk(vk_format);
         if (fmt == format::unknown)
-            return std::unexpected(make_error(error_code::unsupported_format, {},
-                                              "KTX2 VkFormat " + std::to_string(vk_format) +
-                                                  " has no counterpart in rendering::format"));
+            return std::unexpected(
+                make_error(error_code::unsupported_format, {},
+                           "KTX2 VkFormat " + std::to_string(vk_format) + " has no counterpart in rendering::format"));
 
         if (pixel_width == 0)
             return std::unexpected(bad_ktx2("KTX2 declares a zero pixel width"));
@@ -186,8 +227,8 @@ namespace catalyst::resource::detail
         const extent3d extent{pixel_width, pixel_height == 0 ? 1u : pixel_height, pixel_depth == 0 ? 1u : pixel_depth};
 
         if (face_count != 1 && face_count != 6)
-            return std::unexpected(bad_ktx2("KTX2 declares " + std::to_string(face_count) +
-                                            " faces; only 1 or 6 are valid"));
+            return std::unexpected(
+                bad_ktx2("KTX2 declares " + std::to_string(face_count) + " faces; only 1 or 6 are valid"));
 
         // `layerCount == 0` means "not an array", `levelCount == 0` means "the file stores one level
         // and would like the application to generate the rest". Both store one of the thing.
@@ -244,11 +285,14 @@ namespace catalyst::resource::detail
 
             if (index[level].length != expected)
                 return std::unexpected(bad_ktx2("KTX2 level " + std::to_string(level) + " is " +
-                                                std::to_string(index[level].length) + " bytes, but its extent and "
-                                                "format require " + std::to_string(expected)));
+                                                std::to_string(index[level].length) +
+                                                " bytes, but its extent and "
+                                                "format require " +
+                                                std::to_string(expected)));
 
             if (index[level].offset > bytes.size() || bytes.size() - index[level].offset < expected)
-                return std::unexpected(bad_ktx2("KTX2 level " + std::to_string(level) + " runs past the end of the file"));
+                return std::unexpected(
+                    bad_ktx2("KTX2 level " + std::to_string(level) + " runs past the end of the file"));
         }
 
         // Transpose: the file is level-major, an `image` is layer-major.

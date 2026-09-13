@@ -79,7 +79,7 @@ namespace catalyst::resource::csv
         parse_error_code code = parse_error_code::none; ///< What went wrong.
         std::size_t offset = 0;                         ///< Byte offset into the input where it went wrong.
         std::size_t line = 0;                           ///< 1-based record number, counting a header record as line 1.
-        std::size_t column = 0;                          ///< 1-based field number within the record.
+        std::size_t column = 0;                         ///< 1-based field number within the record.
 
         /**
          * @fn message()

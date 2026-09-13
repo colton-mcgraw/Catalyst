@@ -10,7 +10,6 @@
  */
 
 #include <catalyst/resource/json/document.hpp>
-
 #include <catalyst/resource/json/tape.hpp>
 #include <catalyst/resource/json/value.hpp>
 

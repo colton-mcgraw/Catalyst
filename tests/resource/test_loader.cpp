@@ -16,12 +16,12 @@
  * License: MIT (see LICENSE).
  */
 
-#include "../test_common.hpp"
-
 #include <catalyst/resource/image.hpp>
 #include <catalyst/resource/loader.hpp>
 #include <catalyst/resource/source.hpp>
 #include <catalyst/resource/vfs.hpp>
+
+#include "../test_common.hpp"
 
 #include <charconv>
 #include <cstdint>
@@ -135,16 +135,16 @@ namespace
     vfs make_files()
     {
         vfs files;
-        auto mounted = files.mount({.scheme = "asset"},
-                                   make_memory_source({
-                                       {"textures/stone.dds", fixture_bytes(dds_bc7_8x8)},
-                                       {"textures/moss.dds", fixture_bytes(dds_dxt1_4x4)},
-                                       {"materials/wall.mat", text_bytes("../textures/stone.dds")},
-                                       {"materials/floor.mat", text_bytes("../textures/stone.dds")},
-                                       {"materials/broken.mat", text_bytes("../textures/absent.dds")},
-                                       {"counts/seven", text_bytes("7")},
-                                       {"counts/bad", text_bytes("not a number")},
-                                   }));
+        auto mounted =
+            files.mount({.scheme = "asset"}, make_memory_source({
+                                                 {"textures/stone.dds", fixture_bytes(dds_bc7_8x8)},
+                                                 {"textures/moss.dds", fixture_bytes(dds_dxt1_4x4)},
+                                                 {"materials/wall.mat", text_bytes("../textures/stone.dds")},
+                                                 {"materials/floor.mat", text_bytes("../textures/stone.dds")},
+                                                 {"materials/broken.mat", text_bytes("../textures/absent.dds")},
+                                                 {"counts/seven", text_bytes("7")},
+                                                 {"counts/bad", text_bytes("not a number")},
+                                             }));
         CT_REQUIRE(mounted.has_value());
         return files;
     }

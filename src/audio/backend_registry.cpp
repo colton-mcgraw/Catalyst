@@ -8,9 +8,9 @@
  * License: MIT (see LICENSE).
  */
 
-#include "detail_backend.hpp"
-
 #include <catalyst/audio/backend.hpp>
+
+#include "detail_backend.hpp"
 
 namespace catalyst::audio
 {

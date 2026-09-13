@@ -7,7 +7,8 @@
  * submitted.
  * @details Every variant draws the same picture - `count` quads on a grid that fills the render target - so the four
  * numbers are directly comparable:
- *   - *batched*: one draw of a pre-built vertex buffer holding six vertices per quad. The cheapest thing the API can do.
+ *   - *batched*: one draw of a pre-built vertex buffer holding six vertices per quad. The cheapest thing the API can
+ * do.
  *   - *instanced*: one `draw_indexed` of a four-vertex unit quad with one instance per quad, so the vertex buffer holds
  *     32 bytes per quad instead of 144.
  *   - *dynamic*: the instanced variant with the instance buffer rewritten from the CPU every frame, which is what a
@@ -45,7 +46,8 @@ namespace catalyst::bench::render
 
             explicit grid(std::size_t count)
             {
-                columns = static_cast<std::size_t>(std::ceil(std::sqrt(static_cast<double>(std::max<std::size_t>(count, 1)))));
+                columns = static_cast<std::size_t>(
+                    std::ceil(std::sqrt(static_cast<double>(std::max<std::size_t>(count, 1)))));
                 rows = (std::max<std::size_t>(count, 1) + columns - 1) / columns;
                 half_w = 0.9f / static_cast<float>(columns);
                 half_h = 0.9f / static_cast<float>(rows);
@@ -92,7 +94,8 @@ namespace catalyst::bench::render
                 const quad_vertex bottom_left{x0, y0, r, g, b, 1.0f};
                 const quad_vertex bottom_right{x1, y0, r, g, b, 1.0f};
 
-                vertices.insert(vertices.end(), {top_left, bottom_left, bottom_right, top_left, bottom_right, top_right});
+                vertices.insert(vertices.end(),
+                                {top_left, bottom_left, bottom_right, top_left, bottom_right, top_right});
             }
             return vertices;
         }
@@ -123,7 +126,8 @@ namespace catalyst::bench::render
             return instances;
         }
 
-        /** The unit quad the instanced and per-draw variants expand: corners in [-1, 1] and the two triangles' indices. */
+        /** The unit quad the instanced and per-draw variants expand: corners in [-1, 1] and the two triangles' indices.
+         */
         constexpr quad_corner unit_corners[] = {{0.0f, 0.0f}, {0.0f, 1.0f}, {1.0f, 1.0f}, {1.0f, 0.0f}};
         constexpr std::uint16_t unit_indices[] = {0, 1, 2, 0, 2, 3};
         constexpr quad_vertex unit_quad[] = {
@@ -192,13 +196,12 @@ namespace catalyst::bench::render
         }
 
         // Geometry shared by every count: the unit quad the instanced and per-draw variants expand.
-        auto corners = create_structured_buffer<quad_corner>(dev, std::size(unit_corners), buffer_usage::vertex,
-                                                             memory_access::gpu_only,
-                                                             std::span<const quad_corner>{unit_corners}, "unit corners");
-        auto indices = create_structured_buffer<std::uint16_t>(dev, std::size(unit_indices), buffer_usage::index,
-                                                               memory_access::gpu_only,
-                                                               std::span<const std::uint16_t>{unit_indices},
-                                                               "unit indices");
+        auto corners = create_structured_buffer<quad_corner>(
+            dev, std::size(unit_corners), buffer_usage::vertex, memory_access::gpu_only,
+            std::span<const quad_corner>{unit_corners}, "unit corners");
+        auto indices = create_structured_buffer<std::uint16_t>(
+            dev, std::size(unit_indices), buffer_usage::index, memory_access::gpu_only,
+            std::span<const std::uint16_t>{unit_indices}, "unit indices");
         auto unit = create_structured_buffer<quad_vertex>(dev, std::size(unit_quad), buffer_usage::vertex,
                                                           memory_access::gpu_only,
                                                           std::span<const quad_vertex>{unit_quad}, "unit quad");
@@ -210,21 +213,23 @@ namespace catalyst::bench::render
             // --- one draw call, six vertices per quad ---------------------------------------------------------
             {
                 const std::vector<quad_vertex> vertices = build_quad_vertices(count);
-                auto vb = create_structured_buffer<quad_vertex>(dev, vertices.size(), buffer_usage::vertex,
-                                                                memory_access::gpu_only,
-                                                                std::span<const quad_vertex>{vertices}, "batched quads");
+                auto vb = create_structured_buffer<quad_vertex>(
+                    dev, vertices.size(), buffer_usage::vertex, memory_access::gpu_only,
+                    std::span<const quad_vertex>{vertices}, "batched quads");
                 if (vb)
                 {
                     const auto vertex_count = static_cast<std::uint32_t>(vertices.size());
                     const frame_report report =
-                        run_frames(ctx, opt, [&](const command_list &cl, const texture &target) {
-                            begin_quad_pass(cl, target, extent, batched_pipeline);
-                            const quad_transform identity{};
-                            push_constants(cl, 0, std::as_bytes(std::span{&identity, 1}));
-                            set_vertex_buffer(cl, 0, vb.handle());
-                            draw(cl, vertex_count);
-                            end_render_pass(cl);
-                        });
+                        run_frames(ctx, opt,
+                                   [&](const command_list &cl, const texture &target)
+                                   {
+                                       begin_quad_pass(cl, target, extent, batched_pipeline);
+                                       const quad_transform identity{};
+                                       push_constants(cl, 0, std::as_bytes(std::span{&identity, 1}));
+                                       set_vertex_buffer(cl, 0, vb.handle());
+                                       draw(cl, vertex_count);
+                                       end_render_pass(cl);
+                                   });
                     report_quads("batched, one draw call" + suffix, report, count, 1);
                 }
                 vb.destroy();
@@ -233,15 +238,16 @@ namespace catalyst::bench::render
             // --- one instanced draw call ---------------------------------------------------------------------
             {
                 const std::vector<quad_instance> instances = build_quad_instances(count);
-                auto ib = create_structured_buffer<quad_instance>(dev, instances.size(), buffer_usage::vertex,
-                                                                  memory_access::gpu_only,
-                                                                  std::span<const quad_instance>{instances},
-                                                                  "quad instances");
+                auto ib = create_structured_buffer<quad_instance>(
+                    dev, instances.size(), buffer_usage::vertex, memory_access::gpu_only,
+                    std::span<const quad_instance>{instances}, "quad instances");
                 if (ib)
                 {
                     const auto instance_count = static_cast<std::uint32_t>(instances.size());
-                    const frame_report report =
-                        run_frames(ctx, opt, [&](const command_list &cl, const texture &target) {
+                    const frame_report report = run_frames(
+                        ctx, opt,
+                        [&](const command_list &cl, const texture &target)
+                        {
                             begin_quad_pass(cl, target, extent, instanced_pipeline);
                             set_vertex_buffer(cl, 0, corners.handle());
                             set_vertex_buffer(cl, 1, ib.handle());
@@ -257,16 +263,17 @@ namespace catalyst::bench::render
             // --- instanced with the instance buffer rewritten every frame ------------------------------------
             {
                 std::vector<quad_instance> instances = build_quad_instances(count);
-                auto ib = create_structured_buffer<quad_instance>(dev, instances.size(), buffer_usage::vertex,
-                                                                  memory_access::cpu_to_gpu,
-                                                                  std::span<const quad_instance>{instances},
-                                                                  "dynamic quad instances");
+                auto ib = create_structured_buffer<quad_instance>(
+                    dev, instances.size(), buffer_usage::vertex, memory_access::cpu_to_gpu,
+                    std::span<const quad_instance>{instances}, "dynamic quad instances");
                 if (ib)
                 {
                     const auto instance_count = static_cast<std::uint32_t>(instances.size());
                     float phase = 0.0f;
-                    const frame_report report =
-                        run_frames(ctx, opt, [&](const command_list &cl, const texture &target) {
+                    const frame_report report = run_frames(
+                        ctx, opt,
+                        [&](const command_list &cl, const texture &target)
+                        {
                             phase = phase >= 1.0f ? 0.0f : phase + 0.05f;
                             fill_quad_instances(instances, count, phase);
                             ib.write(instances);
@@ -302,16 +309,19 @@ namespace catalyst::bench::render
                     transforms.push_back({cx, cy, layout.half_w, layout.half_h});
                 }
 
-                const frame_report report = run_frames(ctx, opt, [&](const command_list &cl, const texture &target) {
-                    begin_quad_pass(cl, target, extent, batched_pipeline);
-                    set_vertex_buffer(cl, 0, unit.handle());
-                    for (const quad_transform &transform : transforms)
-                    {
-                        push_constants(cl, 0, std::as_bytes(std::span{&transform, 1}));
-                        draw(cl, static_cast<std::uint32_t>(std::size(unit_quad)));
-                    }
-                    end_render_pass(cl);
-                });
+                const frame_report report =
+                    run_frames(ctx, opt,
+                               [&](const command_list &cl, const texture &target)
+                               {
+                                   begin_quad_pass(cl, target, extent, batched_pipeline);
+                                   set_vertex_buffer(cl, 0, unit.handle());
+                                   for (const quad_transform &transform : transforms)
+                                   {
+                                       push_constants(cl, 0, std::as_bytes(std::span{&transform, 1}));
+                                       draw(cl, static_cast<std::uint32_t>(std::size(unit_quad)));
+                                   }
+                                   end_render_pass(cl);
+                               });
                 report_quads("per-draw, one draw call per quad" + suffix, report, count, count);
             }
         }

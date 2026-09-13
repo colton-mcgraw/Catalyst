@@ -47,11 +47,11 @@ namespace catalyst::events
     private:
         friend class bus;
 
-        token(const std::shared_ptr<detail::state> &owner,
-              const std::shared_ptr<detail::slot_base> &s,
-              detail::kind k,
+        token(const std::shared_ptr<detail::state> &owner, const std::shared_ptr<detail::slot_base> &s, detail::kind k,
               event_key type) noexcept
-            : owner_(owner), slot_(s), kind_(k), type_(type), id_(s->id) {}
+            : owner_(owner), slot_(s), kind_(k), type_(type), id_(s->id)
+        {
+        }
 
         std::weak_ptr<detail::state> owner_;
         std::weak_ptr<detail::slot_base> slot_;

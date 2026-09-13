@@ -4,14 +4,14 @@
  * License: MIT (see LICENSE).
  */
 
-#include "../test_common.hpp"
-
 #include <catalyst/events/bus.hpp>
 #include <catalyst/input/action_map.hpp>
 #include <catalyst/input/gamepad.hpp>
 #include <catalyst/input/keyboard.hpp>
 #include <catalyst/input/mouse.hpp>
 #include <catalyst/input/registry.hpp>
+
+#include "../test_common.hpp"
 
 #include <cmath>
 #include <string>

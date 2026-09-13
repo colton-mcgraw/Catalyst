@@ -6,14 +6,14 @@
 
 #pragma once
 
+#include "tape.hpp"
+
 #include <bit>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <string>
 #include <vector>
-
-#include "tape.hpp"
 
 namespace catalyst::resource::json
 {

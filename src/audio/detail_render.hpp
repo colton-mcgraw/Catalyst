@@ -61,16 +61,10 @@ namespace catalyst::audio::detail
         }
 
         /** @brief Any thread. Records audio that was dropped or not produced in time. */
-        void add_xrun(std::uint64_t count = 1) noexcept
-        {
-            xruns_.fetch_add(count, std::memory_order_relaxed);
-        }
+        void add_xrun(std::uint64_t count = 1) noexcept { xruns_.fetch_add(count, std::memory_order_relaxed); }
 
         /** @brief Any thread. Records a device topology change. */
-        void add_device_change() noexcept
-        {
-            device_changes_.fetch_add(1, std::memory_order_relaxed);
-        }
+        void add_device_change() noexcept { device_changes_.fetch_add(1, std::memory_order_relaxed); }
 
         /**
          * @brief How many xruns happened since this was last asked, for coalescing into one event.
@@ -141,17 +135,11 @@ namespace catalyst::audio::detail
     class render_dispatcher
     {
     public:
-        render_dispatcher(renderer render, stats_block &stats) noexcept
-            : render_(render), stats_(&stats) {}
+        render_dispatcher(renderer render, stats_block &stats) noexcept : render_(render), stats_(&stats) {}
 
         /** @brief Render thread. Either span may be empty. */
-        void dispatch(
-            std::span<sample> output,
-            std::span<const sample> input,
-            std::uint32_t frames,
-            channel_count output_channels,
-            channel_count input_channels,
-            sample_rate_t rate) noexcept
+        void dispatch(std::span<sample> output, std::span<const sample> input, std::uint32_t frames,
+                      channel_count output_channels, channel_count input_channels, sample_rate_t rate) noexcept
         {
             if (frames == 0)
                 return;
@@ -180,10 +168,7 @@ namespace catalyst::audio::detail
         }
 
         /** @brief Frames dispatched since the last `rewind()`. */
-        [[nodiscard]] frame_count position() const noexcept
-        {
-            return position_.load(std::memory_order_relaxed);
-        }
+        [[nodiscard]] frame_count position() const noexcept { return position_.load(std::memory_order_relaxed); }
 
         void rewind() noexcept { position_.store(0, std::memory_order_relaxed); }
 

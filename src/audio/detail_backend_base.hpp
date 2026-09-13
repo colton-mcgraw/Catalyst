@@ -63,10 +63,7 @@ namespace catalyst::audio::detail
          * this object's handler and not in the caller's frame - the callers are `noexcept` driver
          * callbacks, where an allocation failure one frame too early ends the process.
          */
-        void fire(device_notice::kind what, std::string_view device_id) noexcept
-        {
-            emit(what, device_id);
-        }
+        void fire(device_notice::kind what, std::string_view device_id) noexcept { emit(what, device_id); }
 
         /**
          * @brief Any thread. Counts a change that has no notice shape - a driver changing the
@@ -77,10 +74,7 @@ namespace catalyst::audio::detail
         /** @brief Stops delivery. The counter keeps working, so a late change is still counted. */
         void retire() noexcept { active_.store(false, std::memory_order_release); }
 
-        [[nodiscard]] std::uint64_t changes() const noexcept
-        {
-            return changes_.load(std::memory_order_relaxed);
-        }
+        [[nodiscard]] std::uint64_t changes() const noexcept { return changes_.load(std::memory_order_relaxed); }
 
     private:
         void emit(device_notice::kind what, std::string_view device_id) noexcept
@@ -134,10 +128,7 @@ namespace catalyst::audio::detail
 
         [[nodiscard]] backend_kind kind() const noexcept final { return kind_; }
 
-        [[nodiscard]] bool is_running() const noexcept override
-        {
-            return running_.load(std::memory_order_acquire);
-        }
+        [[nodiscard]] bool is_running() const noexcept override { return running_.load(std::memory_order_acquire); }
 
         [[nodiscard]] stream_stats stats() const noexcept override
         {
@@ -196,10 +187,7 @@ namespace catalyst::audio::detail
         }
 
         /** @brief Clears any recorded failure, so a restarted stream does not report an old one. */
-        void clear_failure() noexcept
-        {
-            stream_error_.store(error_code::none, std::memory_order_relaxed);
-        }
+        void clear_failure() noexcept { stream_error_.store(error_code::none, std::memory_order_relaxed); }
 
         /**
          * @brief Records which device was opened and arms notice delivery for it.
@@ -211,8 +199,7 @@ namespace catalyst::audio::detail
             device_id_ = std::move(device_id);
             device_name_ = device_name.empty() ? device_id_ : std::move(device_name);
 
-            notices_ = std::make_shared<notice_publisher>(
-                request_.notices, request_.direction, device_id_);
+            notices_ = std::make_shared<notice_publisher>(request_.notices, request_.direction, device_id_);
             change_baseline_.store(0, std::memory_order_relaxed);
         }
 
@@ -256,20 +243,11 @@ namespace catalyst::audio::detail
          * @details Atomic because a driver may tell us on its own thread that the rate changed
          * underneath us - ASIO does - while `info()` is answering on the caller's.
          */
-        [[nodiscard]] sample_rate_t rate() const noexcept
-        {
-            return sample_rate_.load(std::memory_order_relaxed);
-        }
+        [[nodiscard]] sample_rate_t rate() const noexcept { return sample_rate_.load(std::memory_order_relaxed); }
 
-        void set_rate(sample_rate_t rate) noexcept
-        {
-            sample_rate_.store(rate, std::memory_order_relaxed);
-        }
+        void set_rate(sample_rate_t rate) noexcept { sample_rate_.store(rate, std::memory_order_relaxed); }
 
-        [[nodiscard]] const std::shared_ptr<notice_publisher> &publisher() const noexcept
-        {
-            return notices_;
-        }
+        [[nodiscard]] const std::shared_ptr<notice_publisher> &publisher() const noexcept { return notices_; }
 
         const backend_kind kind_;
         open_request request_{};

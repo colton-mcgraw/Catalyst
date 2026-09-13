@@ -60,7 +60,10 @@ namespace catalyst::ui
          * @param a The alpha channel, in [0, 1].
          * @return The color.
          */
-        [[nodiscard]] static constexpr color rgba(float r, float g, float b, float a) noexcept { return color{r, g, b, a}; }
+        [[nodiscard]] static constexpr color rgba(float r, float g, float b, float a) noexcept
+        {
+            return color{r, g, b, a};
+        }
 
         /**
          * @fn from_rgba8
@@ -86,8 +89,9 @@ namespace catalyst::ui
          */
         [[nodiscard]] static constexpr color from_argb32(std::uint32_t packed) noexcept
         {
-            return from_rgba8(static_cast<std::uint8_t>((packed >> 16) & 0xFFu), static_cast<std::uint8_t>((packed >> 8) & 0xFFu),
-                              static_cast<std::uint8_t>(packed & 0xFFu), static_cast<std::uint8_t>((packed >> 24) & 0xFFu));
+            return from_rgba8(
+                static_cast<std::uint8_t>((packed >> 16) & 0xFFu), static_cast<std::uint8_t>((packed >> 8) & 0xFFu),
+                static_cast<std::uint8_t>(packed & 0xFFu), static_cast<std::uint8_t>((packed >> 24) & 0xFFu));
         }
 
         /**
@@ -98,7 +102,8 @@ namespace catalyst::ui
          */
         [[nodiscard]] constexpr std::uint32_t to_rgba8() const noexcept
         {
-            const auto quantize = [](float v) constexpr noexcept -> std::uint32_t {
+            const auto quantize = [](float v) constexpr noexcept -> std::uint32_t
+            {
                 const float clamped = (v < 0.0f) ? 0.0f : ((v > 1.0f) ? 1.0f : v);
                 return static_cast<std::uint32_t>(clamped * 255.0f + 0.5f);
             };

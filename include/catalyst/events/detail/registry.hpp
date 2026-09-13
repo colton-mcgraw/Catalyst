@@ -94,8 +94,7 @@ namespace catalyst::events::detail
         {
             auto &current = live[type];
             auto updated = current ? std::make_shared<list>(*current) : std::make_shared<list>();
-            auto pos = std::ranges::find_if(*updated, [&](const auto &x)
-                                            { return x->priority < s->priority; });
+            auto pos = std::ranges::find_if(*updated, [&](const auto &x) { return x->priority < s->priority; });
             updated->insert(pos, std::move(s));
             current = std::move(updated);
         }
@@ -107,8 +106,7 @@ namespace catalyst::events::detail
                 return;
 
             const list &current = *it->second;
-            auto pos = std::ranges::find(current, id, [](const auto &x)
-                                         { return x->id; });
+            auto pos = std::ranges::find(current, id, [](const auto &x) { return x->id; });
             if (pos == current.end())
                 return;
 

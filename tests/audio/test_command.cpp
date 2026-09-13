@@ -15,9 +15,9 @@
  * License: MIT (see LICENSE).
  */
 
-#include "../test_common.hpp"
-
 #include <catalyst/audio/audio.hpp>
+
+#include "../test_common.hpp"
 
 #include <atomic>
 #include <cstddef>
@@ -225,7 +225,11 @@ namespace
         static_assert(!commandable<decltype(owning)>, "a capture that frees must not reach the ring");
 
         // And the shape that is meant to work: handles and numbers, by value.
-        const auto ordinary = [voice = 3u, gain = 0.5f]() noexcept { (void)voice; (void)gain; };
+        const auto ordinary = [voice = 3u, gain = 0.5f]() noexcept
+        {
+            (void)voice;
+            (void)gain;
+        };
         static_assert(commandable<decltype(ordinary)>, "handles and floats are the intended capture");
     }
 
@@ -317,8 +321,8 @@ namespace
 
         // The render thread replaces what it was using and hands the old one back rather than
         // deleting it, which is the whole point - `delete` on the render thread is an allocation.
-        CT_REQUIRE(to_audio.post([&retired, live]() noexcept
-                                 { (void)retired.try_push(std::unique_ptr<counted>(live)); }));
+        CT_REQUIRE(
+            to_audio.post([&retired, live]() noexcept { (void)retired.try_push(std::unique_ptr<counted>(live)); }));
         CT_REQUIRE(to_audio.execute() == 1);
         CT_REQUIRE(counted::alive == 1); // still alive: nothing was destroyed on the audio side
 
@@ -342,23 +346,25 @@ namespace
         spsc_ring<int> ring(64);
         std::atomic<bool> failed{false};
 
-        std::thread consumer([&ring, &failed]
-                             {
-            int expected = 0;
-            int value = 0;
-            while (expected < total)
+        std::thread consumer(
+            [&ring, &failed]
             {
-                if (ring.try_pop(value))
+                int expected = 0;
+                int value = 0;
+                while (expected < total)
                 {
-                    if (value != expected)   // a lost, duplicated or reordered element
-                        failed.store(true, std::memory_order_relaxed);
-                    ++expected;
+                    if (ring.try_pop(value))
+                    {
+                        if (value != expected) // a lost, duplicated or reordered element
+                            failed.store(true, std::memory_order_relaxed);
+                        ++expected;
+                    }
+                    else
+                    {
+                        std::this_thread::yield();
+                    }
                 }
-                else
-                {
-                    std::this_thread::yield();
-                }
-            } });
+            });
 
         for (int i = 0; i < total; ++i)
         {
@@ -385,31 +391,33 @@ namespace
         // command touches belongs to the thread that runs the command.
         int applied = 0;
 
-        std::thread consumer([&commands, &executed, &failed, &applied]
-                             {
-            while (executed.load(std::memory_order_relaxed) < total)
+        std::thread consumer(
+            [&commands, &executed, &failed, &applied]
             {
-                const std::size_t ran = commands.execute(16);   // a block's worth at a time
-                if (ran == 0)
-                    std::this_thread::yield();
-                else
-                    executed.fetch_add(static_cast<int>(ran), std::memory_order_relaxed);
-            }
+                while (executed.load(std::memory_order_relaxed) < total)
+                {
+                    const std::size_t ran = commands.execute(16); // a block's worth at a time
+                    if (ran == 0)
+                        std::this_thread::yield();
+                    else
+                        executed.fetch_add(static_cast<int>(ran), std::memory_order_relaxed);
+                }
 
-            if (applied != total)
-                failed.store(true, std::memory_order_relaxed);
-        });
+                if (applied != total)
+                    failed.store(true, std::memory_order_relaxed);
+            });
 
         std::uint64_t retries = 0;
         for (int i = 0; i < total; ++i)
         {
-            while (!commands.post([&applied, i]() noexcept
-                                  {
-                                      if (applied != i)   // out of order, or one ran twice
-                                          applied = -1;
-                                      else
-                                          ++applied;
-                                  }))
+            while (!commands.post(
+                [&applied, i]() noexcept
+                {
+                    if (applied != i) // out of order, or one ran twice
+                        applied = -1;
+                    else
+                        ++applied;
+                }))
             {
                 ++retries;
                 std::this_thread::yield();

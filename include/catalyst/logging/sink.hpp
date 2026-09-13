@@ -97,7 +97,7 @@ namespace catalyst::logging
         template <typename S>
         concept has_threading_member =
             requires { requires std::same_as<std::remove_cv_t<decltype(S::log_sink_threading)>, sink_threading>; };
-    }
+    } // namespace detail
 
     /**
      * @struct sink_traits
@@ -194,7 +194,8 @@ namespace catalyst::logging
          * with no contract does not get that far.
          */
         template <typename S>
-        inline constexpr sink_threading threading_or_reentrant = [] {
+        inline constexpr sink_threading threading_or_reentrant = []
+        {
             if constexpr (declares_threading<S>)
                 return sink_traits<S>::threading;
             else
@@ -207,9 +208,8 @@ namespace catalyst::logging
 
         /// The message an `owner_thread` sink handed straight to the router fails on.
         template <typename S>
-        inline constexpr bool direct_sink_diagnostic =
-            threading_or_reentrant<S> != sink_threading::owner_thread;
-    }
+        inline constexpr bool direct_sink_diagnostic = threading_or_reentrant<S> != sink_threading::owner_thread;
+    } // namespace detail
 
     // ---------------------------------------------------------------------
     // Registration

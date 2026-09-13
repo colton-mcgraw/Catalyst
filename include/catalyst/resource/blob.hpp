@@ -67,8 +67,7 @@ namespace catalyst::resource
         blob &operator=(const blob &) = delete;
 
         blob(blob &&other) noexcept
-            : bytes_(std::exchange(other.bytes_, {})),
-              release_(std::exchange(other.release_, nullptr)),
+            : bytes_(std::exchange(other.bytes_, {})), release_(std::exchange(other.release_, nullptr)),
               context_(std::exchange(other.context_, nullptr))
         {
         }

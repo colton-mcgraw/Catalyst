@@ -3,8 +3,8 @@
  * SPDX-FileCopyrightText: 2026-Current Catalyst
  *
  * @file
- * @brief The rendering device: the root object that owns every other GPU resource (buffers, shaders, textures, pipelines,
- * swapchains, command lists) and represents one logical connection to a graphics adapter.
+ * @brief The rendering device: the root object that owns every other GPU resource (buffers, shaders, textures,
+ * pipelines, swapchains, command lists) and represents one logical connection to a graphics adapter.
  *
  * @details **Threads.** From Tier 3 on, the module is safe to use from several threads at once, and
  * the rules are worth stating precisely because "thread-safe" on its own says nothing useful:
@@ -44,7 +44,8 @@ namespace catalyst::rendering
     {
         /** Reported to the driver (e.g. `VkApplicationInfo::pApplicationName`). */
         const char *application_name = "Catalyst";
-        /** Enable API validation / debug layers where the backend supports them. Costs performance; use in debug builds. */
+        /** Enable API validation / debug layers where the backend supports them. Costs performance; use in debug
+         * builds. */
         bool enable_validation = false;
         /** Prefer a discrete GPU over an integrated one when several adapters are present. */
         bool prefer_discrete_adapter = true;

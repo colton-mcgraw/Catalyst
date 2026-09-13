@@ -11,9 +11,9 @@
 namespace catalyst
 {
 
-const char *version() noexcept
-{
-    return CATALYST_VERSION_STRING;
-}
+    const char *version() noexcept
+    {
+        return CATALYST_VERSION_STRING;
+    }
 
 } // namespace catalyst

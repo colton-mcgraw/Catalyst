@@ -15,9 +15,8 @@
  * License: MIT (see LICENSE).
  */
 
-#include <catalyst/audio/mixer.hpp>
-
 #include <catalyst/audio/command.hpp>
+#include <catalyst/audio/mixer.hpp>
 
 #include <algorithm>
 #include <atomic>
@@ -118,10 +117,7 @@ namespace catalyst::audio
     struct mixer::impl
     {
         /** @brief Takes an already-sanitised config, because `commands` is sized from it here. */
-        explicit impl(const mixer_config &settings)
-            : config(settings), commands(settings.command_capacity)
-        {
-        }
+        explicit impl(const mixer_config &settings) : config(settings), commands(settings.command_capacity) {}
 
         // ---- Built once, read by both ----------------------------------------------------------
 
@@ -210,12 +206,8 @@ namespace catalyst::audio
         // ---- Render-thread operations, called from commands -------------------------------------
 
         /** @brief Render thread. Puts a voice in a slot the game thread already reserved. */
-        void start_voice(
-            std::uint32_t index,
-            std::uint32_t generation,
-            std::uint32_t sound_index,
-            const sound_buffer *buffer,
-            voice_params params) noexcept
+        void start_voice(std::uint32_t index, std::uint32_t generation, std::uint32_t sound_index,
+                         const sound_buffer *buffer, voice_params params) noexcept
         {
             if (index >= voices.size())
                 return;
@@ -289,33 +281,39 @@ namespace catalyst::audio
             const std::uint32_t index = voice.index;
             const std::uint32_t generation = voice.generation;
 
-            return commands.post([self = this, index, generation]() noexcept
-                                 {
-                if (self->voice_at(index, generation) != nullptr)
-                    self->end_voice(index); });
+            return commands.post(
+                [self = this, index, generation]() noexcept
+                {
+                    if (self->voice_at(index, generation) != nullptr)
+                        self->end_voice(index);
+                });
         }
 
         /** @brief Game thread. Queues the end of every voice. False when the ring is full. */
         [[nodiscard]] bool post_stop_all()
         {
-            return commands.post([self = this]() noexcept
-                                 {
-                for (std::uint32_t v = 0; v < self->voices.size(); ++v)
-                    self->end_voice(v); });
+            return commands.post(
+                [self = this]() noexcept
+                {
+                    for (std::uint32_t v = 0; v < self->voices.size(); ++v)
+                        self->end_voice(v);
+                });
         }
 
         /** @brief Game thread. Queues a sound's retirement. False when the ring is full. */
         [[nodiscard]] bool post_release(std::uint32_t index)
         {
-            return commands.post([self = this, index]() noexcept
-                                 {
-                self->audio_sounds[index] = nullptr;
+            return commands.post(
+                [self = this, index]() noexcept
+                {
+                    self->audio_sounds[index] = nullptr;
 
-                for (std::uint32_t v = 0; v < self->voices.size(); ++v)
-                    if (self->voices[v].active && self->voices[v].sound_index == index)
-                        self->end_voice(v);
+                    for (std::uint32_t v = 0; v < self->voices.size(); ++v)
+                        if (self->voices[v].active && self->voices[v].sound_index == index)
+                            self->end_voice(v);
 
-                self->held[index].store(0, std::memory_order_release); });
+                    self->held[index].store(0, std::memory_order_release);
+                });
         }
 
         /**
@@ -340,8 +338,7 @@ namespace catalyst::audio
     // Construction
     // ------------------------------------------------------------------------------------------------------------------
 
-    mixer::mixer(const mixer_config &config)
-        : impl_(std::make_unique<impl>(sane(config)))
+    mixer::mixer(const mixer_config &config) : impl_(std::make_unique<impl>(sane(config)))
     {
         impl &m = *impl_;
 
@@ -398,8 +395,7 @@ namespace catalyst::audio
 
         const sound_buffer *pointer = m.sounds[index].buffer.get();
 
-        if (!m.commands.post([self = &m, index, pointer]() noexcept
-                             { self->audio_sounds[index] = pointer; }))
+        if (!m.commands.post([self = &m, index, pointer]() noexcept { self->audio_sounds[index] = pointer; }))
         {
             // The render thread will never learn about it, so nothing here happened.
             m.sounds[index].buffer.reset();
@@ -434,8 +430,7 @@ namespace catalyst::audio
         if (!sound.valid() || sound.index >= m.sounds.size())
             return false;
 
-        return m.sound_generation[sound.index] == sound.generation &&
-               m.sounds[sound.index].buffer != nullptr &&
+        return m.sound_generation[sound.index] == sound.generation && m.sounds[sound.index].buffer != nullptr &&
                !m.sounds[sound.index].releasing;
     }
 
@@ -513,10 +508,12 @@ namespace catalyst::audio
         const std::uint32_t generation = voice.generation;
         const float target = sane_gain(gain);
 
-        m.commands.post([self = &m, index, generation, target]() noexcept
-                        {
-            if (impl::audio_voice *v = self->voice_at(index, generation))
-                v->gain_target = target; });
+        m.commands.post(
+            [self = &m, index, generation, target]() noexcept
+            {
+                if (impl::audio_voice *v = self->voice_at(index, generation))
+                    v->gain_target = target;
+            });
     }
 
     void mixer::set_pan(voice_id voice, float pan)
@@ -526,10 +523,12 @@ namespace catalyst::audio
         const std::uint32_t generation = voice.generation;
         const float target = sane_pan(pan);
 
-        m.commands.post([self = &m, index, generation, target]() noexcept
-                        {
-            if (impl::audio_voice *v = self->voice_at(index, generation))
-                v->pan_target = target; });
+        m.commands.post(
+            [self = &m, index, generation, target]() noexcept
+            {
+                if (impl::audio_voice *v = self->voice_at(index, generation))
+                    v->pan_target = target;
+            });
     }
 
     void mixer::set_speed(voice_id voice, float speed)
@@ -539,10 +538,12 @@ namespace catalyst::audio
         const std::uint32_t generation = voice.generation;
         const float target = sane_speed(speed);
 
-        m.commands.post([self = &m, index, generation, target]() noexcept
-                        {
-            if (impl::audio_voice *v = self->voice_at(index, generation))
-                v->speed = target; });
+        m.commands.post(
+            [self = &m, index, generation, target]() noexcept
+            {
+                if (impl::audio_voice *v = self->voice_at(index, generation))
+                    v->speed = target;
+            });
     }
 
     void mixer::set_master_gain(float gain)
@@ -550,8 +551,7 @@ namespace catalyst::audio
         impl &m = *impl_;
         const float target = sane_gain(gain);
 
-        m.commands.post([self = &m, target]() noexcept
-                        { self->master_target = target; });
+        m.commands.post([self = &m, target]() noexcept { self->master_target = target; });
     }
 
     bool mixer::is_playing(voice_id voice) const noexcept
@@ -667,8 +667,7 @@ namespace catalyst::audio
         // How far the read head moves per output frame: the rate ratio, times the caller's pitch.
         double step = static_cast<double>(voice.speed);
         if (block.sample_rate != 0 && buffer->sample_rate() != 0)
-            step *= static_cast<double>(buffer->sample_rate()) /
-                    static_cast<double>(block.sample_rate);
+            step *= static_cast<double>(buffer->sample_rate()) / static_cast<double>(block.sample_rate);
 
         // Pan is evaluated twice per block rather than twice per frame, and the channel gains are
         // interpolated between - the trigonometry costs the same as a few frames of mixing.
@@ -771,9 +770,8 @@ namespace catalyst::audio
     {
         impl &m = *impl_;
 
-        const std::size_t budget = m.config.command_budget == 0
-                                       ? std::numeric_limits<std::size_t>::max()
-                                       : m.config.command_budget;
+        const std::size_t budget =
+            m.config.command_budget == 0 ? std::numeric_limits<std::size_t>::max() : m.config.command_budget;
         m.commands.execute(budget);
 
         m.blocks.fetch_add(1, std::memory_order_relaxed);

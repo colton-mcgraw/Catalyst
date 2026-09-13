@@ -8,9 +8,8 @@
  * License: MIT (see LICENSE).
  */
 
-#include <catalyst/resource/csv/serializer.hpp>
-
 #include <catalyst/resource/csv/dialect.hpp>
+#include <catalyst/resource/csv/serializer.hpp>
 #include <catalyst/resource/csv/table.hpp>
 #include <catalyst/resource/csv/tape.hpp>
 

@@ -292,8 +292,8 @@ namespace catalyst::logging
             return false;
 
         std::scoped_lock lock(middleware_mutex_);
-        const auto at = std::ranges::find(*middleware_, id, [](const std::shared_ptr<detail::middleware_entry> &e)
-                                          { return e->id; });
+        const auto at = std::ranges::find(*middleware_, id,
+                                          [](const std::shared_ptr<detail::middleware_entry> &e) { return e->id; });
         if (at == middleware_->end())
             return false;
 
@@ -599,10 +599,8 @@ namespace catalyst::logging
             stats.written = entry.control->written.load(std::memory_order_relaxed);
             stats.filtered = entry.control->filtered.load(std::memory_order_relaxed);
             stats.exceptions = entry.control->exceptions.load(std::memory_order_relaxed);
-            stats.total_time =
-                std::chrono::nanoseconds(entry.control->nanoseconds.load(std::memory_order_relaxed));
-            stats.max_time =
-                std::chrono::nanoseconds(entry.control->max_nanoseconds.load(std::memory_order_relaxed));
+            stats.total_time = std::chrono::nanoseconds(entry.control->nanoseconds.load(std::memory_order_relaxed));
+            stats.max_time = std::chrono::nanoseconds(entry.control->max_nanoseconds.load(std::memory_order_relaxed));
             return stats;
         }
     } // namespace

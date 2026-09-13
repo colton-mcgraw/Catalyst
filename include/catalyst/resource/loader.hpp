@@ -174,9 +174,10 @@ namespace catalyst::resource
      * the message names the loader, instead of somewhere inside @ref load.
      */
     template <typename T>
-    concept loadable = requires(std::span<const std::byte> bytes, const load_context &ctx, const load_options_t<T> &opt) {
-        { loader<T>::decode(bytes, ctx, opt) } -> std::same_as<std::expected<T, error>>;
-    };
+    concept loadable =
+        requires(std::span<const std::byte> bytes, const load_context &ctx, const load_options_t<T> &opt) {
+            { loader<T>::decode(bytes, ctx, opt) } -> std::same_as<std::expected<T, error>>;
+        };
 
     // -----------------------------------------------------------------------------
     // load
@@ -243,7 +244,7 @@ namespace catalyst::resource
      */
     template <loadable T>
     [[nodiscard]] events::task<std::expected<asset_handle<T>, error>> load_async(vfs &files, store &assets, uri name,
-                                                                                load_options_t<T> options = {});
+                                                                                 load_options_t<T> options = {});
 
 } // namespace catalyst::resource
 

@@ -75,8 +75,14 @@ namespace catalyst::input
         using u = std::underlying_type_t<mouse_buttons>;
         return static_cast<mouse_buttons>(static_cast<u>(~static_cast<u>(a) & 0x1Fu));
     }
-    inline constexpr mouse_buttons &operator|=(mouse_buttons &a, mouse_buttons b) noexcept { return a = (a | b); }
-    inline constexpr mouse_buttons &operator&=(mouse_buttons &a, mouse_buttons b) noexcept { return a = (a & b); }
+    inline constexpr mouse_buttons &operator|=(mouse_buttons &a, mouse_buttons b) noexcept
+    {
+        return a = (a | b);
+    }
+    inline constexpr mouse_buttons &operator&=(mouse_buttons &a, mouse_buttons b) noexcept
+    {
+        return a = (a & b);
+    }
 
     /** @brief A single button as a bit set. `unknown` maps to `none`. */
     [[nodiscard]] inline constexpr mouse_buttons to_mouse_buttons(mouse_button b) noexcept
@@ -95,8 +101,8 @@ namespace catalyst::input
     /**
      * @enum mouse_axis
      * @brief The mouse's analog controls.
-     * @details `x`/`y` are absolute; the rest accumulate over a frame and are cleared by input_state::new_frame(), which
-     * is what makes them bindable as a look axis without the application differencing positions itself.
+     * @details `x`/`y` are absolute; the rest accumulate over a frame and are cleared by input_state::new_frame(),
+     * which is what makes them bindable as a look axis without the application differencing positions itself.
      */
     enum class mouse_axis : std::uint8_t
     {
@@ -154,8 +160,8 @@ namespace catalyst::input
 
     /**
      * @struct mouse_move_event
-     * @brief The cursor moved inside the window's client area - or outside it, while a button is held and the window has
-     * the mouse captured.
+     * @brief The cursor moved inside the window's client area - or outside it, while a button is held and the window
+     * has the mouse captured.
      */
     struct mouse_move_event : device_event<tags::mouse_move>
     {
@@ -184,7 +190,8 @@ namespace catalyst::input
         mouse_button button{mouse_button::unknown};
         /** @brief Press or release; a mouse never produces button_action::repeat. */
         button_action action{button_action::press};
-        /** @brief For a press, how many consecutive clicks it completes (1 = single, 2 = double). Always 1 for a release. */
+        /** @brief For a press, how many consecutive clicks it completes (1 = single, 2 = double). Always 1 for a
+         * release. */
         std::uint8_t clicks{1};
         /** @brief Cursor position in client-area pixels. */
         math::vec2<std::int32_t> position_px{};

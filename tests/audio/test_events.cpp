@@ -9,10 +9,10 @@
  * License: MIT (see LICENSE).
  */
 
-#include "../test_common.hpp"
-
 #include <catalyst/audio/audio.hpp>
 #include <catalyst/events/bus.hpp>
+
+#include "../test_common.hpp"
 
 #include <vector>
 
@@ -66,10 +66,10 @@ namespace
         std::vector<stream_started_event> started;
         std::vector<stream_stopped_event> stopped;
 
-        auto started_token = bus.add_listener<stream_started_event>(
-            [&started](const stream_started_event &event) { started.push_back(event); });
-        auto stopped_token = bus.add_listener<stream_stopped_event>(
-            [&stopped](const stream_stopped_event &event) { stopped.push_back(event); });
+        auto started_token = bus.add_listener<stream_started_event>([&started](const stream_started_event &event)
+                                                                    { started.push_back(event); });
+        auto stopped_token = bus.add_listener<stream_stopped_event>([&stopped](const stream_stopped_event &event)
+                                                                    { stopped.push_back(event); });
 
         auto opened = stream::open(null_config(&bus), renderer{});
         CT_REQUIRE(opened.has_value());
@@ -127,8 +127,7 @@ namespace
         events::bus bus;
 
         int starts = 0;
-        auto token = bus.add_listener<stream_started_event>(
-            [&starts](const stream_started_event &) { ++starts; });
+        auto token = bus.add_listener<stream_started_event>([&starts](const stream_started_event &) { ++starts; });
 
         auto opened = stream::open(null_config(&bus), renderer{});
         CT_REQUIRE(opened.has_value());

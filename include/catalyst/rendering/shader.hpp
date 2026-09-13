@@ -3,8 +3,8 @@
  * SPDX-FileCopyrightText: 2026-Current Catalyst
  *
  * @file
- * @brief Shader modules. The rendering API consumes pre-compiled bytecode (SPIR-V, DXIL, ...); compiling from source and
- * reflecting the result are planned as a separate layer on top of this header.
+ * @brief Shader modules. The rendering API consumes pre-compiled bytecode (SPIR-V, DXIL, ...); compiling from source
+ * and reflecting the result are planned as a separate layer on top of this header.
  * @details A `shader` is one stage's worth of bytecode. Shaders are combined into a `pipeline` (see pipeline.hpp); they
  * are never bound directly to a command list. The bytecode is copied at creation so the caller's buffer may be freed
  * immediately afterwards.
@@ -37,9 +37,12 @@ namespace catalyst::rendering
     {
         switch (stage)
         {
-        case shader_stage::vertex:   return "vertex";
-        case shader_stage::fragment: return "fragment";
-        case shader_stage::compute:  return "compute";
+        case shader_stage::vertex:
+            return "vertex";
+        case shader_stage::fragment:
+            return "fragment";
+        case shader_stage::compute:
+            return "compute";
         }
         return "unknown";
     }
@@ -62,8 +65,10 @@ namespace catalyst::rendering
     {
         switch (backend)
         {
-        case backend_kind::d3d12: return shader_bytecode_format::dxil;
-        case backend_kind::metal: return shader_bytecode_format::metallib;
+        case backend_kind::d3d12:
+            return shader_bytecode_format::dxil;
+        case backend_kind::metal:
+            return shader_bytecode_format::metallib;
         case backend_kind::vulkan:
         case backend_kind::null:
             break;
@@ -97,8 +102,8 @@ namespace catalyst::rendering
     using shader = resource_handle<shader_tag>;
 
     /**
-     * @brief Creates a shader module from bytecode. Returns an invalid handle when `dev` is invalid, the bytecode is empty
-     * or the backend rejects it.
+     * @brief Creates a shader module from bytecode. Returns an invalid handle when `dev` is invalid, the bytecode is
+     * empty or the backend rejects it.
      */
     [[nodiscard]] shader create_shader(const device &dev, const shader_desc &desc);
 

@@ -9,12 +9,10 @@
  * License: MIT (see LICENSE).
  */
 
-#include <catalyst/resource/json/parser.hpp>
-
 #include <catalyst/resource/json/document.hpp>
 #include <catalyst/resource/json/error.hpp>
+#include <catalyst/resource/json/parser.hpp>
 #include <catalyst/resource/json/value.hpp>
-
 #include <catalyst/text/utf8.hpp>
 
 #include <charconv>
@@ -252,9 +250,8 @@ namespace catalyst::resource::json::detail
 
         if (n.fast && n.mant <= (std::uint64_t(1) << 53) && n.exp10 >= -22 && n.exp10 <= 22)
         {
-            static constexpr double p10[] = {1e0,  1e1,  1e2,  1e3,  1e4,  1e5,  1e6,  1e7,
-                                             1e8,  1e9,  1e10, 1e11, 1e12, 1e13, 1e14, 1e15,
-                                             1e16, 1e17, 1e18, 1e19, 1e20, 1e21, 1e22};
+            static constexpr double p10[] = {1e0,  1e1,  1e2,  1e3,  1e4,  1e5,  1e6,  1e7,  1e8,  1e9,  1e10, 1e11,
+                                             1e12, 1e13, 1e14, 1e15, 1e16, 1e17, 1e18, 1e19, 1e20, 1e21, 1e22};
             double d = static_cast<double>(n.mant);
             d = n.exp10 < 0 ? d / p10[-n.exp10] : d * p10[n.exp10];
             return {false, 0, n.neg ? -d : d};

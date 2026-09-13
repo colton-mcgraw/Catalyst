@@ -23,10 +23,7 @@ namespace catalyst::audio::detail
         class null_backend final : public backend_base
         {
         public:
-            explicit null_backend(open_request request)
-                : backend_base(backend_kind::null, std::move(request))
-            {
-            }
+            explicit null_backend(open_request request) : backend_base(backend_kind::null, std::move(request)) {}
 
             [[nodiscard]] std::expected<std::vector<device_info>, error> enumerate_devices() const override
             {

@@ -168,7 +168,8 @@ namespace catalyst::rendering::detail::vulkan
         // queue, which nothing in this backend tracks.
         const auto uploaded = transfer_once(
             *dev, device_id, initial_data, t.created,
-            [&](VkCommandBuffer cmd, VkBuffer source, VkDeviceSize source_offset) {
+            [&](VkCommandBuffer cmd, VkBuffer source, VkDeviceSize source_offset)
+            {
                 VkImageMemoryBarrier to_general{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
                 to_general.srcAccessMask = 0;
                 to_general.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
@@ -267,13 +268,15 @@ namespace catalyst::rendering::detail
             const VkImageView sampled_view = t->sampled_view != t->view ? t->sampled_view : VK_NULL_HANDLE;
             const VkImage image = t->image;
             const VkDeviceMemory memory = t->memory;
-            defer_release(*dev, [d, view, sampled_view, image, memory] {
-                if (sampled_view)
-                    vkDestroyImageView(d, sampled_view, nullptr);
-                vkDestroyImageView(d, view, nullptr);
-                vkDestroyImage(d, image, nullptr);
-                vkFreeMemory(d, memory, nullptr);
-            });
+            defer_release(*dev,
+                          [d, view, sampled_view, image, memory]
+                          {
+                              if (sampled_view)
+                                  vkDestroyImageView(d, sampled_view, nullptr);
+                              vkDestroyImageView(d, view, nullptr);
+                              vkDestroyImage(d, image, nullptr);
+                              vkFreeMemory(d, memory, nullptr);
+                          });
         }
         reg().textures.erase(id);
     }

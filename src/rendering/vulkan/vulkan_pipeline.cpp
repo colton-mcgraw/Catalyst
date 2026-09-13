@@ -151,8 +151,7 @@ namespace catalyst::rendering::detail
         multisample.rasterizationSamples = to_vk_sample_count(desc.sample_count);
 
         const format depth_format = resolve_format(*dev, desc.depth_format);
-        VkPipelineDepthStencilStateCreateInfo depth_stencil{
-            VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO};
+        VkPipelineDepthStencilStateCreateInfo depth_stencil{VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO};
         depth_stencil.depthTestEnable =
             (depth_format != format::unknown && desc.depth_stencil.depth_test) ? VK_TRUE : VK_FALSE;
         depth_stencil.depthWriteEnable =
@@ -185,8 +184,8 @@ namespace catalyst::rendering::detail
         rendering.colorAttachmentCount = color_count;
         rendering.pColorAttachmentFormats = color_formats.data();
         rendering.depthAttachmentFormat = to_vk_format(depth_format);
-        rendering.stencilAttachmentFormat = is_stencil_format(depth_format) ? to_vk_format(depth_format)
-                                                                            : VK_FORMAT_UNDEFINED;
+        rendering.stencilAttachmentFormat =
+            is_stencil_format(depth_format) ? to_vk_format(depth_format) : VK_FORMAT_UNDEFINED;
 
         VkGraphicsPipelineCreateInfo info{VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO};
         info.pNext = &rendering;

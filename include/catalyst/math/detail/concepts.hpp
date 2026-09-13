@@ -30,9 +30,10 @@ namespace catalyst::math
         // types are excluded too: vector<char, 3> would format as letters.
         // signed char and unsigned char stay, they are the 8-bit integers.
         template <typename T>
-        concept excluded_arithmetic = std::is_same_v<T, bool> || std::is_same_v<T, char> || std::is_same_v<T, wchar_t> ||
-                                      std::is_same_v<T, char8_t> || std::is_same_v<T, char16_t> || std::is_same_v<T, char32_t>;
-    }
+        concept excluded_arithmetic =
+            std::is_same_v<T, bool> || std::is_same_v<T, char> || std::is_same_v<T, wchar_t> ||
+            std::is_same_v<T, char8_t> || std::is_same_v<T, char16_t> || std::is_same_v<T, char32_t>;
+    } // namespace detail
 
     // The builtin arithmetic types.
     template <typename T>
@@ -50,18 +51,17 @@ namespace catalyst::math
     // with +, -, *, /, unary -, ==, < and construction from 0 and 1.
     template <typename T>
     concept scalar_like =
-        numeric<std::remove_cv_t<T>> ||
-        (enable_scalar<std::remove_cv_t<T>> && std::regular<std::remove_cv_t<T>> &&
-         requires(const std::remove_cv_t<T> &a, const std::remove_cv_t<T> &b) {
-             { a + b } -> std::convertible_to<std::remove_cv_t<T>>;
-             { a - b } -> std::convertible_to<std::remove_cv_t<T>>;
-             { a * b } -> std::convertible_to<std::remove_cv_t<T>>;
-             { a / b } -> std::convertible_to<std::remove_cv_t<T>>;
-             { -a } -> std::convertible_to<std::remove_cv_t<T>>;
-             { a < b } -> std::convertible_to<bool>;
-             std::remove_cv_t<T>{};
-             std::remove_cv_t<T>{1};
-         });
+        numeric<std::remove_cv_t<T>> || (enable_scalar<std::remove_cv_t<T>> && std::regular<std::remove_cv_t<T>> &&
+                                         requires(const std::remove_cv_t<T> &a, const std::remove_cv_t<T> &b) {
+                                             { a + b } -> std::convertible_to<std::remove_cv_t<T>>;
+                                             { a - b } -> std::convertible_to<std::remove_cv_t<T>>;
+                                             { a *b } -> std::convertible_to<std::remove_cv_t<T>>;
+                                             { a / b } -> std::convertible_to<std::remove_cv_t<T>>;
+                                             { -a } -> std::convertible_to<std::remove_cv_t<T>>;
+                                             { a < b } -> std::convertible_to<bool>;
+                                             std::remove_cv_t<T>{};
+                                             std::remove_cv_t<T>{1};
+                                         });
 
     // The two halves of numeric, for large_number.hpp and fraction.hpp, which
     // treat integer and floating-point operands differently.

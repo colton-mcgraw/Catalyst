@@ -178,10 +178,9 @@ namespace catalyst::rendering::detail::vulkan
             return;
 
         const staging_ring::block entry{end, point};
-        const auto at = std::lower_bound(ring.in_flight.begin(), ring.in_flight.end(), entry,
-                                         [](const staging_ring::block &a, const staging_ring::block &b) {
-                                             return a.end < b.end;
-                                         });
+        const auto at =
+            std::lower_bound(ring.in_flight.begin(), ring.in_flight.end(), entry,
+                             [](const staging_ring::block &a, const staging_ring::block &b) { return a.end < b.end; });
         ring.in_flight.insert(at, entry);
     }
 
@@ -205,12 +204,10 @@ namespace catalyst::rendering::detail::vulkan
             const VkResult result = vkCreateCommandPool(dev.device, &info, nullptr, &dev.transfers.pool);
             if (result != VK_SUCCESS)
             {
-                logging::error<detail::render_log>("transfers: vkCreateCommandPool failed ({})",
-                                                   result_string(result));
+                logging::error<detail::render_log>("transfers: vkCreateCommandPool failed ({})", result_string(result));
                 return false;
             }
-            set_debug_name(dev, VK_OBJECT_TYPE_COMMAND_POOL, handle_bits(dev.transfers.pool),
-                           "catalyst transfer pool");
+            set_debug_name(dev, VK_OBJECT_TYPE_COMMAND_POOL, handle_bits(dev.transfers.pool), "catalyst transfer pool");
             return true;
         }
 
@@ -340,9 +337,10 @@ namespace catalyst::rendering::detail::vulkan
         }
     } // namespace
 
-    std::expected<std::uint64_t, error> transfer_once(
-        device_state &dev, resource_id device_id, std::span<const std::byte> data, const creation_marks &created,
-        const std::function<void(VkCommandBuffer, VkBuffer, VkDeviceSize)> &record) noexcept
+    std::expected<std::uint64_t, error>
+    transfer_once(device_state &dev, resource_id device_id, std::span<const std::byte> data,
+                  const creation_marks &created,
+                  const std::function<void(VkCommandBuffer, VkBuffer, VkDeviceSize)> &record) noexcept
     {
         if (dev.lost)
             return std::unexpected(make_error(error_code::device_lost, "transfer"));
@@ -354,7 +352,8 @@ namespace catalyst::rendering::detail::vulkan
 
         // Everything below releases the command buffer on the way out; there is no path that
         // leaves it marked busy.
-        const auto release_entry = [&](std::uint64_t point) {
+        const auto release_entry = [&](std::uint64_t point)
+        {
             dev.transfers.buffers[entry].busy = false;
             dev.transfers.buffers[entry].point = point;
         };
@@ -409,9 +408,8 @@ namespace catalyst::rendering::detail::vulkan
         }
 
         const VkCommandBuffer commands[] = {cmd};
-        const auto value = submit_batch(dev, {.kind = queue_kind::copy,
-                                              .commands = commands,
-                                              .timeline_waits = std::span{waits, wait_count}});
+        const auto value = submit_batch(
+            dev, {.kind = queue_kind::copy, .commands = commands, .timeline_waits = std::span{waits, wait_count}});
         if (!value)
         {
             release_entry(queue_for(dev, queue_kind::copy).last_submitted);
@@ -559,8 +557,7 @@ namespace catalyst::rendering::detail
         return {};
     }
 
-    std::expected<void, error> transfer_upload_texture(resource_id id, resource_id dst,
-                                                       std::span<const std::byte> data)
+    std::expected<void, error> transfer_upload_texture(resource_id id, resource_id dst, std::span<const std::byte> data)
     {
         transfer_batch_state *batch = find(reg().transfer_batches, id);
         if (!batch)
@@ -645,15 +642,14 @@ namespace catalyst::rendering::detail
         }
 
         const VkCommandBuffer commands[] = {batch->cmd};
-        const auto value = submit_batch(*dev, {.kind = queue_kind::copy,
-                                               .commands = commands,
-                                               .timeline_waits = std::span{waits, wait_count}});
+        const auto value = submit_batch(
+            *dev, {.kind = queue_kind::copy, .commands = commands, .timeline_waits = std::span{waits, wait_count}});
         if (!value)
         {
             // The command buffer is spent either way; let it be recycled once the queue drains.
             dev->transfers.buffers[batch->entry].busy = false;
-            dev->transfers.buffers[batch->entry].point = dev->queues[static_cast<std::size_t>(queue_kind::copy)]
-                                                             .last_submitted;
+            dev->transfers.buffers[batch->entry].point =
+                dev->queues[static_cast<std::size_t>(queue_kind::copy)].last_submitted;
             batch->end_offset = 0;
             return std::unexpected(value.error());
         }
@@ -829,10 +825,12 @@ namespace catalyst::rendering::detail
             const VkBuffer buffer = d->buffer;
             const VkDeviceMemory memory = d->memory;
             // Deferred, so destroying a readback whose copy is still running is legal and free.
-            defer_release(*dev, [device, buffer, memory] {
-                vkDestroyBuffer(device, buffer, nullptr);
-                vkFreeMemory(device, memory, nullptr);
-            });
+            defer_release(*dev,
+                          [device, buffer, memory]
+                          {
+                              vkDestroyBuffer(device, buffer, nullptr);
+                              vkFreeMemory(device, memory, nullptr);
+                          });
         }
         reg().downloads.erase(id);
     }

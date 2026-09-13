@@ -176,8 +176,8 @@ namespace catalyst::input
      * @struct joystick_axis_event
      * @brief An axis on a generic HID device changed, after its dead zone.
      * @note Axes are normalised by the backend from the descriptor's logical range: an axis that rests centred reports
-     * [-1, 1], and one that rests at an end - a throttle, a pedal - reports [0, 1]. `kind` says which, because a binding
-     * cannot apply a sensible dead zone without knowing.
+     * [-1, 1], and one that rests at an end - a throttle, a pedal - reports [0, 1]. `kind` says which, because a
+     * binding cannot apply a sensible dead zone without knowing.
      */
     struct joystick_axis_event : device_event<tags::joystick_axis>
     {

@@ -114,11 +114,13 @@ namespace catalyst::math
     {
         using T = typename L::value_type;
         constexpr std::size_t N = L::rows;
-        return detail::generate<T, N + 1, N + 1, detail::order_of<L>()>([&](std::size_t i, std::size_t j) {
-            if (i < N && j < N)
-                return linear(i, j);
-            return i == j ? T{1} : T{};
-        });
+        return detail::generate<T, N + 1, N + 1, detail::order_of<L>()>(
+            [&](std::size_t i, std::size_t j)
+            {
+                if (i < N && j < N)
+                    return linear(i, j);
+                return i == j ? T{1} : T{};
+            });
     }
 
     template <matrix_like L, vector_like V>
@@ -127,13 +129,15 @@ namespace catalyst::math
     {
         using T = detail::common_element_t<L, V>;
         constexpr std::size_t N = L::rows;
-        return detail::generate<T, N + 1, N + 1, detail::order_of<L>()>([&](std::size_t i, std::size_t j) {
-            if (i < N && j < N)
-                return static_cast<T>(linear(i, j));
-            if (i < N)
-                return static_cast<T>(translation[i]);
-            return j == N ? T{1} : T{};
-        });
+        return detail::generate<T, N + 1, N + 1, detail::order_of<L>()>(
+            [&](std::size_t i, std::size_t j)
+            {
+                if (i < N && j < N)
+                    return static_cast<T>(linear(i, j));
+                if (i < N)
+                    return static_cast<T>(translation[i]);
+                return j == N ? T{1} : T{};
+            });
     }
 
     template <vector_like V>
@@ -189,12 +193,14 @@ namespace catalyst::math
     {
         using T = detail::common_element_t<M, V>;
         constexpr std::size_t N = V::length;
-        return detail::generate<T, N>([&](std::size_t i) {
-            T total{};
-            for (std::size_t k = 0; k < N; ++k)
-                total = static_cast<T>(total + m(i, k) * direction[k]);
-            return total;
-        });
+        return detail::generate<T, N>(
+            [&](std::size_t i)
+            {
+                T total{};
+                for (std::size_t k = 0; k < N; ++k)
+                    total = static_cast<T>(total + m(i, k) * direction[k]);
+                return total;
+            });
     }
 
     // ---- cameras ---------------------------------------------------------
@@ -255,4 +261,3 @@ namespace catalyst::math
     }
 
 } // namespace catalyst::math
-

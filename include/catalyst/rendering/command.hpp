@@ -60,12 +60,11 @@
 
 #include <catalyst/rendering/buffer.hpp>
 #include <catalyst/rendering/device.hpp>
+#include <catalyst/rendering/error.hpp>
 #include <catalyst/rendering/pipeline.hpp>
 #include <catalyst/rendering/texture.hpp>
-#include <catalyst/rendering/types.hpp>
-
-#include <catalyst/rendering/error.hpp>
 #include <catalyst/rendering/timeline.hpp>
+#include <catalyst/rendering/types.hpp>
 
 #include <cstddef>
 #include <cstdint>

@@ -10,11 +10,11 @@
 
 #pragma once
 
-#include <cstdint>
-
 #include <catalyst/ui/color.hpp>
 #include <catalyst/ui/geometry.hpp>
 #include <catalyst/ui/measurement.hpp>
+
+#include <cstdint>
 
 namespace catalyst::ui
 {
@@ -127,7 +127,8 @@ namespace catalyst::ui
          */
         space_around,
         /**
-         * @brief Leftover space is divided evenly into gaps of equal size, including before the first and after the last child.
+         * @brief Leftover space is divided evenly into gaps of equal size, including before the first and after the
+         * last child.
          */
         space_evenly,
     };

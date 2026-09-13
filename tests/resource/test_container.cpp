@@ -16,9 +16,9 @@
  * License: MIT (see LICENSE).
  */
 
-#include "../test_common.hpp"
-
 #include <catalyst/resource/image.hpp>
+
+#include "../test_common.hpp"
 
 #include <array>
 #include <cstdint>
@@ -211,8 +211,7 @@ namespace
         CT_REQUIRE(bad.error().code == error_code::decode_failed);
 
         // A KTX2 identifier and nothing after it.
-        const std::array<std::uint8_t, 12> stub{0xAB, 0x4B, 0x54, 0x58, 0x20, 0x32,
-                                                0x30, 0xBB, 0x0D, 0x0A, 0x1A, 0x0A};
+        const std::array<std::uint8_t, 12> stub{0xAB, 0x4B, 0x54, 0x58, 0x20, 0x32, 0x30, 0xBB, 0x0D, 0x0A, 0x1A, 0x0A};
         auto truncated = load_image(std::as_bytes(std::span<const std::uint8_t>{stub}));
         CT_REQUIRE(!truncated.has_value());
         CT_REQUIRE(truncated.error().code == error_code::decode_failed);
@@ -238,9 +237,9 @@ namespace
         CT_REQUIRE(level0.size() == 2 * 2 * 4);
 
         // Memory order for BGRA: blue, green, red, alpha.
-        CT_REQUIRE(static_cast<std::uint8_t>(level0[0]) == 0);   // red texel: B
-        CT_REQUIRE(static_cast<std::uint8_t>(level0[2]) == 255); //            R
-        CT_REQUIRE(static_cast<std::uint8_t>(level0[5]) == 255); // green texel: G
+        CT_REQUIRE(static_cast<std::uint8_t>(level0[0]) == 0);    // red texel: B
+        CT_REQUIRE(static_cast<std::uint8_t>(level0[2]) == 255);  //            R
+        CT_REQUIRE(static_cast<std::uint8_t>(level0[5]) == 255);  // green texel: G
         CT_REQUIRE(static_cast<std::uint8_t>(level0[15]) == 128); // white texel's half alpha
 
         const std::span<const std::byte> level1 = img->level(1);
