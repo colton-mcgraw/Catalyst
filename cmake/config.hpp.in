@@ -1,0 +1,73 @@
+/**
+ * SPDX-License-Identifier: MIT
+ * SPDX-FileCopyrightText: 2026-Current Catalyst
+ *
+ * @file
+ * @brief Generated. What this build of Catalyst contains, and which version it is.
+ * @details Do not edit: CMake writes this from cmake/config.hpp.in at configure time, and it
+ * describes the configuration that produced the binaries next to it. That is the point -- the
+ * module switches are a build-time choice, and without this header a consumer had no way to ask
+ * which way it went.
+ *
+ * @code
+ * #include <catalyst/config.hpp>
+ *
+ * #if CATALYST_HAS_AUDIO
+ * #  include <catalyst/audio/audio.hpp>
+ * #endif
+ *
+ * static_assert(CATALYST_VERSION >= CATALYST_VERSION_ENCODE(0, 1, 0));
+ * @endcode
+ */
+
+#pragma once
+
+/** @brief Major version. */
+#define CATALYST_VERSION_MAJOR @PROJECT_VERSION_MAJOR@
+/** @brief Minor version. */
+#define CATALYST_VERSION_MINOR @PROJECT_VERSION_MINOR@
+/** @brief Patch version. */
+#define CATALYST_VERSION_PATCH @PROJECT_VERSION_PATCH@
+
+/** @brief The version as a string, e.g. `"0.1.0"`. */
+#define CATALYST_VERSION_STRING "@PROJECT_VERSION@"
+
+/** @brief Packs a version into one comparable integer. */
+#define CATALYST_VERSION_ENCODE(major, minor, patch) ((major) *10000 + (minor) *100 + (patch))
+
+/** @brief This build's version, comparable with @ref CATALYST_VERSION_ENCODE. */
+#define CATALYST_VERSION                                                                                               \
+    CATALYST_VERSION_ENCODE(CATALYST_VERSION_MAJOR, CATALYST_VERSION_MINOR, CATALYST_VERSION_PATCH)
+
+/**
+ * @name Module availability
+ * @brief 1 when the module was built into this configuration, 0 when it was switched off.
+ * @{
+ */
+#define CATALYST_HAS_ANIMATION @CATALYST_HAS_ANIMATION@
+#define CATALYST_HAS_AUDIO @CATALYST_HAS_AUDIO@
+#define CATALYST_HAS_CORE @CATALYST_HAS_CORE@
+#define CATALYST_HAS_EVENTS @CATALYST_HAS_EVENTS@
+#define CATALYST_HAS_INPUT @CATALYST_HAS_INPUT@
+#define CATALYST_HAS_LOGGING @CATALYST_HAS_LOGGING@
+#define CATALYST_HAS_MATH @CATALYST_HAS_MATH@
+#define CATALYST_HAS_NET @CATALYST_HAS_NET@
+#define CATALYST_HAS_PHYSICS @CATALYST_HAS_PHYSICS@
+#define CATALYST_HAS_PLATFORM @CATALYST_HAS_PLATFORM@
+#define CATALYST_HAS_RENDERING @CATALYST_HAS_RENDERING@
+#define CATALYST_HAS_RESOURCE @CATALYST_HAS_RESOURCE@
+#define CATALYST_HAS_SCENE @CATALYST_HAS_SCENE@
+#define CATALYST_HAS_TEXT @CATALYST_HAS_TEXT@
+#define CATALYST_HAS_UI @CATALYST_HAS_UI@
+#define CATALYST_HAS_UTILS @CATALYST_HAS_UTILS@
+/** @} */
+
+/**
+ * @brief The rendering backend this build selected: `"vulkan"`, `"d3d12"`, `"null"`.
+ * @details Resolved, never `"auto"` -- `auto` is a request, and this is the answer. A build that
+ * says `"null"` records state and draws nothing.
+ */
+#define CATALYST_RENDERING_BACKEND_NAME "@_catalyst_rendering_backend_resolved@"
+
+/** @brief 1 when catalyst::resource was built with stb_image's source-format decoders. */
+#define CATALYST_HAS_STB_IMAGE @CATALYST_HAS_STB_IMAGE@

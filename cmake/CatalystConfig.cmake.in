@@ -1,0 +1,48 @@
+@PACKAGE_INIT@
+
+# Catalyst's package config.
+#
+# Every module is a COMPONENT, so a consumer asks for what it needs:
+#
+#   find_package(Catalyst 0.1 REQUIRED COMPONENTS audio rendering)
+#   target_link_libraries(app PRIVATE catalyst::audio catalyst::rendering)
+#
+# Asking for nothing gives every module the installed build contains, plus the monolithic
+# catalyst::catalyst when that was built. A component that was switched off at build time is
+# reported as missing rather than silently absent.
+
+include(CMakeFindDependencyMacro)
+
+set(CATALYST_MODULES @_catalyst_installed_modules@)
+set(CATALYST_RENDERING_BACKEND_NAME "@_catalyst_rendering_backend_resolved@")
+
+# catalyst::logging calls sinks from every thread that logs.
+if("logging" IN_LIST CATALYST_MODULES)
+  find_dependency(Threads)
+endif()
+
+# The Vulkan backend is linked into catalyst::rendering, and its loader is a PUBLIC dependency.
+if("@_catalyst_rendering_backend_resolved@" STREQUAL "vulkan")
+  find_dependency(Vulkan)
+endif()
+
+include("${CMAKE_CURRENT_LIST_DIR}/CatalystTargets.cmake")
+
+foreach(_component ${Catalyst_FIND_COMPONENTS})
+  if(NOT TARGET catalyst::${_component})
+    set(Catalyst_${_component}_FOUND FALSE)
+    if(Catalyst_FIND_REQUIRED_${_component})
+      set(Catalyst_FOUND FALSE)
+      list(APPEND _catalyst_missing "${_component}")
+    endif()
+  else()
+    set(Catalyst_${_component}_FOUND TRUE)
+  endif()
+endforeach()
+
+if(_catalyst_missing)
+  set(Catalyst_NOT_FOUND_MESSAGE
+      "This Catalyst install does not contain: ${_catalyst_missing}. It was built with: ${CATALYST_MODULES}")
+endif()
+
+check_required_components(Catalyst)

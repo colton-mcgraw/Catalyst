@@ -1,0 +1,51 @@
+# Catalyst's format, derived from the code that was already here rather than imposed on it: Allman
+# braces, four-space indent, indented namespace bodies, 120 columns, and pointers bound to the name
+# (`const char *name`). Where the tree was inconsistent the majority won -- <catalyst/...> includes
+# before the standard library (171 files to 77), and case labels on their own line (274 to 193).
+#
+# The commit that added this file reformatted the tree with it, so the two agree. Keep them that
+# way: CI checks it.
+#
+#   clang-format -i $(git ls-files '*.hpp' '*.cpp')       format everything
+#   clang-format --dry-run --Werror <files>               check without writing (what CI runs)
+
+Language: Cpp
+BasedOnStyle: LLVM
+
+AccessModifierOffset: -4
+AlignAfterOpenBracket: Align
+AllowShortBlocksOnASingleLine: Empty
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLambdasOnASingleLine: All
+AlwaysBreakTemplateDeclarations: Yes
+BreakBeforeBraces: Allman
+BreakConstructorInitializers: BeforeColon
+ColumnLimit: 120
+DerivePointerAlignment: false
+FixNamespaceComments: true
+IndentCaseLabels: false
+IndentWidth: 4
+NamespaceIndentation: All
+PointerAlignment: Right
+ReferenceAlignment: Right
+SortIncludes: CaseSensitive
+SpaceAfterTemplateKeyword: true
+TabWidth: 4
+UseTab: Never
+
+# <catalyst/...> first, then this module's own relative headers, then the standard library. The
+# order a reader benefits from: what this file is part of, then what it reaches for.
+IncludeBlocks: Regroup
+IncludeCategories:
+  - Regex: '^<catalyst/'
+    Priority: 1
+  - Regex: '^"'
+    Priority: 2
+  - Regex: '^<win32/'
+    Priority: 3
+  - Regex: '^<[a-z_]+>$'
+    Priority: 5
+  - Regex: '.*'
+    Priority: 4
