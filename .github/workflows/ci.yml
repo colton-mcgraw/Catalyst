@@ -1,0 +1,213 @@
+# Catalyst CI.
+#
+# Catalyst needs a C++23 toolchain that implements deducing this and std::expected (see
+# cmake/CatalystCompilerSupport.cmake). GCC 14+, Clang 19+ against libstdc++ 14+, and MSVC 19.40+
+# all clear that bar; distribution defaults often do not, so the matrix names its compilers
+# explicitly rather than taking the runner image's.
+#
+# macOS is the one entry still expected to fail, and it is kept non-blocking rather than deleted
+# because its result is the honest status of macOS support. See the comment on that entry.
+#
+# Tests run against the `null` rendering backend. It is the one configuration that builds and runs
+# everywhere, and the runners have no GPU. The Vulkan backend is compiled but not run, in its own
+# job, so that backend code cannot rot unnoticed.
+
+name: CI
+
+on:
+  push:
+    branches: [main, master, "dev-*"]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  format:
+    name: Format
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Pinned to a major version on purpose: clang-format's output shifts between releases, and a
+      # job that reformats differently from the contributor who ran it locally is worse than no job.
+      - name: Install clang-format
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends clang-format-18
+
+      - name: Check formatting
+        run: clang-format-18 --dry-run --Werror $(git ls-files '*.hpp' '*.cpp')
+
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    # macOS is informational rather than blocking; see the comment on that matrix entry.
+    continue-on-error: ${{ matrix.experimental == true }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux / GCC 14
+            os: ubuntu-24.04
+            packages: g++-14
+            cc: gcc-14
+            cxx: g++-14
+
+          - name: Linux / Clang 20 + libstdc++ 14
+            os: ubuntu-24.04
+            # g++-14 is installed for its standard library headers, not its compiler: Clang uses the
+            # newest libstdc++ on the box, and 24.04's default 13 is too old for <expected>. Clang 18
+            # would not work either, whatever libstdc++ it is given -- libstdc++ gates <expected> on
+            # __cpp_concepts >= 202002L, which Clang only reports from 19.
+            packages: clang-20 g++-14
+            cc: clang-20
+            cxx: clang++-20
+
+          - name: Windows / MSVC
+            os: windows-2022
+
+          - name: macOS / Apple Clang
+            os: macos-15
+            # Still expected to fail, and kept non-blocking to track when that changes. Apple Clang
+            # ships libc++ and there is no swapping it out on macOS. Catalyst now carries its own
+            # move_only_function and guards the tz-database and <syncstream> paths, so the one
+            # remaining blocker is that libc++ leaves the floating-point std::from_chars overloads
+            # deleted, which catalyst::resource's JSON and CSV number parsing needs. That wants a
+            # real float parser rather than a shim. Promote this to required (drop the line below)
+            # once it passes.
+            experimental: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install toolchain
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ninja-build ${{ matrix.packages }}
+
+      - name: Install Ninja
+        if: runner.os == 'macOS'
+        run: brew install ninja
+
+      - name: Configure
+        env:
+          CC: ${{ matrix.cc }}
+          CXX: ${{ matrix.cxx }}
+          CXXFLAGS: ${{ matrix.cxxflags }}
+        # No generator is forced on Windows: the image's Visual Studio generator is a multi-config
+        # one, which is why every build and test step below also passes --config / -C.
+        run: >
+          cmake -S . -B build
+          -DCMAKE_BUILD_TYPE=Release
+          -DCATALYST_BUILD_TESTS=ON
+          -DCATALYST_RENDERING_BACKEND=null
+          ${{ runner.os == 'Windows' && ' ' || '-G Ninja' }}
+
+      - name: Build
+        run: cmake --build build --config Release --parallel
+
+      - name: Test
+        run: ctest --test-dir build --build-config Release --output-on-failure --parallel
+
+  vulkan:
+    name: Linux / Vulkan backend (build only)
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install toolchain and Vulkan headers
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ninja-build g++-14 libvulkan-dev
+
+      - name: Configure
+        env:
+          CC: gcc-14
+          CXX: g++-14
+        # Named explicitly rather than left to `auto`, so a missing SDK fails this job instead of
+        # silently falling back to the null backend and testing nothing.
+        run: >
+          cmake -S . -B build -G Ninja
+          -DCMAKE_BUILD_TYPE=Release
+          -DCATALYST_RENDERING_BACKEND=vulkan
+
+      # Not run: the SPIR-V the backend consumes is committed, so this compiles and links without a
+      # shader compiler, but creating a device needs a GPU the runner does not have.
+      - name: Build
+        run: cmake --build build --parallel
+
+  configurations:
+    name: Module subsets
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ninja-build g++-14
+
+      # The module switches are the library's advertised feature, so something has to exercise them.
+      # These build rather than just configure: the tests, examples and benchmarks are guarded on
+      # the modules they link, so a subset that configures is a subset that should also link.
+      - name: Build subsets
+        env:
+          CC: gcc-14
+          CXX: g++-14
+        run: |
+          set -eux
+          subset() {
+            local name="$1"; shift
+            cmake -S . -B "build-$name" -G Ninja -DCATALYST_RENDERING_BACKEND=null "$@"
+            cmake --build "build-$name" --parallel
+          }
+          subset default
+          subset no-audio    -DCATALYST_BUILD_AUDIO=OFF
+          subset no-stb      -DCATALYST_RESOURCE_STB=OFF
+          subset no-monolith -DCATALYST_BUILD_ALL=OFF
+          subset headless    -DCATALYST_BUILD_PLATFORM=OFF -DCATALYST_BUILD_RENDERING=OFF -DCATALYST_BUILD_UI=OFF -DCATALYST_BUILD_INPUT=OFF
+          subset parsers-only -DCATALYST_BUILD_ALL=OFF -DCATALYST_BUILD_AUDIO=OFF -DCATALYST_BUILD_INPUT=OFF \
+                              -DCATALYST_BUILD_PLATFORM=OFF -DCATALYST_BUILD_RENDERING=OFF -DCATALYST_BUILD_UI=OFF
+
+      # The install and the package config are part of the public surface now, so something has to
+      # prove a separate project can actually consume them.
+      - name: Install and consume
+        env:
+          CC: gcc-14
+          CXX: g++-14
+        run: |
+          set -eux
+          cmake -S . -B build-install -G Ninja -DCMAKE_BUILD_TYPE=Release \
+            -DCATALYST_RENDERING_BACKEND=null -DCMAKE_INSTALL_PREFIX="$PWD/install-prefix"
+          cmake --build build-install --parallel
+          cmake --install build-install
+
+          mkdir -p consumer && cd consumer
+          cat > CMakeLists.txt <<'CMAKE'
+          cmake_minimum_required(VERSION 3.16)
+          project(CatalystConsumer LANGUAGES CXX)
+          set(CMAKE_CXX_STANDARD 23)
+          set(CMAKE_CXX_STANDARD_REQUIRED ON)
+          find_package(Catalyst 0.1 REQUIRED COMPONENTS audio rendering math events)
+          add_executable(consumer main.cpp)
+          target_link_libraries(consumer PRIVATE catalyst::audio catalyst::rendering catalyst::math catalyst::events)
+          CMAKE
+          cat > main.cpp <<'CPP'
+          #include <catalyst/config.hpp>
+          #include <catalyst/math/geometry.hpp>
+          #include <catalyst/math/vector.hpp>
+          static_assert(CATALYST_HAS_AUDIO && CATALYST_HAS_EVENTS);
+          static_assert(CATALYST_VERSION >= CATALYST_VERSION_ENCODE(0, 1, 0));
+          int main() { return catalyst::math::magnitude(catalyst::math::vec3f{0.0f, 1.0f, 0.0f}) == 1.0f ? 0 : 1; }
+          CPP
+          cmake -S . -B build -G Ninja -DCMAKE_PREFIX_PATH="$GITHUB_WORKSPACE/install-prefix"
+          cmake --build build
+          ./build/consumer
