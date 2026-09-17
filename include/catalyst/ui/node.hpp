@@ -109,6 +109,23 @@ namespace catalyst::ui
      */
     using measure_fn = extent (*)(const measure_input &input, void *user) noexcept;
 
+    class batch_builder;
+    struct paint_context;
+
+    /**
+     * @typedef paint_fn
+     * @brief The callback a node uses to paint content the module cannot see: text, images, custom
+     * widgets.
+     * @details The painting half of the seam whose measuring half is `measure_fn`. `paint` calls it
+     * after the node's own background and border and before its children, with the clip already
+     * established, so the callback only emits geometry. A plain function pointer plus user pointer,
+     * like `measure_fn`, so a node costs no `std::function` and the tree stays cheap to move.
+     * @param context The node being painted, its layout, and the opacity in effect.
+     * @param out The builder to emit into.
+     * @param user The opaque pointer registered alongside the callback.
+     */
+    using paint_fn = void (*)(const paint_context &context, batch_builder &out, void *user) noexcept;
+
     /**
      * @struct layout_result
      * @brief The output of the layout engine for one node.
@@ -361,6 +378,33 @@ namespace catalyst::ui
         [[nodiscard]] void *measure_user(node n) const noexcept;
 
         /**
+         * @fn set_painter
+         * @brief Registers the callback that paints a node's content.
+         * @details Unlike `set_measure` this does not mark the node dirty: what a node paints has
+         * no bearing on where it is laid out. Pass `nullptr` to clear it.
+         * @param n The node to modify.
+         * @param fn The callback, or `nullptr` to remove the current one.
+         * @param user An opaque pointer passed back to the callback on every call.
+         */
+        void set_painter(node n, paint_fn fn, void *user = nullptr) noexcept;
+
+        /**
+         * @fn painter_of
+         * @brief Returns the paint callback registered on a node.
+         * @param n The node to query.
+         * @return The callback, or `nullptr` if the node has none or is invalid.
+         */
+        [[nodiscard]] paint_fn painter_of(node n) const noexcept;
+
+        /**
+         * @fn painter_user
+         * @brief Returns the opaque pointer registered alongside a node's paint callback.
+         * @param n The node to query.
+         * @return The pointer, or `nullptr` if the node has no callback or is invalid.
+         */
+        [[nodiscard]] void *painter_user(node n) const noexcept;
+
+        /**
          * @fn layout_of
          * @brief Returns a node's most recent layout result.
          * @param n The node to query.
@@ -420,6 +464,8 @@ namespace catalyst::ui
             layout_result layout{};
             measure_fn measure = nullptr;
             void *measure_user = nullptr;
+            paint_fn painter = nullptr;
+            void *painter_user = nullptr;
         };
 
         [[nodiscard]] const node_data *find(node n) const noexcept;

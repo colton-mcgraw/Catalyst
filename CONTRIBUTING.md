@@ -119,7 +119,7 @@ tests on every platform.
 
 ## Placeholder modules
 
-`animation`, `net`, `physics`, `scene` and `utils` are a single `module_name()` function each. They
+`animation`, `net`, `physics` and `utils` are a single `module_name()` function each. They
 default to `OFF` and the README marks them planned. If you want to implement one, that is a good
 place to start — say so in an issue first so two people don't write it twice.
 

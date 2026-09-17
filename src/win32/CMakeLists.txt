@@ -16,7 +16,11 @@ add_library(catalyst::win32_support ALIAS catalyst_win32_support)
 # Consumers include these as <win32/strings.hpp>. Angle brackets matter: several modules have their
 # own win32/ subdirectory, and only the angled form skips the includer's directory and so resolves
 # unambiguously to this one.
+#
+# BUILD_INTERFACE because the target is in the install export set (a static library's PRIVATE link
+# still lands in INTERFACE_LINK_LIBRARIES, so it has to be), and CMake refuses to export a raw
+# source-tree path. Nothing is installed from here; the headers are private to the build.
 target_include_directories(catalyst_win32_support
   PUBLIC
-    ${PROJECT_SOURCE_DIR}/src
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src>
 )

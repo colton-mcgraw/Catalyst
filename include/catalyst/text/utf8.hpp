@@ -1,7 +1,7 @@
 /**
  * @file utf8.hpp
- * @brief Encoding Unicode code points as UTF-8, and reassembling the UTF-16 surrogate pairs that
- * platform APIs hand over.
+ * @brief Encoding Unicode code points as UTF-8, decoding them back, and reassembling the UTF-16
+ * surrogate pairs that platform APIs hand over.
  * @details Catalyst speaks UTF-8 in its public API and UTF-32 in its input events, and the code that
  * bridges the two had been written three times: once in the JSON parser for `\u` escapes, once in
  * the Win32 window backend for `WM_CHAR`, and once more in an example that needed to print the text
@@ -158,6 +158,105 @@ namespace catalyst::text::utf8
     {
         std::string out;
         encode(text, out);
+        return out;
+    }
+
+    /**
+     * @fn decode(std::string_view, std::size_t&)
+     * @brief Decode one code point from UTF-8, advancing @p pos past the bytes it used.
+     * @param text The UTF-8 text.
+     * @param pos The byte offset to decode from. Must be less than `text.size()`; on return it is
+     *        the offset of the next sequence.
+     * @return The code point, or @ref replacement_character for a sequence that is malformed,
+     *         truncated, overlong, a surrogate, or above @ref max_code_point.
+     * @note On a bad sequence @p pos advances by exactly one byte, so a caller looping over a
+     * string resynchronises at the next lead byte and a run of garbage yields one replacement per
+     * byte rather than swallowing what follows. That is the substitution policy every browser
+     * applies, minus its "maximal subpart" refinement, which changes only how many U+FFFD a
+     * truncated multi-byte sequence produces. The decoding counterpart of @ref encode; it was added
+     * when the UI module's text layout needed to walk a label by code point and found that, for all
+     * the encoding this header does, nothing in the tree decoded.
+     */
+    [[nodiscard]] constexpr char32_t decode(std::string_view text, std::size_t &pos) noexcept
+    {
+        if (pos >= text.size())
+            return replacement_character;
+
+        const unsigned char lead = static_cast<unsigned char>(text[pos]);
+        if (lead < 0x80)
+        {
+            ++pos;
+            return lead;
+        }
+
+        std::size_t length = 0;
+        char32_t cp = 0;
+        char32_t minimum = 0;
+        if ((lead & 0xE0) == 0xC0)
+        {
+            length = 2;
+            cp = lead & 0x1F;
+            minimum = 0x80;
+        }
+        else if ((lead & 0xF0) == 0xE0)
+        {
+            length = 3;
+            cp = lead & 0x0F;
+            minimum = 0x800;
+        }
+        else if ((lead & 0xF8) == 0xF0)
+        {
+            length = 4;
+            cp = lead & 0x07;
+            minimum = 0x10000;
+        }
+        else
+        {
+            ++pos; // a continuation byte with no lead, or 0xF8..0xFF
+            return replacement_character;
+        }
+
+        if (text.size() - pos < length)
+        {
+            ++pos;
+            return replacement_character;
+        }
+
+        for (std::size_t i = 1; i < length; ++i)
+        {
+            const unsigned char c = static_cast<unsigned char>(text[pos + i]);
+            if ((c & 0xC0) != 0x80)
+            {
+                ++pos;
+                return replacement_character;
+            }
+            cp = (cp << 6) | (c & 0x3F);
+        }
+
+        // Overlong forms encode a code point in more bytes than it needs; they are how "../" hides
+        // from a byte-level filter, so they are rejected rather than tolerated.
+        if (cp < minimum || !is_valid(cp))
+        {
+            ++pos;
+            return replacement_character;
+        }
+
+        pos += length;
+        return cp;
+    }
+
+    /**
+     * @fn decode(std::string_view)
+     * @brief Convert UTF-8 to a run of UTF-32.
+     * @param text The UTF-8 text; each bad byte becomes one @ref replacement_character.
+     * @return The code points.
+     */
+    [[nodiscard]] inline std::u32string decode(std::string_view text)
+    {
+        std::u32string out;
+        out.reserve(text.size()); // exact for ASCII, a ceiling otherwise
+        for (std::size_t pos = 0; pos < text.size();)
+            out.push_back(decode(text, pos));
         return out;
     }
 

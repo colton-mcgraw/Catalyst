@@ -185,6 +185,25 @@ namespace catalyst::ui
     };
 
     /**
+     * @enum pointer_mode
+     * @brief Controls whether a node can be the target of a hit test.
+     * @details The CSS `pointer-events` switch. A node set to `none` is transparent to the pointer:
+     * `hit_test` looks through it to whatever is underneath, but its children are still tested,
+     * which is what lets a full-screen overlay pass clicks through while its own buttons still work.
+     */
+    enum class pointer_mode : std::uint8_t
+    {
+        /**
+         * @brief The node is hit when the pointer is inside its border box.
+         */
+        automatic = 0,
+        /**
+         * @brief The node is never hit. Its children may be.
+         */
+        none,
+    };
+
+    /**
      * @struct style
      * @brief The complete set of style properties for one node.
      * @details Every field has a default that makes an unstyled node behave predictably: an
@@ -210,6 +229,10 @@ namespace catalyst::ui
          * @brief How content that overflows this node's padding box is treated when painting.
          */
         overflow_mode overflow = overflow_mode::visible;
+        /**
+         * @brief Whether this node can be the target of a hit test.
+         */
+        pointer_mode pointer_events = pointer_mode::automatic;
 
         /**
          * @brief The node's width. `auto` sizes it from its content, or from its flex container.

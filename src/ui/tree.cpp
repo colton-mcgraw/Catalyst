@@ -73,6 +73,8 @@ namespace catalyst::ui
         d.layout = layout_result{};
         d.measure = nullptr;
         d.measure_user = nullptr;
+        d.painter = nullptr;
+        d.painter_user = nullptr;
 
         ++live_count_;
 
@@ -119,6 +121,8 @@ namespace catalyst::ui
         d->children.shrink_to_fit();
         d->measure = nullptr;
         d->measure_user = nullptr;
+        d->painter = nullptr;
+        d->painter_user = nullptr;
         ++d->generation;
 
         --live_count_;
@@ -263,6 +267,28 @@ namespace catalyst::ui
     {
         const node_data *d = find(n);
         return (d != nullptr) ? d->measure_user : nullptr;
+    }
+
+    void tree::set_painter(node n, paint_fn fn, void *user) noexcept
+    {
+        node_data *d = find(n);
+        if (d == nullptr)
+            return;
+
+        d->painter = fn;
+        d->painter_user = user;
+    }
+
+    paint_fn tree::painter_of(node n) const noexcept
+    {
+        const node_data *d = find(n);
+        return (d != nullptr) ? d->painter : nullptr;
+    }
+
+    void *tree::painter_user(node n) const noexcept
+    {
+        const node_data *d = find(n);
+        return (d != nullptr) ? d->painter_user : nullptr;
     }
 
     const layout_result &tree::layout_of(node n) const noexcept

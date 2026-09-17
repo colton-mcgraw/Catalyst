@@ -35,14 +35,14 @@ option(CATALYST_BUILD_PHYSICS "Build Catalyst physics module (PLACEHOLDER: no im
 option(CATALYST_BUILD_PLATFORM "Build Catalyst platform module" ON)
 option(CATALYST_BUILD_RENDERING "Build Catalyst rendering module" ON)
 option(CATALYST_BUILD_RESOURCE "Build Catalyst resource module" ON)
-option(CATALYST_BUILD_SCENE "Build Catalyst scene module (PLACEHOLDER: no implementation yet)" OFF)
+option(CATALYST_BUILD_SCENE "Build Catalyst scene module" ON)
 option(CATALYST_BUILD_TEXT "Build Catalyst text module (header-only)" ON)
 option(CATALYST_BUILD_UI "Build Catalyst UI module" ON)
 option(CATALYST_BUILD_UTILS "Build Catalyst utils module (PLACEHOLDER: no implementation yet)" OFF)
 
-# animation, net, physics, scene and utils are a single module_name() function each -- 33 to 45 lines
+# animation, net, physics and utils are a single module_name() function each -- 33 to 45 lines
 # including the Doxygen block, and nothing a consumer can call. They shipped default-ON, producing
-# five static libraries that did nothing and sitting in the README's option list beside audio and
+# four static libraries that did nothing and sitting in the README's option list beside audio and
 # rendering with nothing to tell them apart. They default OFF now, and the README says which modules
 # are real. Turn one on if you are working on it; there is nothing else to gain by it.
 # Image decoding in catalyst::resource. ON fetches stb_image at a pinned commit (cmake/stb.cmake),

@@ -17,14 +17,14 @@ real, because a list of ambitions is no use to someone deciding whether to build
 | `logging` | Working | Levels, filters, middleware, routing, and console, terminal, file, ring-buffer, callback, async and queued sinks. |
 | `platform` | Working | Windows, monitors, the event loop. Win32 backend. |
 | `math` | Working | Vectors, matrices, quaternions, transforms, fractions, geometry. Header-only. |
-| `ui` | Working | Retained tree of styled nodes, CSS-like units, flexbox layout, backend-agnostic draw list. |
+| `ui` | Working | Retained tree of styled nodes, CSS-like units, flexbox layout, painting into a backend-agnostic draw list, hit testing, pointer and keyboard interaction, text layout. |
+| `scene` | Working | Entities with a transform hierarchy and components, cameras, lights, bounding volumes, frustum culling and sorted extraction. |
 | `events` | Working | The bus every other module publishes on. Header-only. |
-| `text` | Working | UTF-8 decoding and the scanner the parsers are built on. Header-only. |
+| `text` | Working | UTF-8 encoding and decoding, and the scanner the parsers are built on. Header-only. |
 | `core` | Minimal | Shared vocabulary. Currently just what more than one module needs. |
 | `animation` | **Planned** | Not implemented. The module is a placeholder and defaults to `OFF`. |
 | `net` | **Planned** | Not implemented. The module is a placeholder and defaults to `OFF`. |
 | `physics` | **Planned** | Not implemented. The module is a placeholder and defaults to `OFF`. |
-| `scene` | **Planned** | Not implemented. The module is a placeholder and defaults to `OFF`. |
 | `utils` | **Planned** | Not implemented. The module is a placeholder and defaults to `OFF`. |
 
 Not started, and not currently planned for 0.1: scripting, a plugin system, and profiling tools.
@@ -342,8 +342,8 @@ reaches everything that includes it, transitively.
 ## Documentation
 
 Module documentation lives in the `docs` directory: [audio](docs/audio.md), [input](docs/input.md),
-[rendering](docs/rendering.md), [resource](docs/resource.md) and [ui](docs/ui.md). The remaining
-modules are documented in their headers only. You can also generate the latest documentation using Doxygen:
+[rendering](docs/rendering.md), [resource](docs/resource.md), [scene](docs/scene.md) and
+[ui](docs/ui.md). The remaining modules are documented in their headers only. You can also generate the latest documentation using Doxygen:
 
 ```bash
 doxygen Doxyfile
