@@ -1,7 +1,7 @@
 # The window backends buffer events in a catalyst::events::bus, and the Win32 backend converts key names with catalyst::text.
 # Required, not optional: see cmake/CatalystModuleDeps.cmake.
 include(CatalystModuleDeps)
-catalyst_require_modules(platform events text)
+catalyst_require_modules(platform)
 
 # This module used to require catalyst::core, on the grounds that the window backends buffered
 # events in a core event_queue and window.hpp exposed core event types. Neither is true any more:

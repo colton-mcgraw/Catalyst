@@ -1,7 +1,7 @@
 # The module publishes to a catalyst::events::bus and describes positions with catalyst::math vectors.
 # Required, not optional: see cmake/CatalystModuleDeps.cmake.
 include(CatalystModuleDeps)
-catalyst_require_modules(input events math)
+catalyst_require_modules(input)
 
 add_library(catalyst_input STATIC
   action.cpp

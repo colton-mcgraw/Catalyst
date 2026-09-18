@@ -2,7 +2,7 @@
 # the two modules meet, and the reason it is a separate target from catalyst_ui.
 # Required, not optional: see cmake/CatalystModuleDeps.cmake.
 include(CatalystModuleDeps)
-catalyst_require_modules(ui_renderer ui rendering)
+catalyst_require_modules(ui_renderer)
 
 add_library(catalyst_ui_renderer STATIC
   renderer.cpp

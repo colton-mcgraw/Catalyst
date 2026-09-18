@@ -42,27 +42,11 @@
 /**
  * @name Module availability
  * @brief 1 when the module was built into this configuration, 0 when it was switched off.
+ * @details One line per module in cmake/CatalystModules.cmake, in build order. A placeholder
+ * module that is switched off is also absent from the install, headers included.
  * @{
  */
-#define CATALYST_HAS_ANIMATION @CATALYST_HAS_ANIMATION@
-#define CATALYST_HAS_AUDIO @CATALYST_HAS_AUDIO@
-#define CATALYST_HAS_CORE @CATALYST_HAS_CORE@
-#define CATALYST_HAS_EVENTS @CATALYST_HAS_EVENTS@
-#define CATALYST_HAS_INPUT @CATALYST_HAS_INPUT@
-#define CATALYST_HAS_LOGGING @CATALYST_HAS_LOGGING@
-#define CATALYST_HAS_MATH @CATALYST_HAS_MATH@
-#define CATALYST_HAS_NET @CATALYST_HAS_NET@
-#define CATALYST_HAS_PHYSICS @CATALYST_HAS_PHYSICS@
-#define CATALYST_HAS_PLATFORM @CATALYST_HAS_PLATFORM@
-#define CATALYST_HAS_RENDERING @CATALYST_HAS_RENDERING@
-#define CATALYST_HAS_RESOURCE @CATALYST_HAS_RESOURCE@
-#define CATALYST_HAS_SCENE @CATALYST_HAS_SCENE@
-#define CATALYST_HAS_TEXT @CATALYST_HAS_TEXT@
-#define CATALYST_HAS_UI @CATALYST_HAS_UI@
-/** @brief 1 when the UI renderer bridge (catalyst::ui_renderer, ui/renderer.hpp) was built. */
-#define CATALYST_HAS_UI_RENDERER @CATALYST_HAS_UI_RENDERER@
-#define CATALYST_HAS_UTILS @CATALYST_HAS_UTILS@
-/** @} */
+@CATALYST_CONFIG_MODULE_DEFINES@/** @} */
 
 /**
  * @brief The rendering backend this build selected: `"vulkan"`, `"d3d12"`, `"null"`.

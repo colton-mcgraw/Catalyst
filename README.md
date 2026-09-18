@@ -22,12 +22,16 @@ real, because a list of ambitions is no use to someone deciding whether to build
 | `events` | Working | The bus every other module publishes on. Header-only. |
 | `text` | Working | UTF-8 encoding and decoding, and the scanner the parsers are built on. Header-only. |
 | `core` | Minimal | Shared vocabulary. Currently just what more than one module needs. |
-| `animation` | **Planned** | Not implemented. The module is a placeholder and defaults to `OFF`. |
-| `net` | **Planned** | Not implemented. The module is a placeholder and defaults to `OFF`. |
-| `physics` | **Planned** | Not implemented. The module is a placeholder and defaults to `OFF`. |
-| `utils` | **Planned** | Not implemented. The module is a placeholder and defaults to `OFF`. |
+| `animation` | **Planned** | Not implemented. A placeholder: defaults to `OFF`, and is not installed while off. |
+| `net` | **Planned** | Not implemented. A placeholder: defaults to `OFF`, and is not installed while off. |
+| `physics` | **Planned** | Not implemented. A placeholder: defaults to `OFF`, and is not installed while off. |
+| `utils` | **Planned** | Not implemented. A placeholder: defaults to `OFF`, and is not installed while off. |
 
 Not started, and not currently planned for 0.1: scripting, a plugin system, and profiling tools.
+
+The list above is also a file: [cmake/CatalystModules.cmake](cmake/CatalystModules.cmake) declares
+every module once, and the build switches, build order, package export and test tree are all
+derived from it.
 
 ## Platform support
 
@@ -69,7 +73,7 @@ sudo apt install g++-14
 cmake -S . -B build -DCMAKE_CXX_COMPILER=g++-14
 ```
 
-CMake 3.16 or newer is required. Everything else is optional: see
+CMake 3.23 or newer is required; the presets file needs the same. Everything else is optional: see
 [CMake Options](#cmake-options) for the module switches and
 [Backend selection](#cmake-options) for what each backend needs.
 
@@ -105,6 +109,112 @@ To get started with Catalyst, follow these steps:
     # Windows
     .\build\examples\audio_playback\Release\catalyst_audio_playback.exe
     ```
+
+A checkout configured like this is in *developer mode*: the examples, tests and benchmarks are
+built too. When Catalyst is a dependency of another project they are not; see the next section.
+
+## Using Catalyst from your project
+
+There are four ways in, from least to most selective about what gets fetched. All four end the
+same way: `target_link_libraries(app PRIVATE catalyst::audio catalyst::rendering ...)`, one
+target per module, or `catalyst::catalyst` for everything that was built.
+
+### FetchContent
+
+```cmake
+include(FetchContent)
+FetchContent_Declare(catalyst
+  GIT_REPOSITORY https://github.com/colton-mcgraw/Catalyst.git
+  GIT_TAG        v0.1.0      # a tag or a commit, never a branch
+  GIT_SHALLOW    TRUE        # one commit, not the history
+)
+set(CATALYST_BUILD_UI OFF)   # any CATALYST_BUILD_* switch, before MakeAvailable
+FetchContent_MakeAvailable(catalyst)
+
+target_link_libraries(app PRIVATE catalyst::audio catalyst::logging)
+```
+
+As a dependency, `CATALYST_DEVELOPER_MODE` is off, so the examples, tests and benchmarks are not
+built and nothing of theirs is fetched into your build graph. Only the modules you leave on are
+compiled. The repository is small (under ten megabytes with history, less shallow), so for most
+projects this is the right amount of selectivity.
+
+### add_subdirectory or a submodule
+
+The same, with the checkout under your control:
+
+```bash
+git submodule add https://github.com/colton-mcgraw/Catalyst.git external/catalyst
+```
+
+```cmake
+set(CATALYST_BUILD_UI OFF)
+add_subdirectory(external/catalyst)
+```
+
+### An installed package
+
+Catalyst installs, and exports a CMake package, so it does not have to be in your tree at all:
+
+```bash
+cmake -S . -B build -DCMAKE_INSTALL_PREFIX=/where/you/want/it
+cmake --build build
+cmake --install build
+```
+
+Then, from another project — every module is a component:
+
+```cmake
+find_package(Catalyst 0.1 REQUIRED COMPONENTS audio rendering math)
+
+target_link_libraries(my_app PRIVATE catalyst::audio catalyst::rendering catalyst::math)
+```
+
+Asking for a module the install was not built with is an error naming what is missing and what the
+install does contain, rather than a link failure later. `find_package` also sets `CATALYST_MODULES`
+and `CATALYST_RENDERING_BACKEND_NAME` so a build can branch on either. The project in
+[tests/consumer](tests/consumer/CMakeLists.txt) is a complete example, and CI builds it against a
+fresh install.
+
+### Fetching only what you need
+
+If even a shallow clone is more than you want — a submodule in a repository that vendors several
+libraries, say — take a sparse checkout of the modules you build. The layout is one directory per
+module under `src/`, and the build tolerates a checkout that left any of them out: a module whose
+sources are absent simply defaults to `OFF`.
+
+```bash
+git clone --filter=blob:none --sparse https://github.com/colton-mcgraw/Catalyst.git
+cd Catalyst
+git sparse-checkout add cmake
+cmake -DMODULES="audio;logging" -DAPPLY=ON -P cmake/CatalystSparseCheckout.cmake
+cmake -S . -B build
+```
+
+The helper reads the module manifest, adds each module's dependencies (here `events` and `core`),
+and applies the result:
+
+```text
+-- Modules (with dependencies): core events audio logging
+-- Sparse-checkout paths:       cmake include src/win32 src/core src/events src/audio src/logging
+```
+
+Run it without `-DAPPLY=ON` to see the paths and apply them yourself, or add
+`-DEXTRA="tests;examples"` to take the test suites for those modules and the examples along. The
+public headers under `include/` are always taken whole: they include across modules, and the tree
+is small. `src/win32` is always taken too; it is five files, and the Win32 backends link it.
+
+Asking for a module that is not in the checkout is an error that names the directory to add:
+
+```text
+CATALYST_BUILD_RENDERING=ON, but src/rendering/ is not in this checkout.
+If this is a sparse checkout, add the module's sources:
+  git sparse-checkout add src/rendering
+```
+
+The four header-only modules — `core`, `events`, `text` and `math` — need nothing under `src/`
+beyond the target definition in their `src/<module>/CMakeLists.txt`, so a sparse checkout of any of
+them is `include/` plus a few files.
 
 ### Multi-compiler builds (Windows)
 
@@ -149,22 +259,17 @@ This repo includes a root [CMakePresets.json](CMakePresets.json) so you can quic
   cmake --build --preset clangcl-x64-release
   ```
 
-- Build the whole matrix (script):
-
-  ```powershell
-  ./scripts/build-all-presets.ps1
-  # or: ./scripts/build-all-presets.ps1 -Config Debug
-  # or: ./scripts/build-all-presets.ps1 -Config Release
-  ```
+- Build every preset available on this machine: see [Build-all scripts](#build-all-scripts).
 
 ### Test presets
 
-Test-enabled configure/build presets are provided with the `-tests` suffix.
+Test-enabled configure/build presets are provided with the `-tests` suffix. They switch the
+examples off and the tests on.
 
 - Build + run tests (Windows):
 
   ```powershell
-  ./scripts/build-all-presets.ps1 -Tests -RunTests
+  ./scripts/build-all-available-presets.ps1 -RunTests
   ```
 
 - Or run a specific test preset directly:
@@ -173,6 +278,10 @@ Test-enabled configure/build presets are provided with the `-tests` suffix.
   # after building one of the *-tests build presets
   ctest --preset clangcl-x64-debug-tests
   ```
+
+The `platform` suites run only against the null platform backend, because against Win32 they would
+open real windows on your desktop; add `-DCATALYST_PLATFORM_BACKEND=null` to a configure to run
+them on Windows.
 
 ### Cross-platform presets (Linux/macOS)
 
@@ -218,17 +327,29 @@ Catalyst is modular: you can link individual modules, or link the monolithic umb
 
 - **Monolithic**: `CATALYST_BUILD_ALL` (default: `ON`)
   - Builds the `catalyst` target (aliases: `catalyst::catalyst`, `catalyst::all`) which links all enabled modules.
-- **Modules** (all default to `ON`): `CATALYST_BUILD_ANIMATION`, `CATALYST_BUILD_AUDIO`,
-  `CATALYST_BUILD_CORE`, `CATALYST_BUILD_EVENTS`, `CATALYST_BUILD_INPUT`, `CATALYST_BUILD_LOGGING`,
-  `CATALYST_BUILD_MATH`, `CATALYST_BUILD_NET`, `CATALYST_BUILD_PHYSICS`, `CATALYST_BUILD_PLATFORM`,
-  `CATALYST_BUILD_RENDERING`, `CATALYST_BUILD_RESOURCE`, `CATALYST_BUILD_SCENE`,
-  `CATALYST_BUILD_TEXT`, `CATALYST_BUILD_UI`, `CATALYST_BUILD_UTILS`
+- **Modules**: one `CATALYST_BUILD_<MODULE>` switch per module in
+  [cmake/CatalystModules.cmake](cmake/CatalystModules.cmake).
+  - Implemented modules default to `ON`: `CATALYST_BUILD_AUDIO`, `CATALYST_BUILD_CORE`,
+    `CATALYST_BUILD_EVENTS`, `CATALYST_BUILD_INPUT`, `CATALYST_BUILD_LOGGING`, `CATALYST_BUILD_MATH`,
+    `CATALYST_BUILD_PLATFORM`, `CATALYST_BUILD_RENDERING`, `CATALYST_BUILD_RESOURCE`,
+    `CATALYST_BUILD_SCENE`, `CATALYST_BUILD_TEXT`, `CATALYST_BUILD_UI`.
+  - Placeholders default to `OFF`: `CATALYST_BUILD_ANIMATION`, `CATALYST_BUILD_NET`,
+    `CATALYST_BUILD_PHYSICS`, `CATALYST_BUILD_UTILS`. They contain a `module_name()` and nothing
+    else, and while off their headers are left out of the install.
   - `CATALYST_BUILD_UI_RENDERER` (default: `ON` when both `CATALYST_BUILD_UI` and `CATALYST_BUILD_RENDERING` are)
     builds `catalyst::ui_renderer`, the bridge that draws `catalyst::ui` batches through `catalyst::rendering`.
-- **Extras**:
-  - `CATALYST_BUILD_EXAMPLES` (default: `ON`)
-  - `CATALYST_BUILD_TESTS` (default: `ON`)
-  - `CATALYST_BUILD_BENCHMARKS` (default: `ON`)
+    It switches itself off when either side is off rather than failing the configure.
+  - Any module whose `src/<module>/` directory is not in the checkout defaults to `OFF`, whatever
+    the above says. Switching a module off that another one needs fails the configure with one
+    sentence naming the switch to flip.
+- **Developer mode**: `CATALYST_DEVELOPER_MODE` (default: `ON` when Catalyst is the top-level
+  project, `OFF` when it is an `add_subdirectory()` or `FetchContent` dependency). It is the default
+  for the three extras below and nothing else.
+- **Extras** (each defaults to `CATALYST_DEVELOPER_MODE`, and to `OFF` when its directory is absent):
+  - `CATALYST_BUILD_EXAMPLES`
+  - `CATALYST_BUILD_TESTS`
+  - `CATALYST_BUILD_BENCHMARKS`
+- **Other**:
   - `CATALYST_RESOURCE_STB` (default: `ON`) — fetches stb_image at a pinned commit for the source-format
     image decoders. `OFF` makes the resource module dependency-free; `load_image` then reports
     `unsupported_format` for PNG, JPEG and friends but still reads cooked KTX2 and DDS containers.
@@ -261,10 +382,10 @@ cmake -S . -B build \
 cmake --build build --config Release
 ```
 
-Example: build monolithic Catalyst without networking:
+Example: build monolithic Catalyst without audio:
 
 ```bash
-cmake -S . -B build -DCATALYST_BUILD_NET=OFF
+cmake -S . -B build -DCATALYST_BUILD_AUDIO=OFF
 cmake --build build --config Release
 ```
 
@@ -278,29 +399,6 @@ cmake -S . -B build \
   -DCATALYST_RENDERING_BACKEND=d3d12
 cmake --build build --config Release
 ```
-
-## Installing and consuming
-
-Catalyst installs, and exports a CMake package, so it does not have to be an `add_subdirectory` of
-your tree:
-
-```bash
-cmake -S . -B build -DCMAKE_INSTALL_PREFIX=/where/you/want/it
-cmake --build build
-cmake --install build
-```
-
-Then, from another project — every module is a component:
-
-```cmake
-find_package(Catalyst 0.1 REQUIRED COMPONENTS audio rendering math)
-
-target_link_libraries(my_app PRIVATE catalyst::audio catalyst::rendering catalyst::math)
-```
-
-Asking for a module the install was not built with is an error naming what is missing and what the
-install does contain, rather than a link failure later. `find_package` also sets `CATALYST_MODULES`
-and `CATALYST_RENDERING_BACKEND_NAME` so a build can branch on either.
 
 ## Includes
 
@@ -324,8 +422,8 @@ Generated at configure time, and the way to ask what a given build of Catalyst c
 static_assert(CATALYST_VERSION >= CATALYST_VERSION_ENCODE(0, 1, 0));
 ```
 
-It defines `CATALYST_HAS_<MODULE>` for all sixteen modules, `CATALYST_VERSION_MAJOR` / `_MINOR` /
-`_PATCH` / `_STRING`, the comparable `CATALYST_VERSION` with `CATALYST_VERSION_ENCODE`,
+It defines `CATALYST_HAS_<MODULE>` for every module in the manifest, `CATALYST_VERSION_MAJOR` /
+`_MINOR` / `_PATCH` / `_STRING`, the comparable `CATALYST_VERSION` with `CATALYST_VERSION_ENCODE`,
 `CATALYST_RENDERING_BACKEND_NAME` (resolved, never `"auto"`) and `CATALYST_HAS_STB_IMAGE`. The
 umbrella header uses these to include only what was actually built.
 
@@ -342,6 +440,29 @@ math::vec3f up{0.0f, 1.0f, 0.0f};
 
 Never include that header from a public header of your own: a namespace alias at global scope
 reaches everything that includes it, transitively.
+
+## Versioning and compatibility
+
+Catalyst is pre-1.0, and the version number says what to expect:
+
+- A **minor** release (0.1 to 0.2) may change or remove public API. Each such change is listed in
+  [CHANGELOG.md](CHANGELOG.md) with what to do about it.
+- A **patch** release (0.1.0 to 0.1.1) does not. Code that builds against 0.1.0 builds against
+  0.1.x, and the installed package says so: `find_package(Catalyst 0.1)` accepts any 0.1.x and
+  refuses 0.2.0 (`SameMinorVersion`).
+- From 1.0 the usual rule applies: breaking changes need a new major version.
+
+What the policy covers is what an install contains: the headers under `include/catalyst/`, the
+exported `catalyst::<module>` targets, the `find_package` components, and the macros in
+`<catalyst/config.hpp>`. What it does not cover:
+
+- Placeholder modules (`animation`, `net`, `physics`, `utils`). They are not installed and may be
+  renamed, reshaped or removed in any release.
+- Anything in a `detail` namespace or a `detail/` directory, and the backend targets
+  (`catalyst::rendering_backend_vulkan` and friends) that appear in the export set only because a
+  static library's private links have to.
+- The `null` backends' observable values (the size of the null monitor, say). They are stable in
+  practice because the tests depend on them, but they are a test fixture, not a promise.
 
 ## Documentation
 
@@ -366,4 +487,4 @@ how to build and test, the code style, and what CI checks.
 
 Catalyst is licensed under the MIT License. See the `LICENSE` file for more information.
 
---
+---

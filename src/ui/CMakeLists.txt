@@ -3,7 +3,7 @@
 # text.cpp walks labels by code point with catalyst::text's UTF-8 decoder.
 # Required, not optional: see cmake/CatalystModuleDeps.cmake.
 include(CatalystModuleDeps)
-catalyst_require_modules(ui math events text)
+catalyst_require_modules(ui)
 
 add_library(catalyst_ui STATIC
   ui.cpp

@@ -1,7 +1,7 @@
 # rendering/events.hpp publishes device and swapchain events to a catalyst::events::bus.
 # Required, not optional: see cmake/CatalystModuleDeps.cmake.
 include(CatalystModuleDeps)
-catalyst_require_modules(rendering events)
+catalyst_require_modules(rendering)
 
 add_library(catalyst_rendering STATIC
   rendering.cpp

@@ -1,10 +1,11 @@
-# Module targets live in subdirectories
+# Module targets live in subdirectories. Which subdirectories, in what order, and what each one is
+# called, all comes from the manifest in cmake/CatalystModules.cmake -- this file only walks it.
 
 # ---------------------------------------------------------------------------------------------
 # Generated <catalyst/config.hpp>
 #
 # The module switches are a build-time choice and, until now, a consumer had no way to ask which way
-# it went: <catalyst/catalyst.hpp> included all fourteen module headers unconditionally whatever the
+# it went: <catalyst/catalyst.hpp> included every module header unconditionally whatever the
 # options said. This header is the answer, and it is what lets the umbrella include only what was
 # built.
 #
@@ -25,82 +26,24 @@ target_include_directories(catalyst_config
 # Win32 plumbing shared by the platform, input and audio backends. Not a module: no build switch,
 # and it is added before them so every backend can link it.
 if(WIN32)
+  if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/win32/CMakeLists.txt")
+    message(FATAL_ERROR
+      "src/win32/ is not in this checkout, and the Win32 backends link it.\n"
+      "If this is a sparse checkout: git sparse-checkout add src/win32\n"
+      "Or build the null backends: -DCATALYST_PLATFORM_BACKEND=null -DCATALYST_INPUT_BACKEND=null "
+      "-DCATALYST_AUDIO_BACKEND=null\n")
+  endif()
   add_subdirectory(win32)
 endif()
 
-# These four are added before everything else because other modules link them, and a module's
-# dependency check (cmake/CatalystModuleDeps.cmake) runs when its subdirectory is added -- a
-# foundation added later would not exist yet to be found. They are foundations rather than features:
-# core holds vocabulary, events is the bus every module publishes on, text is the scanner the
-# parsers are built on, math is the geometry input and ui measure in. All four are header-only.
-if(CATALYST_BUILD_CORE)
-  add_subdirectory(core)
-endif()
-
-if(CATALYST_BUILD_EVENTS)
-  add_subdirectory(events)
-endif()
-
-if(CATALYST_BUILD_TEXT)
-  add_subdirectory(text)
-endif()
-
-if(CATALYST_BUILD_MATH)
-  add_subdirectory(math)
-endif()
-
-if(CATALYST_BUILD_ANIMATION)
-  add_subdirectory(animation)
-endif()
-
-if(CATALYST_BUILD_AUDIO)
-  add_subdirectory(audio)
-endif()
-
-if(CATALYST_BUILD_INPUT)
-  add_subdirectory(input)
-endif()
-
-if(CATALYST_BUILD_LOGGING)
-  add_subdirectory(logging)
-endif()
-
-if(CATALYST_BUILD_NET)
-  add_subdirectory(net)
-endif()
-
-if(CATALYST_BUILD_PHYSICS)
-  add_subdirectory(physics)
-endif()
-
-if(CATALYST_BUILD_PLATFORM)
-  add_subdirectory(platform)
-endif()
-
-if(CATALYST_BUILD_RENDERING)
-  add_subdirectory(rendering)
-endif()
-
-if(CATALYST_BUILD_RESOURCE)
-  add_subdirectory(resource)
-endif()
-
-if(CATALYST_BUILD_SCENE)
-  add_subdirectory(scene)
-endif()
-
-if(CATALYST_BUILD_UI)
-  add_subdirectory(ui)
-endif()
-
-# After both ui and rendering: it links them, and catalyst_require_modules checks they exist.
-if(CATALYST_BUILD_UI_RENDERER)
-  add_subdirectory(ui/renderer)
-endif()
-
-if(CATALYST_BUILD_UTILS)
-  add_subdirectory(utils)
-endif()
+# Manifest order is build order: the foundations (core, events, text, math) come first because
+# other modules link them and a module's dependency check runs when its subdirectory is added;
+# ui_renderer comes after both ui and rendering for the same reason.
+foreach(_module IN LISTS CATALYST_MODULES)
+  if(${CATALYST_MODULE_${_module}_OPTION})
+    add_subdirectory(${CATALYST_MODULE_${_module}_SOURCE_DIR})
+  endif()
+endforeach()
 
 # Monolithic library that consumers can link against.
 # It links whatever modules are enabled.
@@ -118,73 +61,11 @@ if(CATALYST_BUILD_ALL)
       $<INSTALL_INTERFACE:include>
   )
 
-  if(TARGET catalyst_rendering)
-    target_link_libraries(catalyst PUBLIC catalyst_rendering)
-  endif()
-
-  if(TARGET catalyst_resource)
-    target_link_libraries(catalyst PUBLIC catalyst_resource)
-  endif()
-
-  if(TARGET catalyst_scene)
-    target_link_libraries(catalyst PUBLIC catalyst_scene)
-  endif()
-
-  if(TARGET catalyst_ui)
-    target_link_libraries(catalyst PUBLIC catalyst_ui)
-  endif()
-
-  if(TARGET catalyst_ui_renderer)
-    target_link_libraries(catalyst PUBLIC catalyst_ui_renderer)
-  endif()
-
-  if(TARGET catalyst_animation)
-    target_link_libraries(catalyst PUBLIC catalyst_animation)
-  endif()
-
-  if(TARGET catalyst_audio)
-    target_link_libraries(catalyst PUBLIC catalyst_audio)
-  endif()
-
-  if(TARGET catalyst_core)
-    target_link_libraries(catalyst PUBLIC catalyst_core)
-  endif()
-
-  if(TARGET catalyst_events)
-    target_link_libraries(catalyst PUBLIC catalyst_events)
-  endif()
-
-  if(TARGET catalyst_text)
-    target_link_libraries(catalyst PUBLIC catalyst_text)
-  endif()
-
-  if(TARGET catalyst_input)
-    target_link_libraries(catalyst PUBLIC catalyst_input)
-  endif()
-
-  if(TARGET catalyst_logging)
-    target_link_libraries(catalyst PUBLIC catalyst_logging)
-  endif()
-
-  if(TARGET catalyst_math)
-    target_link_libraries(catalyst PUBLIC catalyst_math)
-  endif()
-
-  if(TARGET catalyst_net)
-    target_link_libraries(catalyst PUBLIC catalyst_net)
-  endif()
-
-  if(TARGET catalyst_physics)
-    target_link_libraries(catalyst PUBLIC catalyst_physics)
-  endif()
-
-  if(TARGET catalyst_platform)
-    target_link_libraries(catalyst PUBLIC catalyst_platform)
-  endif()
-
-  if(TARGET catalyst_utils)
-    target_link_libraries(catalyst PUBLIC catalyst_utils)
-  endif()
+  foreach(_module IN LISTS CATALYST_MODULES)
+    if(TARGET catalyst_${_module})
+      target_link_libraries(catalyst PUBLIC catalyst_${_module})
+    endif()
+  endforeach()
 endif()
 
 
@@ -193,12 +74,17 @@ endif()
 # been resolved. See the catalyst_config target near the top of this file.
 # ---------------------------------------------------------------------------------------------
 
-foreach(_module ANIMATION AUDIO CORE EVENTS INPUT LOGGING MATH NET PHYSICS PLATFORM RENDERING RESOURCE SCENE TEXT UI UI_RENDERER UTILS)
-  if(CATALYST_BUILD_${_module})
-    set(CATALYST_HAS_${_module} 1)
+set(CATALYST_CONFIG_MODULE_DEFINES "")
+foreach(_module IN LISTS CATALYST_MODULES)
+  string(TOUPPER "${_module}" _upper)
+  if(${CATALYST_MODULE_${_module}_OPTION})
+    set(_value 1)
   else()
-    set(CATALYST_HAS_${_module} 0)
+    set(_value 0)
   endif()
+  string(APPEND CATALYST_CONFIG_MODULE_DEFINES
+    "/** @brief catalyst::${_module}: ${CATALYST_MODULE_${_module}_DESCRIPTION}. */\n"
+    "#define CATALYST_HAS_${_upper} ${_value}\n")
 endforeach()
 
 if(CATALYST_RESOURCE_STB)
@@ -219,6 +105,19 @@ configure_file(
   @ONLY
 )
 
+# The umbrella header is hand-written, and it is the one inventory the manifest cannot generate
+# without owning a public header. So it is checked instead: a module declared here but not guarded
+# there would build, install, and then be missing from <catalyst/catalyst.hpp>.
+file(STRINGS ${PROJECT_SOURCE_DIR}/include/catalyst/catalyst.hpp _umbrella_guards REGEX "^#if CATALYST_HAS_")
+foreach(_module IN LISTS CATALYST_MODULES)
+  string(TOUPPER "${_module}" _upper)
+  if(NOT "#if CATALYST_HAS_${_upper}" IN_LIST _umbrella_guards)
+    message(AUTHOR_WARNING
+      "include/catalyst/catalyst.hpp has no '#if CATALYST_HAS_${_upper}' block for catalyst::${_module}. "
+      "Every module in cmake/CatalystModules.cmake should be included there behind its guard.")
+  endif()
+endforeach()
+
 
 # ---------------------------------------------------------------------------------------------
 # Install and export
@@ -238,11 +137,19 @@ include(CMakePackageConfigHelpers)
 
 set(_catalyst_export_targets catalyst_config)
 set(_catalyst_installed_modules "")
+set(_catalyst_header_excludes "")
 
-foreach(_module animation audio core events input logging math net physics platform rendering resource scene text ui ui_renderer utils)
+foreach(_module IN LISTS CATALYST_MODULES)
   if(TARGET catalyst_${_module})
     list(APPEND _catalyst_export_targets catalyst_${_module})
     list(APPEND _catalyst_installed_modules ${_module})
+  elseif(CATALYST_MODULE_${_module}_PLACEHOLDER)
+    # A placeholder that was not built ships no header either: an empty namespace in an installed
+    # header is a public API by accident, and this is where the release boundary is drawn. Headers
+    # of a real module that was switched off are still installed, because public headers include
+    # across modules (platform/window.hpp includes ui and input headers) and <catalyst/config.hpp>
+    # is how a consumer tells what is actually linkable.
+    list(APPEND _catalyst_header_excludes REGEX "/include/catalyst/${_module}(/|$)" EXCLUDE)
   endif()
 endforeach()
 
@@ -281,9 +188,12 @@ install(TARGETS ${_catalyst_export_targets}
 
 # The hand-written headers, then the generated one, into the same tree so that
 # <catalyst/config.hpp> sits beside <catalyst/audio/audio.hpp> exactly as it does in the build.
+# The EXCLUDE expressions come first because the first match decides.
 install(DIRECTORY ${PROJECT_SOURCE_DIR}/include/catalyst
   DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-  FILES_MATCHING PATTERN "*.hpp"
+  FILES_MATCHING
+    ${_catalyst_header_excludes}
+    PATTERN "*.hpp"
 )
 
 install(FILES ${PROJECT_BINARY_DIR}/generated/catalyst/config.hpp
@@ -302,7 +212,8 @@ configure_package_config_file(
   INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/Catalyst
 )
 
-# SameMinorVersion: Catalyst is pre-1.0, so the minor number is where breaking changes land.
+# SameMinorVersion: Catalyst is pre-1.0, so the minor number is where breaking changes land. The
+# policy is written down in README.md ("Versioning and compatibility") and CHANGELOG.md.
 write_basic_package_version_file(
   ${PROJECT_BINARY_DIR}/CatalystConfigVersion.cmake
   VERSION ${PROJECT_VERSION}

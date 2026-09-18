@@ -102,6 +102,8 @@ jobs:
           CXXFLAGS: ${{ matrix.cxxflags }}
         # No generator is forced on Windows: the image's Visual Studio generator is a multi-config
         # one, which is why every build and test step below also passes --config / -C.
+        # CATALYST_BUILD_TESTS is already ON for a top-level configure (CATALYST_DEVELOPER_MODE);
+        # it is spelled out so this job does not depend on that default.
         run: >
           cmake -S . -B build
           -DCMAKE_BUILD_TYPE=Release
@@ -173,41 +175,78 @@ jobs:
           subset no-audio    -DCATALYST_BUILD_AUDIO=OFF
           subset no-stb      -DCATALYST_RESOURCE_STB=OFF
           subset no-monolith -DCATALYST_BUILD_ALL=OFF
+          subset no-logging  -DCATALYST_BUILD_LOGGING=OFF -DCATALYST_BUILD_RENDERING=OFF
           subset headless    -DCATALYST_BUILD_PLATFORM=OFF -DCATALYST_BUILD_RENDERING=OFF -DCATALYST_BUILD_UI=OFF -DCATALYST_BUILD_INPUT=OFF
           subset parsers-only -DCATALYST_BUILD_ALL=OFF -DCATALYST_BUILD_AUDIO=OFF -DCATALYST_BUILD_INPUT=OFF \
                               -DCATALYST_BUILD_PLATFORM=OFF -DCATALYST_BUILD_RENDERING=OFF -DCATALYST_BUILD_UI=OFF
 
-      # The install and the package config are part of the public surface now, so something has to
-      # prove a separate project can actually consume them.
+      # A dependency's switches must fail with a sentence, not a missing-target error, and a switch
+      # for a module that is not in the checkout must say so. Both are checked below by asking for
+      # the failure and inverting the result.
+      - name: Dependency errors are readable
+        env:
+          CC: gcc-14
+          CXX: g++-14
+        run: |
+          set -eux
+          if cmake -S . -B build-bad-deps -G Ninja -DCATALYST_BUILD_EVENTS=OFF > bad-deps.log 2>&1; then
+            echo "expected the configure to fail"; exit 1
+          fi
+          grep -q "catalyst::audio needs modules that are switched off" bad-deps.log
+          grep -q "CATALYST_BUILD_EVENTS=ON" bad-deps.log
+
+      # A consumer that fetched only the modules it builds. The helper computes the paths from the
+      # manifest; the clone below takes them from a local, sparse checkout of this same commit, so
+      # what is tested is that the build tolerates every directory the helper leaves out.
+      - name: Sparse checkout builds
+        env:
+          CC: gcc-14
+          CXX: g++-14
+        run: |
+          set -eux
+          paths=$(cmake -DMODULES="audio;logging" -P cmake/CatalystSparseCheckout.cmake 2>&1 \
+                  | sed -n 's/^-- Sparse-checkout paths: *//p')
+          git clone --no-checkout --quiet "$PWD" sparse
+          cd sparse
+          git sparse-checkout set --cone $paths
+          git checkout --quiet HEAD
+          test ! -d src/rendering
+          test ! -d tests
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake --build build --parallel
+          # The switches for what is not there are OFF, and asking for one names the fix.
+          if cmake -S . -B build-forced -G Ninja -DCATALYST_BUILD_RENDERING=ON > forced.log 2>&1; then
+            echo "expected the configure to fail"; exit 1
+          fi
+          grep -q "git sparse-checkout add src/rendering" forced.log
+
+      # The install and the package config are part of the public surface, so something has to
+      # prove a separate project can actually consume them. The project is tests/consumer/.
       - name: Install and consume
         env:
           CC: gcc-14
           CXX: g++-14
         run: |
           set -eux
+          version=$(sed -n 's/^project(Catalyst VERSION \([0-9.]*\).*/\1/p' CMakeLists.txt)
           cmake -S . -B build-install -G Ninja -DCMAKE_BUILD_TYPE=Release \
             -DCATALYST_RENDERING_BACKEND=null -DCMAKE_INSTALL_PREFIX="$PWD/install-prefix"
           cmake --build build-install --parallel
           cmake --install build-install
 
-          mkdir -p consumer && cd consumer
-          cat > CMakeLists.txt <<'CMAKE'
-          cmake_minimum_required(VERSION 3.16)
-          project(CatalystConsumer LANGUAGES CXX)
-          set(CMAKE_CXX_STANDARD 23)
-          set(CMAKE_CXX_STANDARD_REQUIRED ON)
-          find_package(Catalyst 0.1 REQUIRED COMPONENTS audio rendering math events)
-          add_executable(consumer main.cpp)
-          target_link_libraries(consumer PRIVATE catalyst::audio catalyst::rendering catalyst::math catalyst::events)
-          CMAKE
-          cat > main.cpp <<'CPP'
-          #include <catalyst/config.hpp>
-          #include <catalyst/math/geometry.hpp>
-          #include <catalyst/math/vector.hpp>
-          static_assert(CATALYST_HAS_AUDIO && CATALYST_HAS_EVENTS);
-          static_assert(CATALYST_VERSION >= CATALYST_VERSION_ENCODE(0, 1, 0));
-          int main() { return catalyst::math::magnitude(catalyst::math::vec3f{0.0f, 1.0f, 0.0f}) == 1.0f ? 0 : 1; }
-          CPP
-          cmake -S . -B build -G Ninja -DCMAKE_PREFIX_PATH="$GITHUB_WORKSPACE/install-prefix"
-          cmake --build build
-          ./build/consumer
+          # Placeholder modules stay out of a default install, headers included.
+          test ! -e install-prefix/include/catalyst/net/net.hpp
+          test -e install-prefix/include/catalyst/audio/audio.hpp
+
+          cmake -S tests/consumer -B build-consumer -G Ninja \
+            -DCMAKE_PREFIX_PATH="$PWD/install-prefix" -DCATALYST_CONSUMER_VERSION="$version"
+          cmake --build build-consumer
+          ctest --test-dir build-consumer --output-on-failure
+
+          # Requiring a component the install does not have must fail, naming what it does have.
+          if cmake -S tests/consumer -B build-consumer-missing -G Ninja \
+               -DCMAKE_PREFIX_PATH="$PWD/install-prefix" -DCATALYST_CONSUMER_COMPONENTS="audio;net" \
+               -DCATALYST_CONSUMER_EXPECT_ABSENT="" > missing.log 2>&1; then
+            echo "expected find_package to fail"; exit 1
+          fi
+          grep -q "This Catalyst install does not contain: net" missing.log

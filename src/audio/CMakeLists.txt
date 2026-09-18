@@ -1,7 +1,7 @@
 # Device and stream events are published to a catalyst::events::bus.
 # Required, not optional: see cmake/CatalystModuleDeps.cmake.
 include(CatalystModuleDeps)
-catalyst_require_modules(audio events)
+catalyst_require_modules(audio)
 
 # The null backend is always compiled, so the module builds, links and tests on every platform, and
 # the offline renderer needs no backend at all. Platform backends are added conditionally and

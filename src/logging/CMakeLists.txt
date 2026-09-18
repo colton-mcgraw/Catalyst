@@ -1,7 +1,7 @@
 # detail/middleware_entry.hpp stores the erased middleware in core::detail::move_only_function.
 # Required, not optional: see cmake/CatalystModuleDeps.cmake.
 include(CatalystModuleDeps)
-catalyst_require_modules(logging core)
+catalyst_require_modules(logging)
 
 add_library(catalyst_logging STATIC
   logging.cpp

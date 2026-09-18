@@ -1,7 +1,7 @@
 # Transforms, bounds, cameras and extraction are all expressed in catalyst::math types.
 # Required, not optional: see cmake/CatalystModuleDeps.cmake.
 include(CatalystModuleDeps)
-catalyst_require_modules(scene math)
+catalyst_require_modules(scene)
 
 add_library(catalyst_scene STATIC
   scene.cpp

@@ -1,7 +1,7 @@
 # The listener and middleware registries store callables in core::detail::move_only_function.
 # Required, not optional: see cmake/CatalystModuleDeps.cmake.
 include(CatalystModuleDeps)
-catalyst_require_modules(events core)
+catalyst_require_modules(events)
 
 # catalyst::events is header-only, and is the module the rest of Catalyst is built on: audio, input,
 # rendering, resource, platform and ui all publish to an events::bus.

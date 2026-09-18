@@ -1,7 +1,7 @@
 # loader.hpp and vfs.hpp publish to a catalyst::events::bus; json/scan.hpp and csv/parser.hpp are built on catalyst::text.
 # Required, not optional: see cmake/CatalystModuleDeps.cmake.
 include(CatalystModuleDeps)
-catalyst_require_modules(resource events text)
+catalyst_require_modules(resource)
 
 add_library(catalyst_resource STATIC
   resource.cpp

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.23)
 
 project(Catalyst VERSION 0.1.0 LANGUAGES CXX)
 
@@ -20,44 +20,53 @@ if(MSVC)
 	add_compile_options(/FS)
 endif()
 
+# Contributor defaults versus consumer defaults. A checkout configured directly wants the examples,
+# tests and benchmarks; a project that pulled Catalyst in with add_subdirectory() or FetchContent
+# wants the library and nothing else, and should not have to know three switches to get it.
+option(CATALYST_DEVELOPER_MODE
+  "Default the examples, tests and benchmarks to ON. ON when this is the top-level project, OFF when Catalyst is a dependency of another one."
+  ${PROJECT_IS_TOP_LEVEL})
+
 option(CATALYST_BUILD_ALL "Build monolithic Catalyst library (links enabled modules)" ON)
 
-# Implemented modules. These build real code.
-option(CATALYST_BUILD_ANIMATION "Build Catalyst animation module (PLACEHOLDER: no implementation yet)" OFF)
-option(CATALYST_BUILD_AUDIO "Build Catalyst audio module" ON)
-option(CATALYST_BUILD_CORE "Build Catalyst core module" ON)
-option(CATALYST_BUILD_EVENTS "Build Catalyst events module (header-only)" ON)
-option(CATALYST_BUILD_INPUT "Build Catalyst input module" ON)
-option(CATALYST_BUILD_LOGGING "Build Catalyst logging module" ON)
-option(CATALYST_BUILD_MATH "Build Catalyst math module" ON)
-option(CATALYST_BUILD_NET "Build Catalyst net module (PLACEHOLDER: no implementation yet)" OFF)
-option(CATALYST_BUILD_PHYSICS "Build Catalyst physics module (PLACEHOLDER: no implementation yet)" OFF)
-option(CATALYST_BUILD_PLATFORM "Build Catalyst platform module" ON)
-option(CATALYST_BUILD_RENDERING "Build Catalyst rendering module" ON)
-option(CATALYST_BUILD_RESOURCE "Build Catalyst resource module" ON)
-option(CATALYST_BUILD_SCENE "Build Catalyst scene module" ON)
-option(CATALYST_BUILD_TEXT "Build Catalyst text module (header-only)" ON)
-option(CATALYST_BUILD_UI "Build Catalyst UI module" ON)
-# The bridge that submits catalyst::ui draw lists through catalyst::rendering. A dependent option so
-# that switching either module off does not fail the configure; it simply goes with them.
-include(CMakeDependentOption)
-cmake_dependent_option(CATALYST_BUILD_UI_RENDERER "Build the Catalyst UI renderer bridge (catalyst::ui_renderer)" ON
-  "CATALYST_BUILD_UI;CATALYST_BUILD_RENDERING" OFF)
-option(CATALYST_BUILD_UTILS "Build Catalyst utils module (PLACEHOLDER: no implementation yet)" OFF)
+# The modules, one declaration each, in cmake/CatalystModules.cmake. This turns every declaration
+# into a CATALYST_BUILD_<MODULE> switch. Implemented modules default ON; the placeholders
+# (animation, net, physics, utils) default OFF; and any module whose src/ directory is not in the
+# checkout defaults OFF, which is what lets a sparse checkout of a few modules configure as is.
+include(CatalystModules)
+catalyst_module_options()
 
-# animation, net, physics and utils are a single module_name() function each -- 33 to 45 lines
-# including the Doxygen block, and nothing a consumer can call. They shipped default-ON, producing
-# four static libraries that did nothing and sitting in the README's option list beside audio and
-# rendering with nothing to tell them apart. They default OFF now, and the README says which modules
-# are real. Turn one on if you are working on it; there is nothing else to gain by it.
 # Image decoding in catalyst::resource. ON fetches stb_image at a pinned commit (cmake/stb.cmake),
 # which needs network access the first time a build tree is configured. OFF keeps the resource
 # module dependency-free and makes load_image report unsupported_format instead of decoding.
 option(CATALYST_RESOURCE_STB "Fetch stb_image and build the resource module's image decoders" ON)
 
-option(CATALYST_BUILD_EXAMPLES "Build Catalyst examples" ON)
-option(CATALYST_BUILD_TESTS "Build Catalyst tests" ON)
-option(CATALYST_BUILD_BENCHMARKS "Build Catalyst benchmarks" ON)
+# Each extra follows developer mode, and each also needs its directory to be present: a sparse
+# checkout that took only the library should not fail over a tests/ that was never fetched.
+foreach(_extra "EXAMPLES examples" "TESTS tests" "BENCHMARKS bench")
+	separate_arguments(_extra)
+	list(GET _extra 0 _option)
+	list(GET _extra 1 _dir)
+
+	if(CATALYST_DEVELOPER_MODE AND EXISTS "${PROJECT_SOURCE_DIR}/${_dir}/CMakeLists.txt")
+		set(_default ON)
+	else()
+		set(_default OFF)
+	endif()
+
+	option(CATALYST_BUILD_${_option} "Build Catalyst ${_dir} (defaults to CATALYST_DEVELOPER_MODE)" ${_default})
+
+	if(CATALYST_BUILD_${_option} AND NOT EXISTS "${PROJECT_SOURCE_DIR}/${_dir}/CMakeLists.txt")
+		message(FATAL_ERROR
+			"CATALYST_BUILD_${_option}=ON, but ${_dir}/ is not in this checkout.\n"
+			"If this is a sparse checkout: git sparse-checkout add ${_dir}\n"
+			"Otherwise: -DCATALYST_BUILD_${_option}=OFF\n")
+	endif()
+endforeach()
+unset(_extra)
+unset(_option)
+unset(_dir)
+unset(_default)
 
 add_subdirectory(src)
 
