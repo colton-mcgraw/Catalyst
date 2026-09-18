@@ -5,7 +5,11 @@ All notable changes to Catalyst are recorded here. The format follows
 policy in the README under *Versioning and compatibility*: while Catalyst is pre-1.0, a minor
 release may break the API and a patch release may not.
 
-## [Unreleased]
+## [0.1.0] - 2026-09-18
+
+Initial development release: rendering, resource, audio, input, logging, platform, math, ui,
+scene, events and text modules, with Win32 and Vulkan backends and null backends for every module.
+The entries below are the build-system and documentation work that went into cutting it.
 
 ### Added
 
@@ -48,7 +52,12 @@ release may break the API and a patch release may not.
 - README: the build-all script is `scripts/build-all-available-presets.ps1` and takes `-RunTests`
   only; the module switches do not all default to ON; the CMake floor matches the project.
 
-## [0.1.0]
+### Known issues
 
-Initial development release: rendering, resource, audio, input, logging, platform, math, ui,
-scene, events and text modules, with Win32 and Vulkan backends and null backends for every module.
+- `catalyst.rendering.transfer` fails in a Release build against the Vulkan backend: a
+  `co_await` on a readback never resumes, so the test's bounded pump loop gives up
+  (`tests/rendering/test_transfer.cpp`, "co_await readback"). Reproduced on 2026-09-18 with
+  clang-cl and an Intel Arc GPU, three runs out of three. Debug builds and the `null` backend pass.
+  Until it is fixed, treat readback completion on Vulkan in optimised builds as unreliable.
+
+[0.1.0]: https://github.com/colton-mcgraw/Catalyst/releases/tag/v0.1.0
