@@ -33,7 +33,20 @@ namespace catalyst::ui
             return b.left > 0.0f || b.top > 0.0f || b.right > 0.0f || b.bottom > 0.0f;
         }
 
-        void paint_node(const tree &t, node n, batch_builder &out, const resolve_context &base, float parent_opacity)
+        /**
+         * @brief Opens a layer over `bounds` when `opacity` calls for one under `mode`.
+         * @return True when a layer was begun and `end_layer` is owed.
+         */
+        [[nodiscard]] bool maybe_begin_layer(batch_builder &out, opacity_mode mode, const rect &bounds, float opacity)
+        {
+            if (mode != opacity_mode::group || opacity >= 1.0f)
+                return false;
+            out.begin_layer(bounds, opacity);
+            return true;
+        }
+
+        void paint_node(const tree &t, node n, batch_builder &out, const resolve_context &base, opacity_mode mode,
+                        float parent_opacity)
         {
             const layout_result &lr = t.layout_of(n);
             if (!lr.laid_out || lr.hidden)
@@ -43,9 +56,14 @@ namespace catalyst::ui
             if (s.display == display_mode::none)
                 return;
 
-            const float opacity = parent_opacity * std::clamp(s.opacity, 0.0f, 1.0f);
-            if (opacity <= 0.0f)
+            const float own = std::clamp(s.opacity, 0.0f, 1.0f);
+            if (own <= 0.0f || parent_opacity <= 0.0f)
                 return;
+
+            // Group: the subtree paints at full alpha into a layer the renderer blends in at `own`.
+            // Multiply: `own` folds into the alpha of everything below, layer-free.
+            const bool layered = maybe_begin_layer(out, mode, lr.subtree_bounds, own);
+            const float opacity = layered ? parent_opacity : parent_opacity * own;
 
             resolve_context ctx = base;
             ctx.font_px = lr.font_px;
@@ -72,10 +90,12 @@ namespace catalyst::ui
             }
 
             for (const node child : t.children_of(n))
-                paint_node(t, child, out, base, opacity);
+                paint_node(t, child, out, base, mode, opacity);
 
             if (clips)
                 out.pop_clip();
+            if (layered)
+                out.end_layer();
         }
     } // namespace
 
@@ -83,7 +103,18 @@ namespace catalyst::ui
     {
         if (!t.is_valid(root))
             return;
-        paint_node(t, root, out, params.context, std::clamp(params.opacity, 0.0f, 1.0f));
+
+        const float root_opacity = std::clamp(params.opacity, 0.0f, 1.0f);
+        if (root_opacity <= 0.0f)
+            return;
+
+        // The root opacity behaves like an opacity on the root node: a layer over the whole tree
+        // in group mode, a multiplier otherwise.
+        const layout_result &lr = t.layout_of(root);
+        const bool layered = lr.laid_out && maybe_begin_layer(out, params.compositing, lr.subtree_bounds, root_opacity);
+        paint_node(t, root, out, params.context, params.compositing, layered ? 1.0f : root_opacity);
+        if (layered)
+            out.end_layer();
     }
 
 } // namespace catalyst::ui

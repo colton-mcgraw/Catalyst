@@ -223,6 +223,8 @@ Catalyst is modular: you can link individual modules, or link the monolithic umb
   `CATALYST_BUILD_MATH`, `CATALYST_BUILD_NET`, `CATALYST_BUILD_PHYSICS`, `CATALYST_BUILD_PLATFORM`,
   `CATALYST_BUILD_RENDERING`, `CATALYST_BUILD_RESOURCE`, `CATALYST_BUILD_SCENE`,
   `CATALYST_BUILD_TEXT`, `CATALYST_BUILD_UI`, `CATALYST_BUILD_UTILS`
+  - `CATALYST_BUILD_UI_RENDERER` (default: `ON` when both `CATALYST_BUILD_UI` and `CATALYST_BUILD_RENDERING` are)
+    builds `catalyst::ui_renderer`, the bridge that draws `catalyst::ui` batches through `catalyst::rendering`.
 - **Extras**:
   - `CATALYST_BUILD_EXAMPLES` (default: `ON`)
   - `CATALYST_BUILD_TESTS` (default: `ON`)

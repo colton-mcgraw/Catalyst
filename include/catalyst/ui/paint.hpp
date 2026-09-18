@@ -17,6 +17,26 @@ namespace catalyst::ui
 {
 
     /**
+     * @enum opacity_mode
+     * @brief How a translucent node (`style::opacity` below one) is painted.
+     */
+    enum class opacity_mode : std::uint8_t
+    {
+        /**
+         * @brief Group opacity, as CSS defines it: the subtree is painted at full opacity into a
+         * `layer` of the batch, and the renderer blends the finished image in at the node's opacity.
+         * Overlapping children do not show through each other. Costs an offscreen pass per
+         * translucent node; needs a renderer that draws layers.
+         */
+        group = 0,
+        /**
+         * @brief The node's opacity is multiplied into the alpha of everything in its subtree.
+         * No layers, no offscreen pass, but overlapping children show through each other.
+         */
+        multiply,
+    };
+
+    /**
      * @struct paint_params
      * @brief The inputs a paint pass needs beyond the tree and the builder.
      */
@@ -30,8 +50,14 @@ namespace catalyst::ui
          */
         resolve_context context{};
 
-        /** @brief Opacity applied to the whole subtree, multiplied into every node's own. */
+        /**
+         * @brief Opacity applied to the whole subtree, treated like a `style::opacity` on the root:
+         * a layer under `opacity_mode::group`, a multiplier under `opacity_mode::multiply`.
+         */
         float opacity = 1.0f;
+
+        /** @brief Whether a translucent node becomes a layer or scales its subtree's alpha. */
+        opacity_mode compositing = opacity_mode::group;
 
         /**
          * @brief Builds parameters matching `layout_params::for_viewport`.
@@ -65,9 +91,11 @@ namespace catalyst::ui
         /** @brief The node's style. */
         const ui::style &style;
         /**
-         * @brief The opacity in effect, the product of every ancestor's and the node's own.
-         * @details Multiply it into the alpha of everything painted. The pass has already applied
-         * it to the background and border.
+         * @brief The opacity to multiply into the alpha of everything painted.
+         * @details Under `opacity_mode::multiply` it is the product of every ancestor's opacity and
+         * the node's own. Under `opacity_mode::group` a translucent ancestor is a layer the renderer
+         * composites instead, so this is one. The pass has already applied it to the background
+         * and border either way.
          */
         float opacity;
         /** @brief The measurement context for this node: its font size and box size are filled in. */
@@ -82,13 +110,16 @@ namespace catalyst::ui
      * then the clip is popped. Nodes that layout hid, or that were never laid out, are skipped with
      * their subtrees.
      *
-     * Opacity is applied per node by scaling alpha, which is not the same as compositing the
-     * subtree at reduced opacity: overlapping children show through each other. True group
-     * opacity needs an offscreen pass and is deferred with the renderer bridge.
+     * A node whose opacity is below one is, under `opacity_mode::group`, wrapped in a
+     * `batch_builder::begin_layer` over its `layout_result::subtree_bounds` and painted at full
+     * opacity inside it; the renderer composites the layer. A `paint_fn` that draws outside its
+     * node's subtree bounds is cut at the layer's edge. Under `opacity_mode::multiply` the opacity
+     * is instead multiplied into the alpha of everything in the subtree, and overlapping children
+     * show through each other. A node whose opacity is zero is skipped with its subtree either way.
      * @param t The tree.
      * @param root The node to start from. Its ancestors' clips are not applied.
      * @param out The builder to emit into. Its current clip bounds everything painted.
-     * @param params Context and root opacity.
+     * @param params Context, root opacity and how opacity composites.
      */
     void paint(const tree &t, node root, batch_builder &out, const paint_params &params) noexcept;
 

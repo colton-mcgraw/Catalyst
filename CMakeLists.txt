@@ -38,6 +38,11 @@ option(CATALYST_BUILD_RESOURCE "Build Catalyst resource module" ON)
 option(CATALYST_BUILD_SCENE "Build Catalyst scene module" ON)
 option(CATALYST_BUILD_TEXT "Build Catalyst text module (header-only)" ON)
 option(CATALYST_BUILD_UI "Build Catalyst UI module" ON)
+# The bridge that submits catalyst::ui draw lists through catalyst::rendering. A dependent option so
+# that switching either module off does not fail the configure; it simply goes with them.
+include(CMakeDependentOption)
+cmake_dependent_option(CATALYST_BUILD_UI_RENDERER "Build the Catalyst UI renderer bridge (catalyst::ui_renderer)" ON
+  "CATALYST_BUILD_UI;CATALYST_BUILD_RENDERING" OFF)
 option(CATALYST_BUILD_UTILS "Build Catalyst utils module (PLACEHOLDER: no implementation yet)" OFF)
 
 # animation, net, physics and utils are a single module_name() function each -- 33 to 45 lines

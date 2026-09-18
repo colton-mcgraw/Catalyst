@@ -77,6 +77,10 @@
 #include <catalyst/ui/ui.hpp>
 #endif
 
+#if CATALYST_HAS_UI_RENDERER
+#include <catalyst/ui/renderer.hpp>
+#endif
+
 #if CATALYST_HAS_UTILS
 #include <catalyst/utils/utils.hpp>
 #endif

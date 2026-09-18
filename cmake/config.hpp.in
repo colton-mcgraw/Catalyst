@@ -59,6 +59,8 @@
 #define CATALYST_HAS_SCENE @CATALYST_HAS_SCENE@
 #define CATALYST_HAS_TEXT @CATALYST_HAS_TEXT@
 #define CATALYST_HAS_UI @CATALYST_HAS_UI@
+/** @brief 1 when the UI renderer bridge (catalyst::ui_renderer, ui/renderer.hpp) was built. */
+#define CATALYST_HAS_UI_RENDERER @CATALYST_HAS_UI_RENDERER@
 #define CATALYST_HAS_UTILS @CATALYST_HAS_UTILS@
 /** @} */
 

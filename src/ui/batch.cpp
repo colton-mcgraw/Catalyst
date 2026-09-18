@@ -77,6 +77,7 @@ namespace catalyst::ui
         vertices.clear();
         indices.clear();
         commands.clear();
+        layers.clear();
     }
 
     std::uint32_t corner_segments(float radius) noexcept
@@ -114,17 +115,46 @@ namespace catalyst::ui
             clip_stack_.pop_back();
     }
 
+    layer_id batch_builder::begin_layer(const rect &bounds, float opacity)
+    {
+        // The layer's rectangle is also its clip: nothing painted outside it can reach the target,
+        // so culling against it here is free and matches what the renderer's scissor would do.
+        push_clip(bounds);
+
+        const layer_id id = static_cast<layer_id>(batch_.layers.size());
+        batch_.layers.push_back(ui::layer{ // Qualified: the member function layer() shadows the struct here.
+            .bounds = clip_stack_.back(),
+            .opacity = std::clamp(opacity, 0.0f, 1.0f),
+            .parent = layer(),
+            .first_command = static_cast<std::uint32_t>(batch_.commands.size()),
+            .end_command = static_cast<std::uint32_t>(batch_.commands.size()),
+        });
+        layer_stack_.push_back(id);
+        return id;
+    }
+
+    void batch_builder::end_layer() noexcept
+    {
+        if (layer_stack_.empty())
+            return;
+        batch_.layers[layer_stack_.back()].end_command = static_cast<std::uint32_t>(batch_.commands.size());
+        layer_stack_.pop_back();
+        pop_clip();
+    }
+
     draw_command &batch_builder::current_command()
     {
         const rect &clip = clip_stack_.back();
+        const layer_id current_layer = layer();
         if (!batch_.commands.empty())
         {
             draw_command &last = batch_.commands.back();
             const bool contiguous = last.first_index + last.index_count == batch_.indices.size();
-            if (contiguous && last.texture == texture_ && last.clip == clip)
+            if (contiguous && last.texture == texture_ && last.layer == current_layer && last.clip == clip)
                 return last;
         }
-        batch_.commands.push_back(draw_command{static_cast<std::uint32_t>(batch_.indices.size()), 0u, clip, texture_});
+        batch_.commands.push_back(
+            draw_command{static_cast<std::uint32_t>(batch_.indices.size()), 0u, clip, texture_, current_layer});
         return batch_.commands.back();
     }
 

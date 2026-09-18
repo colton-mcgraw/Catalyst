@@ -93,6 +93,11 @@ if(CATALYST_BUILD_UI)
   add_subdirectory(ui)
 endif()
 
+# After both ui and rendering: it links them, and catalyst_require_modules checks they exist.
+if(CATALYST_BUILD_UI_RENDERER)
+  add_subdirectory(ui/renderer)
+endif()
+
 if(CATALYST_BUILD_UTILS)
   add_subdirectory(utils)
 endif()
@@ -127,6 +132,10 @@ if(CATALYST_BUILD_ALL)
 
   if(TARGET catalyst_ui)
     target_link_libraries(catalyst PUBLIC catalyst_ui)
+  endif()
+
+  if(TARGET catalyst_ui_renderer)
+    target_link_libraries(catalyst PUBLIC catalyst_ui_renderer)
   endif()
 
   if(TARGET catalyst_animation)
@@ -184,7 +193,7 @@ endif()
 # been resolved. See the catalyst_config target near the top of this file.
 # ---------------------------------------------------------------------------------------------
 
-foreach(_module ANIMATION AUDIO CORE EVENTS INPUT LOGGING MATH NET PHYSICS PLATFORM RENDERING RESOURCE SCENE TEXT UI UTILS)
+foreach(_module ANIMATION AUDIO CORE EVENTS INPUT LOGGING MATH NET PHYSICS PLATFORM RENDERING RESOURCE SCENE TEXT UI UI_RENDERER UTILS)
   if(CATALYST_BUILD_${_module})
     set(CATALYST_HAS_${_module} 1)
   else()
@@ -230,7 +239,7 @@ include(CMakePackageConfigHelpers)
 set(_catalyst_export_targets catalyst_config)
 set(_catalyst_installed_modules "")
 
-foreach(_module animation audio core events input logging math net physics platform rendering resource scene text ui utils)
+foreach(_module animation audio core events input logging math net physics platform rendering resource scene text ui ui_renderer utils)
   if(TARGET catalyst_${_module})
     list(APPEND _catalyst_export_targets catalyst_${_module})
     list(APPEND _catalyst_installed_modules ${_module})

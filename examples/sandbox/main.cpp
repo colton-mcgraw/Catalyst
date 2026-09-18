@@ -9,7 +9,8 @@
 
 #include <catalyst/catalyst.hpp>
 
-namespace logging = catalyst::logging;
+using namespace catalyst;
+using namespace catalyst::ui::literals;
 
 namespace
 {
@@ -28,22 +29,13 @@ int main()
     // itself on when the stream turns out to be one.
     logging::default_logger().add_sink(logging::console_sink{});
 
-    {
-        using namespace catalyst::resource;
-
-        // A braced list becomes an object only when *every* element is a {string, value} pair.
-        // Give the number list a key and the whole thing is an object.
-        json::value json_object = {{"Hello", 0}, {"World", 1}, {"Numbers", {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}}};
-
-        logging::info<sandbox_log>("{} -> {}", json_object.is_object() ? "object" : "array", json::dump(json_object));
-
-        // A mixed list is always an array. To make an element an object, wrap the pair once more so
-        // that element is itself a one-pair braced list: {{"Hello", 0}} is {"Hello":0}.
-        json::value json_array = {{{"Hello", 0}}, {{"World", 1}}, {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}};
-
-        logging::info<sandbox_log>("{} -> {}", json_array.is_array() ? "array" : "object", json::dump(json_array));
-
-    } // end of JSON resource scope
+    const auto window = platform::create_window(platform::window_desc{
+        .title = "Sandbox Window",
+        .width_px = 800.0_px,
+        .height_px = 600.0_px,
+        .visible = true,
+        .resizable = true,
+    });
 
     return 0;
 }

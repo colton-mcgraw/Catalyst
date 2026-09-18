@@ -205,6 +205,77 @@ namespace
         CT_REQUIRE(batch.vertices.size() == 11u);
     }
 
+    void test_layers()
+    {
+        render_batch batch;
+        batch_builder b{batch};
+        CT_REQUIRE(b.layer() == no_layer);
+
+        b.push_clip(box(0, 0, 100, 100));
+        b.add_rect(box(0, 0, 10, 10), colors::red); // command 0, no layer
+        CT_REQUIRE(batch.commands[0].layer == no_layer);
+
+        // A layer's bounds are cut to the clip, and become the clip inside it.
+        const layer_id outer = b.begin_layer(box(50, 50, 100, 100), 0.5f);
+        CT_REQUIRE(outer == 0u);
+        CT_REQUIRE(b.layer() == outer);
+        CT_REQUIRE(batch.layers.size() == 1u);
+        CT_REQUIRE(batch.layers[outer].bounds == box(50, 50, 50, 50));
+        CT_REQUIRE(b.clip() == box(50, 50, 50, 50));
+        CT_REQUIRE(batch.layers[outer].parent == no_layer);
+        CT_REQUIRE(near(batch.layers[outer].opacity, 0.5f));
+
+        // Geometry inside the layer never merges into a command outside it.
+        b.add_rect(box(60, 60, 10, 10), colors::red); // command 1, layer 0
+        CT_REQUIRE(batch.commands.size() == 2u);
+        CT_REQUIRE(batch.commands[1].layer == outer);
+
+        // Nested: the parent is the enclosing layer, bounds shrink to the clip, opacity is clamped.
+        const layer_id inner = b.begin_layer(box(0, 0, 1000, 1000), 2.0f);
+        CT_REQUIRE(inner == 1u);
+        CT_REQUIRE(batch.layers[inner].parent == outer);
+        CT_REQUIRE(batch.layers[inner].bounds == box(50, 50, 50, 50));
+        CT_REQUIRE(near(batch.layers[inner].opacity, 1.0f));
+        b.add_rect(box(60, 60, 10, 10), colors::blue); // command 2, layer 1
+        b.add_rect(box(0, 0, 10, 10), colors::blue);   // outside the layer: culled
+        CT_REQUIRE(batch.commands.size() == 3u);
+        CT_REQUIRE(batch.commands[2].layer == inner);
+        b.end_layer();
+        CT_REQUIRE(b.layer() == outer);
+        CT_REQUIRE(batch.layers[inner].first_command == 2u);
+        CT_REQUIRE(batch.layers[inner].end_command == 3u);
+
+        // Back in the outer layer with the same clip and texture as command 1, but the nested layer
+        // sits between, so a new command opens rather than merging backwards across it.
+        b.add_rect(box(70, 70, 10, 10), colors::red); // command 3, layer 0
+        CT_REQUIRE(batch.commands.size() == 4u);
+        CT_REQUIRE(batch.commands[3].layer == outer);
+        b.end_layer();
+        CT_REQUIRE(b.layer() == no_layer);
+        CT_REQUIRE(b.clip() == box(0, 0, 100, 100));
+        CT_REQUIRE(batch.layers[outer].first_command == 1u);
+        CT_REQUIRE(batch.layers[outer].end_command == 4u);
+
+        // After the layer, root geometry does not merge into the layer's last command either.
+        b.add_rect(box(70, 70, 10, 10), colors::red); // command 4, no layer
+        CT_REQUIRE(batch.commands.size() == 5u);
+        CT_REQUIRE(batch.commands[4].layer == no_layer);
+
+        // A stray end_layer at the root is ignored and leaves the clip alone.
+        b.end_layer();
+        CT_REQUIRE(b.layer() == no_layer);
+        CT_REQUIRE(b.clip() == box(0, 0, 100, 100));
+
+        // An empty layer is still recorded, with an empty range, so ids stay stable.
+        b.begin_layer(box(0, 0, 10, 10), 0.25f);
+        b.end_layer();
+        CT_REQUIRE(batch.layers.size() == 3u);
+        CT_REQUIRE(batch.layers[2].first_command == batch.layers[2].end_command);
+
+        batch.clear();
+        CT_REQUIRE(batch.layers.empty());
+    }
+
 } // namespace
 
 int main()
@@ -214,5 +285,6 @@ int main()
     test_rounded_rect();
     test_border();
     test_line_and_triangles();
+    test_layers();
     return 0;
 }

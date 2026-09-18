@@ -54,12 +54,21 @@ namespace catalyst::ui
     inline constexpr texture_key no_texture = 0;
 
     /**
+     * @typedef layer_id
+     * @brief Indexes `render_batch::layers`.
+     */
+    using layer_id = std::uint32_t;
+
+    /** @brief The layer id of the batch itself: a command drawn straight into the target. */
+    inline constexpr layer_id no_layer = 0xFFFF'FFFFu;
+
+    /**
      * @struct draw_command
      * @brief A run of indices to draw with one clip rectangle and one texture.
-     * @details Consecutive geometry that shares a clip and a texture is merged into one command by
-     * `batch_builder`, so a screen of solid boxes is one draw. The clip is a rectangle in pixels;
-     * the renderer sets it as the scissor. An infinite clip (the builder's default) means "the whole
-     * viewport" and the renderer clamps it.
+     * @details Consecutive geometry that shares a clip, a texture and a layer is merged into one
+     * command by `batch_builder`, so a screen of solid boxes is one draw. The clip is a rectangle in
+     * pixels; the renderer sets it as the scissor. An infinite clip (the builder's default) means
+     * "the whole viewport" and the renderer clamps it.
      */
     struct draw_command
     {
@@ -71,20 +80,64 @@ namespace catalyst::ui
         rect clip{};
         /** @brief The texture to sample, or `no_texture`. */
         texture_key texture = no_texture;
+        /**
+         * @brief The innermost layer this command was recorded inside, or `no_layer`.
+         * @details A renderer draws it into that layer's offscreen target rather than the batch's
+         * own; see `layer`.
+         */
+        layer_id layer = no_layer;
+    };
+
+    /**
+     * @struct layer
+     * @brief A run of commands composited as one image at reduced opacity: group opacity.
+     * @details Scaling every vertex's alpha by a node's opacity lets overlapping children show
+     * through each other. A layer is the alternative: everything between `batch_builder::begin_layer`
+     * and the matching `end_layer` is drawn at full opacity into an offscreen image the size of
+     * `bounds`, and that image is then blended into the parent at `opacity`, where the parent is
+     * the enclosing layer or, for `parent == no_layer`, the target itself.
+     *
+     * The command range `[first_command, end_command)` is the layer's whole subtree: commands
+     * tagged with this layer's id are its own, and commands tagged with a descendant's id belong to
+     * a nested layer, which the renderer composites at the point in the range where it starts.
+     * Layers are numbered in the order they were begun, so a parent always has a smaller id than
+     * its children and a renderer that walks the list backwards draws every child before its parent
+     * needs it.
+     */
+    struct layer
+    {
+        /**
+         * @brief The pixel rectangle composited, already intersected with the clip in effect when
+         * the layer began. Nothing outside it survives, even if geometry inside the layer extends
+         * further. May be empty, in which case the layer draws nothing.
+         */
+        rect bounds{};
+        /** @brief The opacity the finished image is blended in at, in `[0, 1]`. */
+        float opacity = 1.0f;
+        /** @brief The enclosing layer, or `no_layer` for a top-level one. */
+        layer_id parent = no_layer;
+        /** @brief Index of the first command in `render_batch::commands` inside the layer. */
+        std::uint32_t first_command = 0;
+        /** @brief One past the last command inside the layer. */
+        std::uint32_t end_command = 0;
     };
 
     /**
      * @struct render_batch
-     * @brief Everything one frame of UI draws: vertices, indices and the commands that slice them.
+     * @brief Everything one frame of UI draws: vertices, indices, the commands that slice them, and
+     * the layers that group commands.
      * @details Plain vectors, reused frame to frame: `clear` keeps the capacity, so a steady-state
      * frame allocates nothing. The renderer bridge uploads `vertices` and `indices` once and then
-     * issues one indexed draw per command.
+     * issues one indexed draw per command. A consumer that cannot draw layers should ask the paint
+     * pass for `opacity_mode::multiply`, which never opens one, rather than ignore them: a layer's
+     * commands drawn straight into the target come out at full opacity.
      */
     struct render_batch
     {
         std::vector<vertex> vertices;
         std::vector<index> indices;
         std::vector<draw_command> commands;
+        std::vector<layer> layers;
 
         /** @brief Empties the batch without releasing its storage. */
         void clear() noexcept;
@@ -145,6 +198,28 @@ namespace catalyst::ui
 
         /** @brief The texture in effect. */
         [[nodiscard]] texture_key texture() const noexcept { return texture_; }
+
+        /**
+         * @brief Opens a layer: until the matching `end_layer`, shapes are drawn into an offscreen
+         * image that is then composited at `opacity`.
+         * @details The layer's bounds are `bounds` intersected with the current clip, and that
+         * rectangle becomes the clip for everything inside, so shapes outside it are culled here as
+         * they would be cut there. Layers nest; every `begin_layer` needs its `end_layer`, and a
+         * clip pushed inside a layer must be popped inside it.
+         * @param bounds The pixel rectangle the layer covers.
+         * @param opacity The opacity the finished image is blended in at. Clamped to `[0, 1]`.
+         * @return The new layer's id, an index into `render_batch::layers`.
+         */
+        layer_id begin_layer(const rect &bounds, float opacity);
+
+        /** @brief Closes the innermost open layer. Ignored when no layer is open. */
+        void end_layer() noexcept;
+
+        /** @brief The innermost open layer, or `no_layer`. */
+        [[nodiscard]] layer_id layer() const noexcept
+        {
+            return layer_stack_.empty() ? no_layer : layer_stack_.back();
+        }
 
         // ---- shapes -----------------------------------------------------------------------------
 
@@ -222,6 +297,7 @@ namespace catalyst::ui
 
         render_batch &batch_;
         std::vector<rect> clip_stack_;
+        std::vector<layer_id> layer_stack_;
         texture_key texture_ = no_texture;
         std::vector<point> outline_;
     };

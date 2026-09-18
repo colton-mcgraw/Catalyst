@@ -37,4 +37,5 @@ target_link_libraries(catalyst_ui PUBLIC catalyst::events)
 target_link_libraries(catalyst_ui PRIVATE catalyst::text)
 
 # What is deliberately not here: catalyst::rendering. The module emits a render_batch and never
-# submits one; the target that does, catalyst_ui_renderer, is Tier 5 in docs/ui.md and links both.
+# submits one; the target that does, catalyst_ui_renderer in renderer/, links both. It is added from
+# src/CMakeLists.txt after both modules exist, behind CATALYST_BUILD_UI_RENDERER.
