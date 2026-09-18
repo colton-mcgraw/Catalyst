@@ -67,8 +67,8 @@ namespace
     };
 
     /** @brief Records one pass that draws `batch` through `r` into `slot`, submits it and waits. */
-    bool draw_and_wait(const rendering::device &dev, const offscreen &off, ui::renderer &r, const ui::render_batch &batch,
-                       std::uint32_t slot, rendering::extent2d viewport = k_target)
+    bool draw_and_wait(const rendering::device &dev, const offscreen &off, ui::renderer &r,
+                       const ui::render_batch &batch, std::uint32_t slot, rendering::extent2d viewport = k_target)
     {
         rendering::command_list cl = rendering::create_command_list(dev, {.debug_name = "ui test"});
         CT_REQUIRE(rendering::is_valid(cl));
@@ -90,7 +90,8 @@ namespace
         return drew;
     }
 
-    /** @brief A tree of `boxes` solid rectangles side by side, painted into a batch. Each box is at least four vertices. */
+    /** @brief A tree of `boxes` solid rectangles side by side, painted into a batch. Each box is at least four
+     * vertices. */
     void paint_boxes(std::size_t boxes, ui::render_batch &out)
     {
         ui::tree t;
@@ -197,9 +198,9 @@ namespace
         ui::render_batch batch;
         paint_boxes(1, batch);
 
-        CT_REQUIRE(!draw_and_wait(dev, off, r, batch, 2));           // Slot out of range.
-        CT_REQUIRE(!draw_and_wait(dev, off, r, batch, 0, {0, 0}));   // Empty viewport.
-        CT_REQUIRE(r.vertex_capacity(0) == 8);                         // Nothing was uploaded either way.
+        CT_REQUIRE(!draw_and_wait(dev, off, r, batch, 2));         // Slot out of range.
+        CT_REQUIRE(!draw_and_wait(dev, off, r, batch, 0, {0, 0})); // Empty viewport.
+        CT_REQUIRE(r.vertex_capacity(0) == 8);                     // Nothing was uploaded either way.
 
         ui::renderer invalid;
         rendering::command_list cl = rendering::create_command_list(dev, {.debug_name = "unused"});
@@ -286,7 +287,8 @@ namespace
         };
         batch.indices = {0, 1, 2};
         batch.commands = {
-            ui::draw_command{.first_index = 0, .index_count = 3, .clip = ui::rect::from_xywh(-50.0f, -50.0f, 10.0f, 10.0f)},
+            ui::draw_command{
+                .first_index = 0, .index_count = 3, .clip = ui::rect::from_xywh(-50.0f, -50.0f, 10.0f, 10.0f)},
             ui::draw_command{.first_index = 0, .index_count = 3, .clip = ui::batch_builder::unbounded_clip()},
             ui::draw_command{.first_index = 0, .index_count = 0, .clip = ui::batch_builder::unbounded_clip()},
         };
@@ -323,7 +325,8 @@ namespace
         return prepared && drew;
     }
 
-    /** @brief A tree with a translucent group holding overlapping children, painted with group opacity: a layered batch. */
+    /** @brief A tree with a translucent group holding overlapping children, painted with group opacity: a layered
+     * batch. */
     void paint_group(ui::render_batch &out)
     {
         ui::tree t;

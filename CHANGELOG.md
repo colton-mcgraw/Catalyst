@@ -51,6 +51,16 @@ The entries below are the build-system and documentation work that went into cut
 
 - README: the build-all script is `scripts/build-all-available-presets.ps1` and takes `-RunTests`
   only; the module switches do not all default to ON; the CMake floor matches the project.
+- Linking `catalyst::rendering` with the Vulkan backend failed on Linux with an undefined
+  reference to `error::message`: the backend static library calls into the frontend but only the
+  frontend linked the backend, so GNU ld saw the reference after it had already left the frontend
+  behind. Each backend now links `catalyst_rendering` too; CMake handles the cycle between static
+  libraries by repeating them on the link line.
+- The `sandbox` example is gated on `platform` and `ui`, which it uses, and links `platform` when
+  the monolithic library is off. Before, `-DCATALYST_BUILD_ALL=OFF` failed at link time.
+- `tests/resource/test_json.cpp` no longer puts raw string literals containing an escaped quote
+  inside a macro argument, which MSVC's preprocessor mis-lexes.
+- The tree is clang-format 18 clean, which is what CI checks.
 
 ### Known issues
 

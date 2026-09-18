@@ -130,7 +130,11 @@ namespace
 
     void test_strings()
     {
-        CT_REQUIRE(must_parse(R"("a\"b\\c\/d\b\f\n\r\t")").as_string() == "a\"b\\c/d\b\f\n\r\t");
+        // The raw strings with an escaped quote inside are hoisted out of the CT_REQUIRE arguments:
+        // MSVC's preprocessor mis-lexes `\"` inside a raw literal when it appears in a macro
+        // argument and reports an illegal escape sequence on the line.
+        constexpr std::string_view escapes_json = R"("a\"b\\c\/d\b\f\n\r\t")";
+        CT_REQUIRE(must_parse(escapes_json).as_string() == "a\"b\\c/d\b\f\n\r\t");
         CT_REQUIRE(must_parse(R"("\u0041\u00e9\u4e2d")").as_string() == "A\xC3\xA9\xE4\xB8\xAD");
         CT_REQUIRE(must_parse(R"("\ud83d\ude00")").as_string() == "\xF0\x9F\x98\x80"); // U+1F600
         CT_REQUIRE(must_parse(R"("\uD83D\uDE00")").as_string() == "\xF0\x9F\x98\x80"); // upper-case hex
@@ -373,9 +377,11 @@ namespace
         CT_REQUIRE(dump(value(std::numeric_limits<std::int64_t>::min())) == "-9223372036854775808");
 
         CT_REQUIRE(dump(value(std::string("\x01\x1f"))) == R"("\u0001\u001f")");
-        CT_REQUIRE(dump(value("\b\f\n\r\t\\\"/")) == R"("\b\f\n\r\t\\\"/")");
+        constexpr std::string_view escapes_dumped = R"("\b\f\n\r\t\\\"/")";
+        CT_REQUIRE(dump(value("\b\f\n\r\t\\\"/")) == escapes_dumped);
         CT_REQUIRE(dump(value("h\xC3\xA9")) == "\"h\xC3\xA9\""); // UTF-8 is emitted raw
-        CT_REQUIRE(dump(value("abcdefghijklmnop\"qrstuvwxyz")) == R"("abcdefghijklmnop\"qrstuvwxyz")");
+        constexpr std::string_view long_quoted = R"("abcdefghijklmnop\"qrstuvwxyz")";
+        CT_REQUIRE(dump(value("abcdefghijklmnop\"qrstuvwxyz")) == long_quoted);
 
         CT_REQUIRE(dump(must_parse(R"({"a":[1,2],"b":{},"c":{"d":null}})"), 2) ==
                    "{\n  \"a\": [\n    1,\n    2\n  ],\n  \"b\": {},\n  \"c\": {\n    \"d\": null\n  }\n}");

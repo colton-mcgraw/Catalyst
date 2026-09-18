@@ -102,6 +102,12 @@ if(_catalyst_rendering_backend STREQUAL "d3d12")
 
   target_link_libraries(catalyst_rendering_backend_d3d12 PRIVATE catalyst::logging)
 
+  # The backend calls back into the frontend (error::message, the timeline), so it links
+  # catalyst_rendering as well as the other way round. CMake allows the cycle between two
+  # STATIC libraries and repeats them on the link line, which is what a single-pass linker
+  # such as GNU ld needs to resolve the backend's references. Without it, every executable
+  # that links catalyst::rendering fails on Linux with an undefined reference.
+  target_link_libraries(catalyst_rendering_backend_d3d12 PRIVATE catalyst_rendering)
   target_link_libraries(catalyst_rendering PRIVATE catalyst_rendering_backend_d3d12)
 elseif(_catalyst_rendering_backend STREQUAL "metal")
   if(NOT APPLE)
@@ -127,6 +133,12 @@ elseif(_catalyst_rendering_backend STREQUAL "metal")
 
   target_link_libraries(catalyst_rendering_backend_metal PRIVATE catalyst::logging)
 
+  # The backend calls back into the frontend (error::message, the timeline), so it links
+  # catalyst_rendering as well as the other way round. CMake allows the cycle between two
+  # STATIC libraries and repeats them on the link line, which is what a single-pass linker
+  # such as GNU ld needs to resolve the backend's references. Without it, every executable
+  # that links catalyst::rendering fails on Linux with an undefined reference.
+  target_link_libraries(catalyst_rendering_backend_metal PRIVATE catalyst_rendering)
   target_link_libraries(catalyst_rendering PRIVATE catalyst_rendering_backend_metal)
 elseif(_catalyst_rendering_backend STREQUAL "vulkan")
   # Headers and the loader import library come from the Vulkan SDK (VULKAN_SDK env var) or the system package.
@@ -155,6 +167,12 @@ elseif(_catalyst_rendering_backend STREQUAL "vulkan")
 
   target_link_libraries(catalyst_rendering_backend_vulkan PUBLIC Vulkan::Vulkan)
 
+  # The backend calls back into the frontend (error::message, the timeline), so it links
+  # catalyst_rendering as well as the other way round. CMake allows the cycle between two
+  # STATIC libraries and repeats them on the link line, which is what a single-pass linker
+  # such as GNU ld needs to resolve the backend's references. Without it, every executable
+  # that links catalyst::rendering fails on Linux with an undefined reference.
+  target_link_libraries(catalyst_rendering_backend_vulkan PRIVATE catalyst_rendering)
   target_link_libraries(catalyst_rendering PRIVATE catalyst_rendering_backend_vulkan)
 elseif(_catalyst_rendering_backend STREQUAL "null")
   add_library(catalyst_rendering_backend_null STATIC
@@ -170,6 +188,12 @@ elseif(_catalyst_rendering_backend STREQUAL "null")
 
   target_link_libraries(catalyst_rendering_backend_null PRIVATE catalyst::logging)
 
+  # The backend calls back into the frontend (error::message, the timeline), so it links
+  # catalyst_rendering as well as the other way round. CMake allows the cycle between two
+  # STATIC libraries and repeats them on the link line, which is what a single-pass linker
+  # such as GNU ld needs to resolve the backend's references. Without it, every executable
+  # that links catalyst::rendering fails on Linux with an undefined reference.
+  target_link_libraries(catalyst_rendering_backend_null PRIVATE catalyst_rendering)
   target_link_libraries(catalyst_rendering PRIVATE catalyst_rendering_backend_null)
 else()
   message(FATAL_ERROR "Unknown CATALYST_RENDERING_BACKEND: ${_catalyst_rendering_backend}")
