@@ -24,8 +24,6 @@
 #define _CRT_SECURE_NO_WARNINGS
 #endif
 
-#include "font_provider.hpp"
-
 #include <catalyst/events/bus.hpp>
 #include <catalyst/input/input.hpp>
 #include <catalyst/logging/logging.hpp>
@@ -33,6 +31,8 @@
 #include <catalyst/rendering/rendering.hpp>
 #include <catalyst/ui/renderer.hpp>
 #include <catalyst/ui/ui.hpp>
+
+#include "font_provider.hpp"
 
 #include <chrono>
 #include <cmath>
@@ -456,9 +456,8 @@ int main(int argc, char **argv)
     constexpr std::uint32_t frames_in_flight = 3;
 
     // The renderer draws into whatever format the swapchain ended up with, and keeps one buffer set per frame slot.
-    auto ui_renderer = ui::renderer::create(dev, {.color_format = sd.pixel_format,
-                                                  .frames_in_flight = frames_in_flight,
-                                                  .debug_name = "ui_sample"});
+    auto ui_renderer = ui::renderer::create(
+        dev, {.color_format = sd.pixel_format, .frames_in_flight = frames_in_flight, .debug_name = "ui_sample"});
     if (!ui_renderer)
     {
         logging::critical<example_log>("Failed to create the UI renderer: {}", ui_renderer.error().message());
@@ -479,7 +478,8 @@ int main(int argc, char **argv)
     // fills lives on the CPU; `sync_atlas` below is what turns it into the texture the renderer samples.
     ui_sample::ttf_text_provider font;
     ui::null_text_provider boxes;
-    const bool have_font = open_font(font, std::span<char *>(argv + 1, static_cast<std::size_t>(argc > 1 ? argc - 1 : 0)));
+    const bool have_font =
+        open_font(font, std::span<char *>(argv + 1, static_cast<std::size_t>(argc > 1 ? argc - 1 : 0)));
     if (!have_font)
         logging::warn<example_log>("font    none found; text draws as boxes. Pass a .ttf path as the first argument.");
 
@@ -511,8 +511,8 @@ int main(int argc, char **argv)
 
         logging::info<example_log>(
             "layout  {:<8} viewport={}x{} scale={:.2f} nodes={} commands={} vertices={} layers={}", reason,
-            sd.extent.width, sd.extent.height, scale, s.tree.node_count(), batch.commands.size(),
-            batch.vertices.size(), batch.layers.size());
+            sd.extent.width, sd.extent.height, scale, s.tree.node_count(), batch.commands.size(), batch.vertices.size(),
+            batch.layers.size());
     };
 
     // ---- the glyph atlas as a texture ----

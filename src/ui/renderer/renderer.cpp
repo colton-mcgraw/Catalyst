@@ -7,9 +7,8 @@
  * a texture registry, one draw per command.
  */
 
-#include <catalyst/ui/renderer.hpp>
-
 #include <catalyst/rendering/shader.hpp>
+#include <catalyst/ui/renderer.hpp>
 
 #include "shaders.hpp"
 
@@ -429,8 +428,7 @@ namespace catalyst::ui
         if (s.index_capacity < indices)
         {
             const std::uint32_t grown = std::max(indices, s.index_capacity * 2u);
-            if (!replace_buffer(device_, rendering::buffer_usage::index, sizeof(index), grown, "ui indices",
-                                s.indices))
+            if (!replace_buffer(device_, rendering::buffer_usage::index, sizeof(index), grown, "ui indices", s.indices))
                 return false;
             s.index_capacity = grown;
         }
@@ -446,8 +444,7 @@ namespace catalyst::ui
         // Grow to cover both what this layer held before and what it needs now, so a layer that
         // alternates between two shapes settles after one frame of each.
         rendering::texture_desc td;
-        td.extent = {std::max(needed.width, target.capacity.width), std::max(needed.height, target.capacity.height),
-                     1};
+        td.extent = {std::max(needed.width, target.capacity.width), std::max(needed.height, target.capacity.height), 1};
         td.pixel_format = desc_.color_format;
         td.usage = rendering::texture_usage::render_target | rendering::texture_usage::sampled;
         td.debug_name = "ui layer";
@@ -560,9 +557,9 @@ namespace catalyst::ui
     {
         if (slot >= slots_.size())
             return 0u;
-        return static_cast<std::uint32_t>(
-            std::count_if(slots_[slot].layers.begin(), slots_[slot].layers.end(),
-                          [](const layer_target &l) { return static_cast<bool>(l.texture); }));
+        return static_cast<std::uint32_t>(std::count_if(slots_[slot].layers.begin(), slots_[slot].layers.end(),
+                                                        [](const layer_target &l)
+                                                        { return static_cast<bool>(l.texture); }));
     }
 
     // ---- drawing --------------------------------------------------------------------------------
@@ -573,11 +570,11 @@ namespace catalyst::ui
         const float w = static_cast<float>(target.width);
         const float h = static_cast<float>(target.height);
         // Pixel p of the batch lands at p - origin in the target.
-        const push_block pc{{2.0f / w, -2.0f / h},
-                                {-1.0f - 2.0f * static_cast<float>(origin_x) / w,
-                                 1.0f + 2.0f * static_cast<float>(origin_y) / h},
-                                k_mode_solid,
-                                1.0f};
+        const push_block pc{
+            {2.0f / w, -2.0f / h},
+            {-1.0f - 2.0f * static_cast<float>(origin_x) / w, 1.0f + 2.0f * static_cast<float>(origin_y) / h},
+            k_mode_solid,
+            1.0f};
 
         rendering::set_pipeline(cl, pipeline_);
         rendering::set_viewport(cl, {0.0f, 0.0f, w, h});
@@ -589,8 +586,8 @@ namespace catalyst::ui
     }
 
     void renderer::draw_range(const rendering::command_list &cl, const slot_buffers &s, const render_batch &batch,
-                              layer_id within, rendering::extent2d target, std::int32_t origin_x,
-                              std::int32_t origin_y, std::uint32_t composite_first_index) const
+                              layer_id within, rendering::extent2d target, std::int32_t origin_x, std::int32_t origin_y,
+                              std::uint32_t composite_first_index) const
     {
         const bool root = within == no_layer;
         const std::size_t first = root ? 0 : batch.layers[within].first_command;
@@ -690,7 +687,8 @@ namespace catalyst::ui
                 .store = rendering::store_op::store,
                 .clear = {0.0f, 0.0f, 0.0f, 0.0f},
             };
-            rendering::begin_render_pass(cl, {.color_attachments = std::span{&attachment, 1}, .debug_name = "ui layer"});
+            rendering::begin_render_pass(cl,
+                                         {.color_attachments = std::span{&attachment, 1}, .debug_name = "ui layer"});
 
             const rendering::extent2d target{p.width, p.height};
             bind_common(cl, s, target, p.x, p.y);

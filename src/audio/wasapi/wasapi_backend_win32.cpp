@@ -32,11 +32,11 @@
 // functiondiscoverykeys_devpkey.h expands DEFINE_PROPERTYKEY but, from Windows SDK 10.0.26100 on, no longer pulls in
 // the header that defines it. Older SDKs got it transitively from mmdeviceapi.h; include it explicitly so the include
 // order below does not matter.
-#include <propkeydef.h>
 #include <functiondiscoverykeys_devpkey.h>
 #include <ks.h>
 #include <ksmedia.h>
 #include <mmdeviceapi.h>
+#include <propkeydef.h>
 
 #include <algorithm>
 #include <atomic>
