@@ -125,8 +125,9 @@ namespace catalyst::ui
                 if (word_start > line_start)
                 {
                     // The word began after the line did: move the whole word down, so a word is
-                    // never split when it could fit on its own line.
-                    const float shift = out.glyphs[word_start].position.x();
+                    // never split when it could fit on its own line. When this glyph is the word's
+                    // first, nothing has been placed yet and the word starts at the pen.
+                    const float shift = (word_start < out.glyphs.size()) ? out.glyphs[word_start].position.x() : pen;
                     finish_line(word_start);
                     for (std::size_t i = word_start; i < out.glyphs.size(); ++i)
                         out.glyphs[i].position.x() -= shift;

@@ -110,6 +110,8 @@ To get started with Catalyst, follow these steps:
 
 This repo includes a root [CMakePresets.json](CMakePresets.json) so you can quickly validate builds across multiple compilers.
 
+**Note** : MSVC builds are discouraged for developers looking for the most performance. The MSVC linker does not produce as optimized code as GCC or Clang in many cases.
+
 - List presets:
 
   ```bash

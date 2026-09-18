@@ -168,6 +168,15 @@ namespace catalyst::ui
          * @brief Whether this node was skipped because it, or an ancestor, used `display_mode::none`.
          */
         bool hidden = false;
+        /**
+         * @brief The smallest rectangle containing this node's border box and every descendant's, in
+         * absolute pixels.
+         * @details Children that hang out of an `overflow::visible` parent widen it; under any other
+         * overflow mode a child's contribution is cut to the parent's padding box, exactly where the
+         * child stops being reachable. It is what lets hit testing skip whole subtrees, and a paint
+         * pass could cull against it the same way.
+         */
+        rect subtree_bounds{};
 
         /**
          * @fn border_box

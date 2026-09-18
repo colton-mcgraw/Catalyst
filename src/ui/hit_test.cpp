@@ -20,6 +20,11 @@ namespace catalyst::ui
             if (!lr.laid_out || lr.hidden)
                 return null_node;
 
+            // Nothing in this subtree reaches the point: neither the node nor, given its overflow
+            // clip, any descendant. This is what keeps a query from walking every node in the tree.
+            if (!lr.subtree_bounds.contains(p))
+                return null_node;
+
             const style &s = t.style_of(n);
             if (s.display == display_mode::none)
                 return null_node;

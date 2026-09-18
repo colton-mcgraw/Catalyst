@@ -437,6 +437,48 @@ namespace
         CT_REQUIRE(near_rect(box(t, a), 0.0f, 0.0f, 50.0f, 300.0f));
     }
 
+    void test_subtree_bounds_follow_overflow()
+    {
+        tree t;
+        const node root = t.create();
+        t.mutable_style(root).width = px(100.0f);
+        t.mutable_style(root).height = px(100.0f);
+        t.mutable_style(root).padding = edges_length::all(px(10.0f));
+        t.mutable_style(root).align_items = align::start;
+
+        // A child wider and taller than its parent, hanging out to the right and below.
+        const node a = t.create_child(root);
+        t.mutable_style(a).width = px(200.0f);
+        t.mutable_style(a).height = px(150.0f);
+        t.mutable_style(a).flex_shrink = 0.0f;
+
+        // A grandchild hanging out of the child, so the union has to be transitive.
+        const node b = t.create_child(a);
+        t.mutable_style(b).position = position_mode::absolute;
+        t.mutable_style(b).inset =
+            edges_length{.left = px(-30.0f), .top = px(-40.0f), .right = auto_(), .bottom = auto_()};
+        t.mutable_style(b).width = px(10.0f);
+        t.mutable_style(b).height = px(10.0f);
+
+        run(t, root, 100.0f, 100.0f);
+
+        // Visible overflow: the root's bounds reach as far as the deepest descendant does.
+        CT_REQUIRE(near_rect(t.layout_of(b).subtree_bounds, -20.0f, -30.0f, 10.0f, 10.0f));
+        CT_REQUIRE(near_rect(t.layout_of(a).subtree_bounds, -20.0f, -30.0f, 230.0f, 190.0f));
+        CT_REQUIRE(near_rect(t.layout_of(root).subtree_bounds, -20.0f, -30.0f, 230.0f, 190.0f));
+
+        // Hidden overflow on the root cuts what the children contribute to its padding box, which
+        // here is its whole border box; hidden overflow on the child cuts the grandchild away entirely.
+        t.mutable_style(root).overflow = overflow_mode::hidden;
+        run(t, root, 100.0f, 100.0f);
+        CT_REQUIRE(near_rect(t.layout_of(root).subtree_bounds, 0.0f, 0.0f, 100.0f, 100.0f));
+        CT_REQUIRE(near_rect(t.layout_of(a).subtree_bounds, -20.0f, -30.0f, 230.0f, 190.0f));
+
+        t.mutable_style(a).overflow = overflow_mode::hidden;
+        run(t, root, 100.0f, 100.0f);
+        CT_REQUIRE(near_rect(t.layout_of(a).subtree_bounds, 10.0f, 10.0f, 200.0f, 150.0f));
+    }
+
     void test_display_none_is_skipped()
     {
         tree t;
@@ -672,6 +714,7 @@ int main()
     test_stretch_fills_cross_axis();
     test_auto_size_hugs_content();
     test_min_height_expands_auto_container();
+    test_subtree_bounds_follow_overflow();
     test_display_none_is_skipped();
     test_relative_offset_does_not_move_siblings();
     test_absolute_positioning();

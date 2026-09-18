@@ -119,6 +119,33 @@ namespace
         CT_REQUIRE(near(out.glyphs[2].position.x(), 0.0f));
     }
 
+    // A word whose first glyph is the one that overflows has nothing placed yet, so the wrap has to
+    // start it at the pen rather than read the position of a glyph that does not exist. The layout is
+    // reused after a longer string so that stale glyphs are there to be read if it does.
+    void test_wrap_at_first_glyph_of_word_is_deterministic()
+    {
+        null_text_provider provider;
+        text_layout out;
+        layout_text(provider, "mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm", text_style{}, 10.0f, inf, out);
+
+        // "aa " is 18 px wide; the first 'b' would end at 24 px, past the 20 px limit.
+        layout_text(provider, "aa bb", text_style{}, 10.0f, 20.0f, out);
+
+        CT_REQUIRE(out.lines.size() == 2u);
+        CT_REQUIRE(near(out.lines[0].width, 12.0f));
+        CT_REQUIRE(near(out.lines[1].width, 12.0f));
+        CT_REQUIRE(near(out.glyphs[3].position.x(), 0.0f));
+        CT_REQUIRE(near(out.glyphs[4].position.x(), 6.0f));
+        CT_REQUIRE(near(out.size.x(), 12.0f));
+        CT_REQUIRE(near(out.size.y(), 20.0f));
+
+        // Measuring goes through a reused scratch layout too, so the same text must measure the same twice.
+        const extent first = measure_text(provider, "aa bb", text_style{}, 10.0f, 20.0f);
+        const extent second = measure_text(provider, "aa bb", text_style{}, 10.0f, 20.0f);
+        CT_REQUIRE(near(first.y(), 20.0f));
+        CT_REQUIRE(near(second.y(), first.y()));
+    }
+
     void test_content_measures_and_paints()
     {
         null_text_provider provider;
@@ -180,6 +207,7 @@ int main()
     test_single_line();
     test_newlines_and_utf8();
     test_wrapping();
+    test_wrap_at_first_glyph_of_word_is_deterministic();
     test_content_measures_and_paints();
     return 0;
 }
