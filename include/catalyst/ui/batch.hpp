@@ -216,10 +216,7 @@ namespace catalyst::ui
         void end_layer() noexcept;
 
         /** @brief The innermost open layer, or `no_layer`. */
-        [[nodiscard]] layer_id layer() const noexcept
-        {
-            return layer_stack_.empty() ? no_layer : layer_stack_.back();
-        }
+        [[nodiscard]] layer_id layer() const noexcept { return layer_stack_.empty() ? no_layer : layer_stack_.back(); }
 
         // ---- shapes -----------------------------------------------------------------------------
 

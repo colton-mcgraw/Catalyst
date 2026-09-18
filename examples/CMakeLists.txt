@@ -16,7 +16,7 @@ function(catalyst_example directory)
   add_subdirectory(${directory})
 endfunction()
 
-catalyst_example(sandbox core logging resource)
+catalyst_example(sandbox core logging platform ui resource)
 catalyst_example(window_polling platform logging events)
 catalyst_example(window_waiting platform logging events)
 catalyst_example(input_events input platform logging events text)
