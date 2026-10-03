@@ -165,6 +165,26 @@ int main()
     {
         catalyst::events::bus bus;
         const auto listener = bus.add_listener<benchmark_event>(handle_event);
+        std::vector<catalyst::events::token> layers;
+        for (int layer = 0; layer < 4; ++layer)
+            layers.push_back(
+                bus.add_middleware<benchmark_event>([](benchmark_event &event, const auto &next) { next(event); }));
+
+        catalyst::bench::run("bus.dispatch (four chain middleware + one listener)", iterations,
+                             [&] { bus.dispatch(benchmark_event{1u}); });
+    }
+
+    {
+        catalyst::events::bus bus;
+        const auto listener = bus.add_listener<benchmark_event>(handle_event);
+
+        catalyst::bench::run("bus.dispatch (type nothing is registered for, others present)", iterations,
+                             [&] { bus.dispatch(idle_event<0>{}); });
+    }
+
+    {
+        catalyst::events::bus bus;
+        const auto listener = bus.add_listener<benchmark_event>(handle_event);
         const auto middleware = bus.add_middleware<benchmark_event>([](benchmark_event &) { return false; });
 
         catalyst::bench::run("bus.dispatch (middleware stops before one listener)", iterations,

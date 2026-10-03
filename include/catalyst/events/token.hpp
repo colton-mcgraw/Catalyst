@@ -48,7 +48,7 @@ namespace catalyst::events
         friend class bus;
 
         token(const std::shared_ptr<detail::state> &owner, const std::shared_ptr<detail::slot_base> &s, detail::kind k,
-              event_key type) noexcept
+              const detail::hashed_key &type) noexcept
             : owner_(owner), slot_(s), kind_(k), type_(type), id_(s->id)
         {
         }
@@ -56,7 +56,7 @@ namespace catalyst::events
         std::weak_ptr<detail::state> owner_;
         std::weak_ptr<detail::slot_base> slot_;
         detail::kind kind_{detail::kind::sync_listener};
-        event_key type_{};
+        detail::hashed_key type_{invalid_event_key, 0};
         std::size_t id_{0};
     };
 

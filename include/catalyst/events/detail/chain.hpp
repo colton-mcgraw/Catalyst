@@ -29,11 +29,6 @@ namespace catalyst::events::detail
         std::size_t index;
     };
 
-    inline bool live(const slot_base &s) noexcept
-    {
-        return s.active.load(std::memory_order_acquire);
-    }
-
     // Runs middleware [index, end) as an onion around the listeners. Each
     // layer gets a fresh context pointing at the next layer, so calling next
     // recurses into this function with index + 1.
@@ -42,21 +37,22 @@ namespace catalyst::events::detail
         auto &c = *static_cast<chain_ctx *>(raw);
         if (c.middleware)
         {
-            for (std::size_t i = c.index; i < c.middleware->size(); ++i)
+            const auto &layers = c.middleware->slots;
+            for (std::size_t i = c.index; i < layers.size(); ++i)
             {
-                auto &mw = *(*c.middleware)[i];
+                auto &mw = *layers[i];
                 if (!live(mw))
                     continue;
                 chain_ctx rest{c.middleware, c.listeners, i + 1};
-                mw.fn(ev, &rest, &run_chain);
+                mw(ev, &rest, &run_chain);
                 return;
             }
         }
 
         if (c.listeners)
-            for (const auto &s : *c.listeners)
+            for (const auto &s : c.listeners->slots)
                 if (live(*s))
-                    s->fn(ev);
+                    (*s)(ev);
     }
 
     inline task<void> run_chain_async(void *raw, void *ev)
@@ -64,21 +60,22 @@ namespace catalyst::events::detail
         auto &c = *static_cast<async_chain_ctx *>(raw);
         if (c.middleware)
         {
-            for (std::size_t i = c.index; i < c.middleware->size(); ++i)
+            const auto &layers = c.middleware->slots;
+            for (std::size_t i = c.index; i < layers.size(); ++i)
             {
-                auto &mw = *(*c.middleware)[i];
+                auto &mw = *layers[i];
                 if (!live(mw))
                     continue;
                 async_chain_ctx rest{c.middleware, c.listeners, i + 1};
-                co_await mw.fn(ev, &rest, &run_chain_async);
+                co_await mw(ev, &rest, &run_chain_async);
                 co_return;
             }
         }
 
         if (c.listeners)
-            for (const auto &s : *c.listeners)
+            for (const auto &s : c.listeners->slots)
                 if (live(*s))
-                    co_await s->fn(ev);
+                    co_await (*s)(ev);
     }
 
 } // namespace catalyst::events::detail

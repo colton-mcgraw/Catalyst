@@ -5,8 +5,10 @@
 #include <atomic>
 #include <barrier>
 #include <cstddef>
+#include <memory>
 #include <string>
 #include <thread>
+#include <utility>
 #include <vector>
 
 using catalyst::events::bus;
@@ -511,6 +513,149 @@ namespace
     }
 
     // ---------------------------------------------------------------------
+    // Lifetime of removed callables
+    // ---------------------------------------------------------------------
+
+    void test_removal_outside_a_dispatch_frees_the_callable_at_once()
+    {
+        bus b;
+        auto resource = std::make_shared<int>(1);
+        std::weak_ptr<int> watch = resource;
+
+        token t = b.add_listener<ping>([keep = std::move(resource)](const ping &) { (void)keep; });
+        CT_REQUIRE(!watch.expired());
+
+        // No dispatch is in flight, so the registry held the last reference.
+        t.remove();
+        CT_REQUIRE(watch.expired());
+    }
+
+    void test_removal_inside_a_dispatch_frees_the_callable_later()
+    {
+        bus b;
+        auto resource = std::make_shared<int>(1);
+        std::weak_ptr<int> watch = resource;
+        token self;
+        bool alive_after_remove = false;
+
+        self = b.add_listener<ping>(
+            [&, keep = std::move(resource)](const ping &)
+            {
+                self.remove();
+                // Still running, so the callable cannot have been freed under us.
+                alive_after_remove = !watch.expired();
+                (void)keep;
+            });
+
+        b.dispatch(ping{});
+        CT_REQUIRE(alive_after_remove);
+
+        // The removal happened while a dispatch was in flight. Any later mutation of the bus, on
+        // any event type, finds it quiescent and frees what was parked.
+        token other = b.add_listener<pong>([](const pong &) {});
+        CT_REQUIRE(watch.expired());
+    }
+
+    void test_bus_destruction_frees_parked_callables()
+    {
+        std::weak_ptr<int> watch;
+        {
+            bus b;
+            auto resource = std::make_shared<int>(1);
+            watch = resource;
+            token self;
+            self = b.add_listener<ping>(
+                [&, keep = std::move(resource)](const ping &)
+                {
+                    self.remove();
+                    (void)keep;
+                });
+            b.dispatch(ping{});
+        }
+        CT_REQUIRE(watch.expired());
+    }
+
+    // ---------------------------------------------------------------------
+    // Many event types
+    // ---------------------------------------------------------------------
+
+    template <std::size_t N>
+    struct numbered : catalyst::events::tagged<1000 + N>
+    {
+    };
+
+    constexpr std::size_t k_many_types = 300;
+
+    template <std::size_t... Is>
+    void register_many(bus &b, std::vector<token> &tokens, std::atomic_int &hits, std::index_sequence<Is...>)
+    {
+        (tokens.push_back(
+             b.add_listener<numbered<Is>>([&](const numbered<Is> &) { hits.fetch_add(1, std::memory_order_relaxed); })),
+         ...);
+    }
+
+    template <std::size_t... Is>
+    void dispatch_many(bus &b, std::index_sequence<Is...>)
+    {
+        (b.dispatch(numbered<Is>{}), ...);
+    }
+
+    void test_many_event_types()
+    {
+        bus b;
+        std::vector<token> tokens;
+        std::atomic_int hits{0};
+
+        // Far more types than the registry starts with room for, so it has to grow several times,
+        // mixed with a typeid-keyed type.
+        int pings = 0;
+        auto t = b.add_listener<ping>([&](const ping &) { ++pings; });
+        register_many(b, tokens, hits, std::make_index_sequence<k_many_types>{});
+
+        dispatch_many(b, std::make_index_sequence<k_many_types>{});
+        CT_REQUIRE(hits.load() == static_cast<int>(k_many_types));
+
+        b.dispatch(ping{});
+        CT_REQUIRE(pings == 1);
+
+        for (auto &tk : tokens)
+            tk.remove();
+        dispatch_many(b, std::make_index_sequence<k_many_types>{});
+        CT_REQUIRE(hits.load() == static_cast<int>(k_many_types));
+    }
+
+    void test_table_growth_during_concurrent_dispatch()
+    {
+        bus b;
+        std::atomic_int calls{0};
+        std::atomic_bool stop{false};
+
+        auto resident = b.add_listener<ping>([&](const ping &) { calls.fetch_add(1, std::memory_order_relaxed); });
+
+        std::thread dispatcher{[&]
+                               {
+                                   while (!stop.load(std::memory_order_acquire))
+                                       b.dispatch(ping{1});
+                               }};
+
+        while (calls.load(std::memory_order_relaxed) == 0)
+            std::this_thread::yield();
+
+        // Registering hundreds of new types replaces the lookup table repeatedly while another
+        // thread is probing it.
+        std::vector<token> tokens;
+        std::atomic_int hits{0};
+        register_many(b, tokens, hits, std::make_index_sequence<k_many_types>{});
+
+        stop.store(true, std::memory_order_release);
+        dispatcher.join();
+
+        const int before = calls.load();
+        b.dispatch(ping{});
+        CT_REQUIRE(calls.load() == before + 1);
+    }
+
+    // ---------------------------------------------------------------------
     // Threading
     // ---------------------------------------------------------------------
 
@@ -570,7 +715,10 @@ namespace
         // registry or trip on a callable a dispatch is still holding.
         for (int i = 0; i < 2000; ++i)
         {
-            token t = b.add_listener<ping>([&](const ping &) { calls.fetch_add(1, std::memory_order_relaxed); });
+            // The captured allocation is what AddressSanitizer would flag if a dispatch ran a callable
+            // the registry had already freed.
+            token t = b.add_listener<ping>([&, keep = std::make_unique<int>(i)](const ping &)
+                                           { calls.fetch_add(*keep, std::memory_order_relaxed); });
             t.remove();
         }
 
@@ -625,6 +773,13 @@ int main()
     test_async_listener_and_dispatch();
     test_sync_and_async_registrations_are_separate();
     test_async_predicate_middleware_stops_propagation();
+
+    test_removal_outside_a_dispatch_frees_the_callable_at_once();
+    test_removal_inside_a_dispatch_frees_the_callable_later();
+    test_bus_destruction_frees_parked_callables();
+
+    test_many_event_types();
+    test_table_growth_during_concurrent_dispatch();
 
     test_concurrent_dispatch();
     test_registration_churn_during_concurrent_dispatch();

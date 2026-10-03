@@ -8,6 +8,7 @@
 #include <catalyst/events/task.hpp>
 #include <catalyst/events/token.hpp>
 
+#include <atomic>
 #include <memory>
 #include <mutex>
 #include <utility>
@@ -35,6 +36,14 @@ namespace catalyst::events
     // may invoke the same callable concurrently, so callables that share state
     // must synchronise it themselves.
     //
+    // Dispatch takes no lock and performs no reference counting: it is two
+    // atomic increments on a per-thread counter plus the lookups, so it scales
+    // with the number of dispatching threads. The cost moves to the writers:
+    // add and remove take a mutex, and a registration removed while any dispatch
+    // on this bus is in flight is freed by a later add or remove, or by the bus's
+    // destructor, rather than the instant that dispatch ends. See
+    // detail/registry.hpp for the mechanism.
+    //
     // Lifetime: tokens may outlive the bus; they simply become invalid. The bus
     // must outlive its own in-flight dispatches.
 
@@ -57,18 +66,18 @@ namespace catalyst::events
             requires listener_for<F, Event>
         token add_listener(F &&f, int priority = 0)
         {
-            return install(&detail::state::sync_listeners, detail::kind::sync_listener, event_id<Event>(), priority,
-                           [fn = std::forward<F>(f)](const void *ptr) mutable
-                           { fn(*static_cast<const Event *>(ptr)); });
+            return install<detail::sync_listener_sig>(detail::kind::sync_listener, detail::key_of<Event>(), priority,
+                                                      [fn = std::forward<F>(f)](const void *ptr) mutable
+                                                      { fn(*static_cast<const Event *>(ptr)); });
         }
 
         template <typename Event, typename F>
             requires coroutine_listener_for<F, Event>
         token add_listener(F &&f, int priority = 0)
         {
-            return install(&detail::state::async_listeners, detail::kind::async_listener, event_id<Event>(), priority,
-                           [fn = std::forward<F>(f)](const void *ptr) mutable -> task<void>
-                           { return fn(*static_cast<const Event *>(ptr)); });
+            return install<detail::async_listener_sig>(detail::kind::async_listener, detail::key_of<Event>(), priority,
+                                                       [fn = std::forward<F>(f)](const void *ptr) mutable -> task<void>
+                                                       { return fn(*static_cast<const Event *>(ptr)); });
         }
 
         // --------------------------------------------------------
@@ -79,9 +88,10 @@ namespace catalyst::events
             requires chain_middleware_for<F, Event>
         token add_middleware(F &&f, int priority = 0)
         {
-            return install(&detail::state::sync_middleware, detail::kind::sync_middleware, event_id<Event>(), priority,
-                           [fn = std::forward<F>(f)](void *ev, void *ctx, void (*resume)(void *, void *)) mutable
-                           { fn(*static_cast<Event *>(ev), next<Event>{detail::chain_access{}, ctx, resume}); });
+            return install<detail::sync_middleware_sig>(
+                detail::kind::sync_middleware, detail::key_of<Event>(), priority,
+                [fn = std::forward<F>(f)](void *ev, void *ctx, void (*resume)(void *, void *)) mutable
+                { fn(*static_cast<Event *>(ev), next<Event>{detail::chain_access{}, ctx, resume}); });
         }
 
         template <typename Event, typename F>
@@ -101,17 +111,17 @@ namespace catalyst::events
             requires async_chain_middleware_for<F, Event>
         token add_async_middleware(F &&f, int priority = 0)
         {
-            return install(&detail::state::async_middleware, detail::kind::async_middleware, event_id<Event>(),
-                           priority,
-                           // A coroutine rather than a plain forwarder so that the
-                           // async_next outlives the user's coroutine, which only
-                           // holds a reference to it.
-                           [fn = std::forward<F>(f)](void *ev, void *ctx,
-                                                     task<void> (*resume)(void *, void *)) mutable -> task<void>
-                           {
-                               async_next<Event> n{detail::chain_access{}, ctx, resume};
-                               co_await fn(*static_cast<Event *>(ev), n);
-                           });
+            return install<detail::async_middleware_sig>(
+                detail::kind::async_middleware, detail::key_of<Event>(), priority,
+                // A coroutine rather than a plain forwarder so that the
+                // async_next outlives the user's coroutine, which only
+                // holds a reference to it.
+                [fn = std::forward<F>(f)](void *ev, void *ctx,
+                                          task<void> (*resume)(void *, void *)) mutable -> task<void>
+                {
+                    async_next<Event> n{detail::chain_access{}, ctx, resume};
+                    co_await fn(*static_cast<Event *>(ev), n);
+                });
         }
 
         template <typename Event, typename F>
@@ -134,42 +144,54 @@ namespace catalyst::events
         template <typename Event>
         void dispatch(Event e)
         {
-            std::shared_ptr<const detail::sync_middleware_list> middleware;
-            std::shared_ptr<const detail::sync_listener_list> listeners;
-            {
-                std::lock_guard lock(state_->mutex);
-                middleware = state_->sync_middleware.snapshot(event_id<Event>());
-                listeners = state_->sync_listeners.snapshot(event_id<Event>());
-            }
+            detail::read_guard guard{*state_};
 
-            detail::chain_ctx ctx{middleware.get(), listeners.get(), 0};
+            const detail::entry *en = state_->find(detail::key_of<Event>());
+            if (!en)
+                return;
+
+            detail::chain_ctx ctx{en->sync_middleware.load(std::memory_order_seq_cst),
+                                  en->sync_listeners.load(std::memory_order_seq_cst), 0};
+            if (!ctx.middleware && !ctx.listeners)
+                return;
+
             detail::run_chain(&ctx, &e);
         }
 
         template <typename Event>
         task<void> dispatch_async(Event e)
         {
-            std::shared_ptr<const detail::async_middleware_list> middleware;
-            std::shared_ptr<const detail::async_listener_list> listeners;
+            detail::pinned<detail::async_middleware_sig> middleware;
+            detail::pinned<detail::async_listener_sig> listeners;
             {
-                std::lock_guard lock(state_->mutex);
-                middleware = state_->async_middleware.snapshot(event_id<Event>());
-                listeners = state_->async_listeners.snapshot(event_id<Event>());
+                // The guard cannot be held across a suspension, so pin the lists
+                // with their own reference counts and let the guard go.
+                detail::read_guard guard{*state_};
+                if (const detail::entry *en = state_->find(detail::key_of<Event>()))
+                {
+                    middleware = detail::pinned<detail::async_middleware_sig>{
+                        en->async_middleware.load(std::memory_order_seq_cst)};
+                    listeners =
+                        detail::pinned<detail::async_listener_sig>{en->async_listeners.load(std::memory_order_seq_cst)};
+                }
             }
+
+            if (!middleware.get() && !listeners.get())
+                co_return;
 
             detail::async_chain_ctx ctx{middleware.get(), listeners.get(), 0};
             co_await detail::run_chain_async(&ctx, &e);
         }
 
     private:
-        template <typename Fn, typename Callable>
-        token install(detail::registry<Fn> detail::state::*reg, detail::kind k, event_key type, int priority,
-                      Callable &&callable)
+        template <typename Signature, typename Callable>
+        token install(detail::kind k, const detail::hashed_key &type, int priority, Callable &&callable)
         {
-            auto s = std::make_shared<detail::slot<Fn>>(state_->next_id++, priority, std::forward<Callable>(callable));
+            auto s = detail::make_slot<Signature>(state_->next_id.fetch_add(1, std::memory_order_relaxed), priority,
+                                                  std::forward<Callable>(callable));
             {
                 std::lock_guard lock(state_->mutex);
-                ((*state_).*reg).add(type, s);
+                state_->add<Signature>(type, s);
             }
             return token{state_, s, k, type};
         }

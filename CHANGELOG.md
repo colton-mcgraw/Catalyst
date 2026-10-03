@@ -26,6 +26,10 @@ release may break the API and a patch release may not.
 - `.gitattributes` marking contributor-only files `export-ignore`, so release tarballs do not
   carry them.
 
+- Event bus tests for callable lifetime after removal, registries with hundreds of event types and
+  table growth under concurrent dispatch; benchmark cases for a four-layer middleware chain and for
+  a type nothing is registered for.
+
 ### Changed
 
 - CMake 3.23 is the minimum, everywhere: the project, the presets (whose schema already needed it),
@@ -42,6 +46,16 @@ release may break the API and a patch release may not.
   rendering on now fails with a sentence naming the switch instead of a missing-target error.
 - CI: the module-subset job also builds without logging, builds a sparse checkout of two modules,
   and drives the committed consumer fixture. `CONTRIBUTING.md` describes all of it.
+- `events::bus::dispatch` takes no lock and does no reference counting. The registry is a flat
+  table of per-type entries, each publishing immutable lists, read under sharded per-thread
+  counters with deferred reclamation in the style of RCU; the event-type hash is computed once per
+  type rather than on every dispatch (on the MSVC STL `type_index::hash_code()` re-hashes the
+  mangled name each call); and callables live inline in their slot behind one thunk instead of a
+  `move_only_function`. Release benchmark: an empty dispatch from about 90 ns to 15 ns, one
+  listener from 110 ns to 22 ns, eight dispatching threads from 190 ns/op to 5 ns/op. One
+  observable nuance: a registration removed while any dispatch on that bus is in flight is freed by
+  the next add or remove, or by the bus's destructor, rather than the moment that dispatch returns.
+- `events::token` is 8 bytes larger: it carries the hashed event key so removal does not rehash.
 
 ### Fixed
 
