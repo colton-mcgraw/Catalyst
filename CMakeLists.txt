@@ -82,3 +82,19 @@ endif()
 if(CATALYST_BUILD_BENCHMARKS)
 	add_subdirectory(bench)
 endif()
+
+# API reference. The Doxyfile is generated from Doxyfile.in so that project() above is the only
+# place the version number is written; `cmake --build <tree> --target docs` puts the HTML in
+# <tree>/docs/html, which is also what the docs workflow publishes to GitHub Pages.
+if(CATALYST_DEVELOPER_MODE)
+	configure_file(Doxyfile.in "${PROJECT_BINARY_DIR}/Doxyfile" @ONLY)
+
+	find_package(Doxygen QUIET)
+	if(DOXYGEN_FOUND)
+		add_custom_target(docs
+			COMMAND Doxygen::doxygen "${PROJECT_BINARY_DIR}/Doxyfile"
+			WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
+			COMMENT "Generating the API reference with Doxygen"
+			VERBATIM)
+	endif()
+endif()

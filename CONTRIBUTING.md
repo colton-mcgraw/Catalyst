@@ -106,10 +106,11 @@ time. Comments in this codebase carry that, and a patch is more likely to be mer
 does the same.
 
 Public headers get Doxygen (`@brief`, `@details`, `@param`, `@return`). New files start with the
-SPDX header below. The tree is not there yet — it currently has three states: 99 files with this
-block, 161 with an older one-line `License: MIT (see LICENSE).` inside the doc comment, and 92 (most
-of `math/`, plus the examples and benchmarks) with no marker at all. Bringing them to one form is
-worth doing; until then, follow this for anything new rather than matching the file next to it:
+SPDX header below. The tree is not there yet: about a third of the sources carry this block, most
+of the rest carry an older one-line `License: MIT (see LICENSE).` inside the doc comment, and the
+remainder (most of `math/`, plus the examples and benchmarks) have no marker at all. Bringing them
+to one form is worth doing as a single mechanical sweep; until then, follow this for anything new
+rather than matching the file next to it:
 
 ```cpp
 /**

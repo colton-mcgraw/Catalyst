@@ -29,8 +29,8 @@ namespace ui_sample
     {
 #if CATALYST_UI_SAMPLE_HAS_STB
         stbtt_fontinfo info{};
-        int ascent = 0;   ///< Font units; scaled per size.
-        int descent = 0;  ///< Negative in stb's convention.
+        int ascent = 0;  ///< Font units; scaled per size.
+        int descent = 0; ///< Negative in stb's convention.
         int line_gap = 0;
 #endif
     };
@@ -163,9 +163,9 @@ namespace ui_sample
         out.bounds = ui::rect::from_xywh(e->bounds_x, e->bounds_y, static_cast<float>(e->w), static_cast<float>(e->h));
         const float iw = 1.0f / static_cast<float>(width_);
         const float ih = 1.0f / static_cast<float>(height_);
-        out.uv = ui::rect::from_min_max(ui::point{static_cast<float>(e->x) * iw, static_cast<float>(e->y) * ih},
-                                        ui::point{static_cast<float>(e->x + e->w) * iw,
-                                                  static_cast<float>(e->y + e->h) * ih});
+        out.uv = ui::rect::from_min_max(
+            ui::point{static_cast<float>(e->x) * iw, static_cast<float>(e->y) * ih},
+            ui::point{static_cast<float>(e->x + e->w) * iw, static_cast<float>(e->y + e->h) * ih});
         return true;
     }
 
@@ -233,7 +233,8 @@ namespace ui_sample
             std::uint32_t x = 0, y = 0;
             if (allocate(static_cast<std::uint32_t>(w), static_cast<std::uint32_t>(h), x, y))
             {
-                unsigned char *dst = reinterpret_cast<unsigned char *>(atlas_.data()) + (static_cast<std::size_t>(y) * width_ + x);
+                unsigned char *dst =
+                    reinterpret_cast<unsigned char *>(atlas_.data()) + (static_cast<std::size_t>(y) * width_ + x);
                 stbtt_MakeCodepointBitmap(&face_->info, dst, w, h, static_cast<int>(width_), scale, scale, cp);
                 e.x = x;
                 e.y = y;

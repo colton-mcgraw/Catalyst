@@ -122,7 +122,8 @@ namespace catalyst::ui
         push_clip(bounds);
 
         const layer_id id = static_cast<layer_id>(batch_.layers.size());
-        batch_.layers.push_back(ui::layer{ // Qualified: the member function layer() shadows the struct here.
+        batch_.layers.push_back(ui::layer{
+            // Qualified: the member function layer() shadows the struct here.
             .bounds = clip_stack_.back(),
             .opacity = std::clamp(opacity, 0.0f, 1.0f),
             .parent = layer(),
