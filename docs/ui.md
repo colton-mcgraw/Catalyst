@@ -3,7 +3,8 @@
 Status: Tier 1 implemented 2026-09-02. Tiers 2 (painting), 3 (input and interaction) and 4 (the
 text seam) implemented 2026-09-13. Tier 5 (the renderer bridge) implemented 2026-09-17: draws,
 textures and group-opacity layers.
-Tiers 6+ are planned.
+Tier 6a (the shell: `ui::host`, the input bridge and `ui::app`) implemented 2026-10-03. Tiers 6b and
+later are planned; the order was settled on 2026-10-03 and is the one below.
 
 ## Shape of the subsystem
 
@@ -224,25 +225,101 @@ Four things worth knowing:
   format must be samplable, which every 8-bit colour format is. Group opacity on an sRGB target
   therefore stores premultiplied colour sRGB-encoded, which is exact enough at 8 bits.
 
-`examples/ui_sample` is the window that uses it: layout to the swapchain, paint on change, `prepare`
-then `render` every frame, and the input bridge from Tier 3. Its "toast" panel is a translucent group;
-`G` toggles between `group` and `multiply` so the difference is visible. Its text goes through the
-texture path: the sample's stb_truetype provider fills an `r8` atlas, and after each paint the loop
-uploads a changed atlas as a new sampled texture, registers it under the glyphs' key, and retires the
-previous texture once the frame ring has moved `frames_in_flight` frames past the last draw that
-could have sampled it. The renderer never owns the atlas.
+`examples/ui_sample` is the window that uses it, since Tier 6a through `ui::app`. Its "toast" panel
+is a translucent group; `G` toggles between `group` and `multiply` so the difference is visible. Its
+text goes through the texture path: the sample's stb_truetype provider fills an `r8` atlas, and the
+host uploads a changed atlas as a new sampled texture and registers it under the glyphs' key. The
+replaced texture is destroyed at once: the rendering module defers the release until the GPU has
+finished with it, so no retirement list is needed. The renderer never owns the atlas.
 
 Still open in this tier: nothing. A font provider inside the module is Tier 4's open item (the
 sample carries its own), and pixel readback of a texture, which would let the renderer tests check what they drew
 rather than only that it recorded cleanly, is the rendering module's.
 
-### Tier 6 — Widgets
+### Tier 6a — The shell ✅ implemented 2026-10-03
 
-Button, label, image, checkbox, radio, slider, text field, scroll view, list/virtualized
-list, splitter. A `theme` that supplies default styles, plus style inheritance for font
-properties.
+| Header | Contents |
+| --- | --- |
+| `ui/text.hpp` (addition) | `glyph_atlas`: `key`, `pixels`, `width`, `height`, `take_dirty`, `take_resized`; `text_provider::atlas()`, null by default |
+| `ui/input_bridge.hpp` | `to_pointer_button`, `to_modifiers`, `class input_bridge` |
+| `ui/host.hpp` | `host_desc`, `host_timings`, `class host`: `create`, `tree`, `root`, `interaction`, `text`, `set_viewport`, `set_compositing`, `request_paint`, `pending`, `update`, `prepare`, `render` |
+| `ui/app.hpp` | `loop_mode`, `app_desc`, `app_stage`, `app_error`, `frame_timings`, `class app`: `create`, `begin_frame`, `end_frame`, `run`, `request_quit`, `request_redraw`, `set_zoom` |
 
-### Tier 7 — Beyond
+Target `catalyst_ui_host` (`src/ui/host/`), behind `CATALYST_BUILD_UI_HOST`, a dependent option that
+is ON whenever `ui_renderer`, `input` and `platform` are; header guard `CATALYST_HAS_UI_HOST`. It is
+the one place the UI meets the window and input modules. Tests are `catalyst.ui.input_bridge`
+(headless) and `catalyst.ui.host` (needs a device, takes `CATALYST_RENDERING_VALIDATION`).
+
+The question it answers is "should applications derive from a base shell or write their own?" The
+answer is neither: a ready-made shell they **compose**, built only from public API, in two layers so
+that outgrowing one does not mean losing the other.
+
+- **`host`** owns a tree (with a root that fills the viewport and sets a `dp(15)` default text
+  size), the `interaction` over it, an `input_bridge`, a `renderer` and the uploaded glyph atlas.
+  It owns no window, device or loop. The caller gives it a viewport and scale, calls `update` once a
+  frame (layout only when the root is dirty, paint only after a layout, a compositing change or
+  `request_paint`), then `prepare` and `render` from its own command list. Any renderer that can
+  give it a colour pass can host a UI.
+- **`app`** is the loop around one host for a window that is all UI: window, bus, input context,
+  device, swapchain and frame ring, created and torn down in order. The program's code runs between
+  `begin_frame` and `end_frame` (or in `run`'s callback) and reacts through bus listeners. Nothing
+  is overridden. A program that needs a scene under the UI or a second window keeps its `host` and
+  replaces only the loop; `src/ui/host/app.cpp` is the reference for writing one.
+
+What the shell does that the hand-written sample loop did not:
+
+- **Live resize.** `app` installs `platform::set_frame_callback`, so the UI redraws during a border
+  drag instead of freezing until release. A frame can therefore hold several draws (the callback's
+  inside `begin_frame`, then `end_frame`'s), and `app::timings()` sums them.
+- **`loop_mode::wait`.** Between changes the thread sleeps in `platform::wait_events` and nothing is
+  drawn; the OS keeps showing the last image. Measured on the sample: 0 ms of CPU over 4 idle
+  seconds, against about 300 ms polling. `request_redraw` forces a frame, for animation.
+- **`mouse_leave_event` clears hover.** The sample's bridge never forwarded it, so the last node
+  crossed stayed hovered after the cursor left the window.
+- **Atlas growth is handled once, correctly.** Growth during layout is discarded (the paint that
+  follows has current coordinates); growth during a paint repaints, at most four times.
+
+Three things worth knowing:
+
+- **`platform::wait_events` only waits.** It does not dispatch; `pump_events` must follow it. The
+  first cut of wait mode skipped the pump, left messages queued, and spun at ~160k empty frames a
+  second without ever seeing `WM_CLOSE`.
+- **One `app` at a time.** The platform layer has one event bus and one input feed.
+- **`close_quits = false`** is for programs that ask before closing: listen for
+  `platform::window_close_requested_event` and call `request_quit` when the user agrees.
+
+`examples/ui_sample` runs on `ui::app`; `--wait` runs it in wait mode.
+
+### Tier 6b — Widgets and theme
+
+Button, label, image, checkbox, radio, slider, text field, scroll view, list and virtualized list,
+splitter. A `theme` that supplies default styles, plus style inheritance for font properties.
+Widgets live in `catalyst_ui` itself and must not depend on the shell: they are nodes, styles and
+bus listeners, usable from a hand-written loop as much as from `app`.
+
+**Prerequisite: a real font provider in the library.** Today the only rasterising provider is the
+sample's stb_truetype one. Move it (or a DirectWrite/CoreText/FreeType provider behind
+`CATALYST_UI_TEXT_BACKEND`) into the library, implementing `glyph_atlas`, before or alongside the
+first widgets: text-heavy widgets drawn as tofu boxes hide layout problems rather than exposing them.
+
+### Tier 6c — Overlays and focus
+
+A popup/overlay layer above the root (menus, dropdowns, tooltips and dialogs draw and hit-test above
+everything else regardless of tree order), focus scopes that trap focus inside a modal, and tab order
+(still open from Tier 3). Nothing modal or pop-up in Tier 7 works without this.
+
+### Tier 7 — Composite components
+
+Menu bar, context menu, dropdown, tooltip, modal dialog, message box, an in-engine file browser and a
+colour picker, each composed from 6b widgets on 6c overlays. If one cannot be built from those
+without private access, the gap belongs in 6b or 6c, not in the component.
+
+**Native dialogs are not this tier.** OS file pickers (`IFileDialog`, `NSOpenPanel`, the XDG portal)
+belong in `catalyst::platform`, which the UI module must not link, and are independent of every tier
+here. The in-engine file browser is for where a native one does not fit: fullscreen games, consoles,
+themed UI.
+
+### Tier 8 — Beyond
 
 `catalyst::animation` integration for style transitions, accessibility metadata hooks,
 flex wrap and grid layout, layout benchmarks in `bench/ui`.
@@ -254,5 +331,6 @@ flex wrap and grid layout, layout benchmarks in `bench/ui`.
 - `#include <catalyst/ui/ui.hpp>` pulls in the whole module.
 - `catalyst_ui` links `catalyst::math` and `catalyst::events` publicly and `catalyst::text`
   privately. It does **not** link `catalyst::rendering`, and must not: that is Tier 5's target.
+  Nor does it link `catalyst::platform` or `catalyst::input`: that is Tier 6a's.
 - Handles are index + generation, so a stale `node` is detected rather than aliasing a
   recycled slot.

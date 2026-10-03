@@ -1,13 +1,12 @@
 # CMakeLists.txt for the Catalyst UI sample application.
-# Builds a small retained UI tree against a real window: lays it out to the swapchain, paints it into a render_batch,
-# draws that batch every frame through the ui::renderer bridge, and bridges the input module's mouse and keyboard
-# events into the UI interaction state machine. Text is set from a TrueType file through a small stb_truetype-backed
-# text_provider (font_provider.cpp) whose glyph atlas the sample uploads and registers with the renderer; when the
-# build fetched no stb, or no font file is found at run time, the sample falls back to the module's null provider.
-# Lengths are in dp, so the tree follows the monitor's DPI scale and the +/- keys zoom it; P shows a CPU profiler
-# panel for the phases of the frame loop.
-# Links the monolithic library when available, otherwise the platform, input, ui, ui_renderer, rendering, events and
-# logging modules.
+# Builds a small retained UI tree in a ui::app, the UI shell, which owns the window, the device and the frame loop:
+# its ui::host lays the tree out, forwards mouse and keyboard input into it, uploads the glyph atlas and draws it.
+# Text is set from a TrueType file through a small stb_truetype-backed text_provider (font_provider.cpp) that is also
+# the glyph atlas the host uploads; when the build fetched no stb, or no font file is found at run time, the sample
+# falls back to the host's null provider. Lengths are in dp, so the tree follows the monitor's DPI scale and the +/-
+# keys zoom it; P shows a CPU profiler panel built from the app's per-phase frame timings.
+# Links the monolithic library when available, otherwise the ui_host module (which brings ui, ui_renderer,
+# rendering, platform and input) plus events and logging.
 # License: MIT (see LICENSE).
 
 add_executable(catalyst_ui_sample
@@ -19,8 +18,7 @@ if(TARGET catalyst)
   target_link_libraries(catalyst_ui_sample PRIVATE catalyst)
 else()
   target_link_libraries(catalyst_ui_sample PRIVATE
-    catalyst_platform catalyst::input catalyst::ui catalyst::ui_renderer catalyst::rendering catalyst::events
-    catalyst::logging)
+    catalyst::ui_host catalyst::events catalyst::logging)
 endif()
 
 # stb_truetype rides along with the stb_image fetch the resource module makes (cmake/stb.cmake); the target is global,

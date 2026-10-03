@@ -7,7 +7,40 @@ release may break the API and a patch release may not.
 
 ## [Unreleased]
 
+### Added
+
+- `catalyst::ui_host` (`CATALYST_BUILD_UI_HOST`), the UI shell, in two layers that are composed
+  rather than derived from. `ui::host` owns a tree with a viewport-filling root, its
+  `interaction`, an input bridge, the renderer and the uploaded glyph atlas; it lays out and paints
+  only when something changed and draws from the caller's command list, so it fits into any loop.
+  `ui::app` is the loop around one host for a window that is all UI: window, device, swapchain and
+  frame ring, live redraw during border drags through the platform frame callback, DPI scale times
+  a zoom, and `loop_mode::wait`, which sleeps between changes (0 ms of CPU idle, against ~300 ms
+  per 4 s polling). Tests: `catalyst.ui.input_bridge`, `catalyst.ui.host`.
+- `ui::input_bridge`: forwards input-module mouse, wheel, key and text events into a
+  `ui::interaction`, including `mouse_leave_event` (clears hover) and `mouse_enter_event`.
+- `ui::glyph_atlas` and `text_provider::atlas()`: how a rasterising font provider tells whoever
+  uploads it what to upload and when, so the host can drive any provider's atlas.
+- `catalyst::platform` native dialogs (`<catalyst/platform/dialog.hpp>`): `open_file_dialog`,
+  `open_files_dialog`, `save_file_dialog` and `pick_folder_dialog`, described by a
+  `file_dialog_desc` (owner window, title, initial folder, default name, file type filters,
+  default extension), plus `show_message_box` with OK / OK-Cancel / Yes-No / Yes-No-Cancel buttons
+  and an info, warning or error icon. All are synchronous and return `std::expected` with a
+  `dialog_error` of `cancelled`, `unsupported` or `failed`. The Win32 backend uses the Common Item
+  Dialog and `MessageBoxW`, and works from a thread in either COM apartment: a caller in the
+  multi-threaded one (as the audio backends leave the thread that opens a stream) has the dialog
+  shown from a helper thread while it keeps dispatching its own window messages. The null backend
+  returns `unsupported`. New `catalyst.platform.dialog` test (null backend).
+
 ### Changed
+
+- `ui_sample` runs on `ui::app`: the window, device, frame loop, input bridge and atlas upload
+  are gone from it (1129 lines to 790), it keeps redrawing while the window is dragged, and
+  `--wait` runs it in wait mode. Its font provider implements `ui::glyph_atlas`.
+- `docs/ui.md`: the roadmap after Tier 5 is now 6a (the shell), 6b (widgets and theme, with a
+  library font provider as the prerequisite), 6c (overlays, focus scopes, tab order), 7
+  (composite components: menus, dialogs, an in-engine file browser) and 8 (animation, wrap, grid).
+  Native file dialogs are placed in `catalyst::platform`, outside the UI tiers.
 
 - `ui_sample`: every length in the tree, the default text size and the window size are now in
   `dp`, so the sample follows the monitor's DPI scale instead of drawing 16-pixel text on a

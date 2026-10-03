@@ -1,15 +1,15 @@
 /*
  * @file font_provider.hpp
  * @brief A `ui::text_provider` over a TrueType file, rasterising glyphs through stb_truetype into a single-channel
- * atlas the application uploads and registers with `ui::renderer`.
+ * atlas that `ui::host` uploads and registers with its renderer.
  * @details The UI module's text seam asks a provider three questions -- line metrics, one glyph, one kerning pair --
  * and leaves files, rasterisation and atlases to the provider. This is the smallest provider that answers them with a
  * real face. Glyphs are rasterised the first time they are asked for at a size, packed into a CPU-side `r8` bitmap
- * with a shelf packer, and cached; the bitmap is what the sample turns into a `rendering::texture` and registers under
- * `key()`, which every glyph's `texture` field carries. The renderer treats an `r8_unorm` texture as a coverage mask,
- * so the glyph's colour is the vertex colour and the atlas only supplies alpha.
+ * with a shelf packer, and cached; through the `ui::glyph_atlas` interface the bitmap is what the host turns into a
+ * `rendering::texture` and registers under `key()`, which every glyph's `texture` field carries. The renderer treats an
+ * `r8_unorm` texture as a coverage mask, so the glyph's colour is the vertex colour and the atlas only supplies alpha.
  *
- * The provider says when the sample has work to do: `take_dirty` is true when pixels changed since the last upload,
+ * The provider says when its uploader has work to do: `take_dirty` is true when pixels changed since the last upload,
  * and `take_resized` when the atlas grew, which invalidates every `uv` handed out before, so a batch painted during
  * that growth must be painted again. Sizes are quantised to whole pixels for the cache; the module asks with floats.
  * License: MIT (see LICENSE).
@@ -31,8 +31,11 @@
 namespace ui_sample
 {
 
-    /** @brief A `text_provider` backed by one TrueType (or OpenType with TrueType outlines) face. */
-    class ttf_text_provider final : public catalyst::ui::text_provider
+    /**
+     * @brief A `text_provider` backed by one TrueType (or OpenType with TrueType outlines) face, which is also the
+     * `glyph_atlas` its glyphs sample, so `ui::host` finds and uploads the atlas through `atlas()`.
+     */
+    class ttf_text_provider final : public catalyst::ui::text_provider, public catalyst::ui::glyph_atlas
     {
     public:
         /** @brief What the atlas starts as and how far it may grow. */
@@ -78,26 +81,29 @@ namespace ui_sample
                                     catalyst::ui::glyph &out) override;
         [[nodiscard]] float kerning(catalyst::ui::font_id font, float size_px, char32_t left, char32_t right) override;
 
+        /** @brief This provider is its own atlas. */
+        [[nodiscard]] catalyst::ui::glyph_atlas *atlas() noexcept override { return this; }
+
         // ---- the atlas --------------------------------------------------------------------------
 
         /** @brief The key glyphs carry; register the uploaded atlas under it. */
-        [[nodiscard]] catalyst::ui::texture_key key() const noexcept { return desc_.key; }
+        [[nodiscard]] catalyst::ui::texture_key key() const noexcept override { return desc_.key; }
 
         /** @brief The atlas pixels, one byte of coverage per pixel, rows tightly packed. */
-        [[nodiscard]] std::span<const std::byte> pixels() const noexcept;
+        [[nodiscard]] std::span<const std::byte> pixels() const noexcept override;
 
-        [[nodiscard]] std::uint32_t width() const noexcept { return width_; }
-        [[nodiscard]] std::uint32_t height() const noexcept { return height_; }
+        [[nodiscard]] std::uint32_t width() const noexcept override { return width_; }
+        [[nodiscard]] std::uint32_t height() const noexcept override { return height_; }
 
         /** @brief True once per change: pixels were written since the last call, so the texture needs uploading. */
-        [[nodiscard]] bool take_dirty() noexcept;
+        [[nodiscard]] bool take_dirty() noexcept override;
 
         /**
          * @brief True once per growth: the atlas was reallocated larger since the last call. Texture coordinates
          * handed out before it grew point at the old size, so anything painted since the previous call must be
          * painted again after the upload.
          */
-        [[nodiscard]] bool take_resized() noexcept;
+        [[nodiscard]] bool take_resized() noexcept override;
 
         /** @brief How many glyph images were dropped because the atlas hit `max_size`. */
         [[nodiscard]] std::uint32_t dropped() const noexcept { return dropped_; }

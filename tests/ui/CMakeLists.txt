@@ -32,3 +32,31 @@ if(TARGET catalyst::ui_renderer AND TARGET catalyst::logging)
 		COMMAND catalyst_tests_ui_renderer
 	)
 endif()
+
+# The shell: the input bridge is headless, the host needs a device like the renderer bridge does.
+if(TARGET catalyst::ui_host AND TARGET catalyst::logging)
+	add_executable(catalyst_tests_ui_input_bridge
+		test_input_bridge.cpp
+	)
+	target_link_libraries(catalyst_tests_ui_input_bridge
+		PRIVATE
+			catalyst::ui_host
+	)
+	add_test(
+		NAME catalyst.ui.input_bridge
+		COMMAND catalyst_tests_ui_input_bridge
+	)
+
+	add_executable(catalyst_tests_ui_host
+		test_host.cpp
+	)
+	target_link_libraries(catalyst_tests_ui_host
+		PRIVATE
+			catalyst::ui_host
+			catalyst::logging
+	)
+	add_test(
+		NAME catalyst.ui.host
+		COMMAND catalyst_tests_ui_host
+	)
+endif()

@@ -9,8 +9,13 @@
 
 #pragma once
 
+#include <catalyst/platform/dialog.hpp>
 #include <catalyst/platform/monitor.hpp>
 #include <catalyst/platform/window.hpp>
+
+#include <expected>
+#include <filesystem>
+#include <vector>
 
 /**
  * @namespace catalyst::platform::detail
@@ -197,5 +202,42 @@ namespace catalyst::platform::detail
     [[nodiscard]] monitor_desc get_monitor(monitor_id id) noexcept;
     [[nodiscard]] monitor_id primary_monitor() noexcept;
     [[nodiscard]] monitor_id monitor_for_window(window_id w) noexcept;
+
+    // ----------------------
+    // Dialog backend API
+    // ----------------------
+
+    /**
+     * @enum file_dialog_kind
+     * @brief Which of the four public file dialogs show_file_dialog is to show. They share one backend entry point
+     * because every backend builds them from the same description and differs only in a flag or two.
+     */
+    enum class file_dialog_kind : std::uint8_t
+    {
+        open,          ///< One existing file (open_file_dialog).
+        open_multiple, ///< One or more existing files (open_files_dialog).
+        save,          ///< A file to write, which need not exist (save_file_dialog).
+        pick_folder,   ///< One existing folder (pick_folder_dialog).
+    };
+
+    /**
+     * @fn show_file_dialog
+     * @brief Shows a native file dialog and blocks until it is dismissed. See dialog.hpp for the public contract.
+     * @param kind Which dialog to show.
+     * @param desc The description, already passed through normalize_file_dialog_desc (dialog_spec.hpp): the patterns
+     * are ';'-separated wildcards, every filter has a name, default_filter is in range and default_extension has no
+     * dot. A backend may rely on all of that and must not re-derive any of it.
+     * @return The chosen paths -- exactly one for every kind but open_multiple -- or why there are none. A backend
+     * with no native dialogs returns dialog_error::unsupported.
+     */
+    [[nodiscard]] std::expected<std::vector<std::filesystem::path>, dialog_error>
+    show_file_dialog(file_dialog_kind kind, const file_dialog_desc &desc);
+
+    /**
+     * @fn show_message_box
+     * @brief Shows a native message box and blocks until it is dismissed. See platform::show_message_box.
+     * @return The button chosen, or dialog_error::unsupported / dialog_error::failed. Never dialog_error::cancelled.
+     */
+    [[nodiscard]] std::expected<message_box_result, dialog_error> show_message_box(const message_box_desc &desc);
 
 } // namespace catalyst::platform::detail

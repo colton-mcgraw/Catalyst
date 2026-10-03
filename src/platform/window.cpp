@@ -210,16 +210,13 @@ namespace catalyst::platform
 
     /**
      * @fn wait_events
-     * @brief Waits for events to occur, with an optional timeout. This function blocks until at least one event is
-     * available in the event queue or until the specified timeout has elapsed. If events are available, they will be
-     * processed and dispatched to the appropriate handlers. The timeout parameter allows the function to return after a
-     * certain amount of time if no events have occurred, preventing indefinite blocking. This can be useful for
-     * applications that want to perform periodic updates even when no user input or other events are occurring.
+     * @brief Blocks until at least one event is queued or the timeout elapses. Nothing is dispatched here; the
+     * caller follows it with pump_events(), which is what delivers the events to their handlers. The timeout lets a
+     * loop that waits still wake for periodic work when nothing arrives.
      * @param timeout_ms The maximum amount of time (in milliseconds) to wait for events before returning. If set to
      * 0xFFFFFFFF, the function will block indefinitely until an event is available. If set to zero it polls and returns
      * at once. Any other value makes the function return after that time if no events have occurred.
-     * @return A boolean value indicating whether any events were processed during the wait period. True if events were
-     * processed, false if the timeout elapsed without any events occurring.
+     * @return True if an event is queued, false if the timeout elapsed or the wait failed.
      */
     bool wait_events(std::uint32_t timeout_ms) noexcept
     {

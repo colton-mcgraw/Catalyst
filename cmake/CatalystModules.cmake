@@ -136,6 +136,10 @@ catalyst_module(ui DEPENDS math events text
 # switching either side off does not fail the configure; it simply goes with them.
 catalyst_module(ui_renderer DEPENDENT SOURCE_DIR ui/renderer DEPENDS ui rendering
   DESCRIPTION "The bridge that draws catalyst::ui batches through catalyst::rendering")
+# The shell around that bridge: a host that owns a tree and draws it, the input bridge, and a
+# window-and-frame-loop app around one host. DEPENDENT for the same reason as ui_renderer.
+catalyst_module(ui_host DEPENDENT SOURCE_DIR ui/host DEPENDS ui_renderer input platform
+  DESCRIPTION "The UI shell: a hosted tree with its renderer, the input bridge, and a window and frame loop")
 catalyst_module(utils PLACEHOLDER
   DESCRIPTION "Not implemented")
 

@@ -11,6 +11,7 @@ catalyst_require_modules(platform)
 
 add_library(catalyst_platform STATIC
   platform.cpp
+  dialog.cpp
   monitor.cpp
   window.cpp
 )
@@ -50,6 +51,7 @@ if(_catalyst_platform_backend STREQUAL "win32")
   add_library(catalyst_platform_backend_win32 STATIC
     win32/platform_backend_win32.cpp
     win32/win32_helpers.cpp
+    win32/dialog_backend_win32.cpp
     win32/monitor_backend_win32.cpp
     win32/window_backend_win32.cpp
   )
@@ -64,6 +66,11 @@ if(_catalyst_platform_backend STREQUAL "win32")
   # loop, and DwmSetWindowAttribute selects the dark window frame.
   target_link_libraries(catalyst_platform_backend_win32 PUBLIC dwmapi)
 
+  # ole32: CoInitializeEx, CoCreateInstance and CoTaskMemFree for the Common Item Dialog. shell32:
+  # SHCreateItemFromParsingName, which turns file_dialog_desc::initial_folder into a shell item. No
+  # uuid: the class and interface ids are taken with __uuidof rather than from uuid.lib's CLSID_ symbols.
+  target_link_libraries(catalyst_platform_backend_win32 PUBLIC ole32 shell32)
+
   # UTF-8 conversion, run-time entry-point lookup and the <windows.h> include, shared with the input
   # and audio backends. PUBLIC because win32_helpers.hpp re-exports the string helpers.
   target_link_libraries(catalyst_platform_backend_win32 PUBLIC catalyst::win32_support)
@@ -72,6 +79,7 @@ if(_catalyst_platform_backend STREQUAL "win32")
 elseif(_catalyst_platform_backend STREQUAL "null")
   add_library(catalyst_platform_backend_null STATIC
     null/platform_backend_null.cpp
+    null/dialog_backend_null.cpp
     null/monitor_backend_null.cpp
     null/window_backend_null.cpp
   )

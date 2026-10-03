@@ -15,7 +15,7 @@ real, because a list of ambitions is no use to someone deciding whether to build
 | `audio` | Working | Device enumeration, streams, mixing, offline rendering. WASAPI and ASIO backends. |
 | `input` | Working | Keyboard, text, mouse with raw motion and capture, gamepads, action maps, calibration. |
 | `logging` | Working | Levels, filters, middleware, routing, and console, terminal, file, ring-buffer, callback, async and queued sinks. |
-| `platform` | Working | Windows, monitors, the event loop. Win32 backend. |
+| `platform` | Working | Windows, monitors, the event loop, native file dialogs and message boxes. Win32 backend. |
 | `math` | Working | Vectors, matrices, quaternions, transforms, fractions, geometry. Header-only. |
 | `ui` | Working | Retained tree of styled nodes, CSS-like units, flexbox layout, painting into a backend-agnostic draw list, hit testing, pointer and keyboard interaction, text layout. |
 | `scene` | Working | Entities with a transform hierarchy and components, cameras, lights, bounding volumes, frustum culling and sorted extraction. |
@@ -339,6 +339,10 @@ Catalyst is modular: you can link individual modules, or link the monolithic umb
   - `CATALYST_BUILD_UI_RENDERER` (default: `ON` when both `CATALYST_BUILD_UI` and `CATALYST_BUILD_RENDERING` are)
     builds `catalyst::ui_renderer`, the bridge that draws `catalyst::ui` batches through `catalyst::rendering`.
     It switches itself off when either side is off rather than failing the configure.
+  - `CATALYST_BUILD_UI_HOST` (default: `ON` when `CATALYST_BUILD_UI_RENDERER`, `CATALYST_BUILD_INPUT` and
+    `CATALYST_BUILD_PLATFORM` are) builds `catalyst::ui_host`, the UI shell: `ui::host` (a tree with its
+    interaction, renderer and glyph atlas), the input bridge, and `ui::app`, a window and frame loop around a host.
+    It switches itself off with any of the three, like `CATALYST_BUILD_UI_RENDERER`.
   - Any module whose `src/<module>/` directory is not in the checkout defaults to `OFF`, whatever
     the above says. Switching a module off that another one needs fails the configure with one
     sentence naming the switch to flip.

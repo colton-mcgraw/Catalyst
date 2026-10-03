@@ -13,7 +13,9 @@
 #include <catalyst/ui/geometry.hpp>
 #include <catalyst/ui/node.hpp>
 
+#include <cstddef>
 #include <cstdint>
+#include <span>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -71,6 +73,39 @@ namespace catalyst::ui
     };
 
     /**
+     * @class glyph_atlas
+     * @brief The CPU-side image a rasterising provider packs its glyphs into, for whoever uploads it.
+     * @details The module never uploads anything; this is how code that does -- `ui::host`, or an
+     * application driving `ui::renderer` itself -- finds out what to upload and when. The image is
+     * single-channel coverage, one byte per pixel, rows tightly packed, so it uploads as `r8_unorm`,
+     * which the renderer reads as a mask. Register the upload under `key()`, the key every glyph
+     * from this atlas carries in `glyph::texture`.
+     *
+     * The two `take_` calls report a change once and then reset. Pixels written since the last
+     * `take_dirty` need uploading again. A `take_resized` means the image was reallocated larger,
+     * so every `glyph::uv` handed out before then is wrong and anything painted since the previous
+     * call must be painted again before it is drawn.
+     */
+    class glyph_atlas
+    {
+    public:
+        virtual ~glyph_atlas() = default;
+
+        /** @brief The key glyphs from this atlas carry. Never `no_texture`. */
+        [[nodiscard]] virtual texture_key key() const noexcept = 0;
+        /** @brief The coverage bytes, `width() * height()` of them. */
+        [[nodiscard]] virtual std::span<const std::byte> pixels() const noexcept = 0;
+        /** @brief Width of the image in pixels. Zero before the first glyph. */
+        [[nodiscard]] virtual std::uint32_t width() const noexcept = 0;
+        /** @brief Height of the image in pixels. Zero before the first glyph. */
+        [[nodiscard]] virtual std::uint32_t height() const noexcept = 0;
+        /** @brief True once per change: pixels were written since the last call. */
+        [[nodiscard]] virtual bool take_dirty() noexcept = 0;
+        /** @brief True once per growth: the image was reallocated since the last call, invalidating old `uv`s. */
+        [[nodiscard]] virtual bool take_resized() noexcept = 0;
+    };
+
+    /**
      * @class text_provider
      * @brief What the text layout needs from a font engine. Implemented by a real font stack later, and by
      * `null_text_provider` now.
@@ -78,12 +113,19 @@ namespace catalyst::ui
      * two glyphs kern -- and nothing about files, rasterisation or atlases, which are the
      * provider's own business. Shaping (ligatures, complex scripts) is deliberately absent from
      * the seam: a shaping provider would expose a run-level call, and adding it later does not
-     * change these three.
+     * change these three. A provider that rasterises into an image says so through `atlas()`.
      */
     class text_provider
     {
     public:
         virtual ~text_provider() = default;
+
+        /**
+         * @brief The image this provider's glyphs sample, or null for one that draws without a texture.
+         * @details Null by default, which is what `null_text_provider` and any provider whose glyphs
+         * use already-registered textures return.
+         */
+        [[nodiscard]] virtual glyph_atlas *atlas() noexcept { return nullptr; }
 
         /** @brief The vertical metrics of a face at a size. */
         [[nodiscard]] virtual font_metrics metrics(font_id font, float size_px) = 0;

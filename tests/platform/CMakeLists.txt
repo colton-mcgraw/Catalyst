@@ -15,7 +15,7 @@ if(NOT TARGET catalyst_platform_backend_null)
 	return()
 endif()
 
-foreach(_test window monitor)
+foreach(_test window monitor dialog)
 	add_executable(catalyst_tests_platform_${_test}
 		test_${_test}.cpp
 	)
@@ -31,3 +31,10 @@ foreach(_test window monitor)
 		COMMAND catalyst_tests_platform_${_test}
 	)
 endforeach()
+
+# The dialog suite also checks the normalisation of file_dialog_desc, which every backend relies on
+# and no public header exposes, so it reaches into src/ for src/platform/dialog_spec.hpp.
+target_include_directories(catalyst_tests_platform_dialog
+	PRIVATE
+		${PROJECT_SOURCE_DIR}/src
+)

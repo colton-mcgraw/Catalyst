@@ -81,6 +81,12 @@
 #include <catalyst/ui/renderer.hpp>
 #endif
 
+#if CATALYST_HAS_UI_HOST
+#include <catalyst/ui/app.hpp>
+#include <catalyst/ui/host.hpp>
+#include <catalyst/ui/input_bridge.hpp>
+#endif
+
 #if CATALYST_HAS_UTILS
 #include <catalyst/utils/utils.hpp>
 #endif

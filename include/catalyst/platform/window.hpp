@@ -588,17 +588,14 @@ namespace catalyst::platform
 
     /**
      * @fn wait_events
-     * @brief Waits for events to be available in the OS event queue and processes them. This function is similar to
-     * pump_events, but instead of returning immediately if there are no pending events, it will block and wait until at
-     * least one event is available before processing. The function takes an optional timeout parameter (in
-     * milliseconds) that specifies how long to wait for events before returning. If the timeout is set to 0xFFFFFFFFu
-     * (the default), the function will wait indefinitely until an event is available. By using wait_events, developers
-     * can reduce CPU usage in scenarios where the application does not need to update continuously (e.g., when idle or
-     * waiting for user input), while still ensuring that events are processed in a timely manner when they occur.
-     * @param timeout_ms An optional timeout value in milliseconds that specifies how long to wait for events before
-     * returning. If set to 0xFFFFFFFFu (the default), the function will wait indefinitely until at least one event is
-     * available.
-     * @return True if events were processed, false if the wait timed out without any events becoming available.
+     * @brief Blocks until at least one OS event is queued for this thread, or until @p timeout_ms elapses. It does
+     * not dispatch anything: call pump_events() afterwards to process what arrived.
+     * @details The pair is how an application that does not need to update continuously (a tool that is idle, waiting
+     * for input) avoids spinning: `wait_events(); pump_events();`. Waiting without the pump leaves the event queued,
+     * so every later wait returns at once and the loop spins as if it polled.
+     * @param timeout_ms The longest to wait, in milliseconds. 0xFFFFFFFFu (the default) waits indefinitely; zero
+     * returns at once.
+     * @return True if an event is queued, false if the wait timed out or failed.
      */
     [[nodiscard]] bool wait_events(std::uint32_t timeout_ms = 0xFFFFFFFFu) noexcept;
 
