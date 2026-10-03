@@ -4,6 +4,8 @@
 # events into the UI interaction state machine. Text is set from a TrueType file through a small stb_truetype-backed
 # text_provider (font_provider.cpp) whose glyph atlas the sample uploads and registers with the renderer; when the
 # build fetched no stb, or no font file is found at run time, the sample falls back to the module's null provider.
+# Lengths are in dp, so the tree follows the monitor's DPI scale and the +/- keys zoom it; P shows a CPU profiler
+# panel for the phases of the frame loop.
 # Links the monolithic library when available, otherwise the platform, input, ui, ui_renderer, rendering, events and
 # logging modules.
 # License: MIT (see LICENSE).

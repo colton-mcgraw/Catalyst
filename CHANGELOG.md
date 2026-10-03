@@ -5,6 +5,41 @@ All notable changes to Catalyst are recorded here. The format follows
 policy in the README under *Versioning and compatibility*: while Catalyst is pre-1.0, a minor
 release may break the API and a patch release may not.
 
+## [Unreleased]
+
+### Changed
+
+- `ui_sample`: every length in the tree, the default text size and the window size are now in
+  `dp`, so the sample follows the monitor's DPI scale instead of drawing 16-pixel text on a
+  high-DPI panel. "+", "-" and "0" zoom the whole tree, and "P" shows a profiler panel with the
+  CPU time of each phase of the frame loop (events, layout, paint, atlas upload, frame-ring wait,
+  acquire, record, submit, present) over the last half second, plus the batch and atlas sizes. A
+  one-line summary goes to the log every five seconds.
+- Win32 platform backend: a window being dragged or resized is now paced by a helper thread that
+  posts to it once per compositor frame (DwmFlush), so a stationary drag renders at the display's
+  rate instead of the ~64 Hz the size/move timer could manage. The timer remains as a fallback
+  when the thread cannot be started. The pacing gate uses the refresh period of the monitor the
+  window is on rather than the primary display's.
+- Win32 platform backend: `WM_SIZE` requests a frame only while a modal size/move loop is running.
+  A `set_client_size`, snap or maximize outside one no longer renders an unpaced extra frame
+  before the application's own loop does.
+- Win32 platform backend: a finite `wait_events` timeout is honoured to within a fraction of a
+  millisecond, on a high-resolution waitable timer where Windows 10 1803 or later provides one.
+  It previously rounded up to the 15.6 ms scheduler tick.
+- Win32 platform backend: monitor queries are answered from a cache that is dropped on
+  `WM_DISPLAYCHANGE`, `WM_DPICHANGED` and `WM_SETTINGCHANGE`, and `primary_monitor` asks the OS
+  directly. Each query used to enumerate every monitor and create a display DC per monitor.
+- Win32 platform backend: modifier state is sampled with one `GetKeyboardState` call per input
+  message instead of seven `GetKeyState` calls, each of which is a kernel transition.
+  `TranslateMessage` is skipped for non-key messages, `is_valid` no longer round-trips through
+  `IsWindow`, and a captured window being moved or resized only re-clips the cursor instead of
+  re-running the full cursor-mode routine.
+
+### Fixed
+
+- `wait_events` documentation in the platform module described a zero timeout as waiting forever;
+  the implementation and the public header use `0xFFFFFFFF` for that and treat zero as a poll.
+
 ## [0.1.0] - 2026-09-18
 
 Initial development release: rendering, resource, audio, input, logging, platform, math, ui,

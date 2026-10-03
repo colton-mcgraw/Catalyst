@@ -25,6 +25,7 @@
 #include <windowsx.h> // For GET_X_LPARAM/GET_Y_LPARAM and GET_XBUTTON_WPARAM.
 
 #include <algorithm>
+#include <atomic>
 #include <cstring>
 #include <memory>
 #include <string>
@@ -61,12 +62,21 @@ namespace catalyst::platform::detail
 
         /**
          * @var k_size_move_timer_id
-         * @brief Identifier of the timer that is armed for the duration of a modal size/move loop. The loop runs inside
-         * DefWindowProcW and does not return to the application, so a timer is the only way to get periodic control
-         * back when the user is holding the border still (a stationary drag produces no WM_SIZE and no WM_PAINT at
-         * all).
+         * @brief Identifier of the fallback timer armed for the duration of a modal size/move loop when the pacer
+         * thread (see size_move_pacer) could not be started. The loop runs inside DefWindowProcW and does not return to
+         * the application, so something has to get periodic control back when the user is holding the border still (a
+         * stationary drag produces no WM_SIZE and no WM_PAINT at all). A timer does that, but at the system tick rate
+         * of ~64 Hz, which is why it is only the fallback.
          */
         constexpr UINT_PTR k_size_move_timer_id = 1;
+
+        /**
+         * @var k_wm_size_move_frame
+         * @brief The private message the size/move pacer thread posts to the window being dragged once per display
+         * refresh. The OS's modal loop dispatches posted messages like any other, so this is what gets the frame
+         * callback invoked at display rate while the thread is held inside that loop.
+         */
+        constexpr UINT k_wm_size_move_frame = WM_APP + 0x43;
 
         /**
          * @var k_dwmwa_use_immersive_dark_mode
@@ -124,9 +134,12 @@ namespace catalyst::platform::detail
             // ---- Frame callback ----
             frame_callback frame_cb = nullptr;
             void *frame_user = nullptr;
-            bool in_frame_callback = false; ///< guards against a callback that re-triggers a frame request
-            bool in_size_move = false;      ///< a modal size/move loop is currently running for this window
-            LONGLONG last_frame_qpc = 0;    ///< when the last size/move frame started, for pacing
+            bool in_frame_callback = false;       ///< guards against a callback that re-triggers a frame request
+            bool in_size_move = false;            ///< a modal size/move loop is currently running for this window
+            LONGLONG last_frame_qpc = 0;          ///< when the last size/move frame started, for pacing
+            LONGLONG size_move_interval_qpc = 0;  ///< refresh period of the window's monitor, measured at drag start
+            HMONITOR size_move_monitor = nullptr; ///< the monitor that interval belongs to, so a drag onto another
+                                                  ///< display re-measures it
 
             // ---- Constraints and saved state ----
             math::vec2<std::int32_t> min_size_px{0, 0}; ///< client-area minimum; a zero component means unconstrained
@@ -406,18 +419,165 @@ namespace catalyst::platform::detail
         }
 
         /**
+         * @fn refresh_period_qpc_for_monitor
+         * @brief One refresh period of @p mon in QPC units, from the display mode currently set on it.
+         * @details DwmGetCompositionTimingInfo only reports the primary display's period, so a window dragged on a
+         * secondary monitor with a different refresh rate would be paced wrongly from it. The display mode knows the
+         * monitor's own rate. EnumDisplaySettingsW is not cheap (it is a round trip into the display driver), which is
+         * why the result is cached per drag rather than queried per frame.
+         */
+        LONGLONG refresh_period_qpc_for_monitor(HMONITOR mon) noexcept
+        {
+            MONITORINFOEXW mi{};
+            mi.cbSize = sizeof(mi);
+            DEVMODEW dm{};
+            dm.dmSize = sizeof(dm);
+
+            if (mon && GetMonitorInfoW(mon, &mi) && EnumDisplaySettingsW(mi.szDevice, ENUM_CURRENT_SETTINGS, &dm) &&
+                dm.dmDisplayFrequency > 1)
+            {
+                LARGE_INTEGER freq{};
+                QueryPerformanceFrequency(&freq);
+                if (freq.QuadPart > 0)
+                    return freq.QuadPart / static_cast<LONGLONG>(dm.dmDisplayFrequency);
+            }
+
+            return frame_interval_qpc();
+        }
+
+        /** @brief Re-measures the drag pacing interval if @p ws has moved onto a different monitor. */
+        void refresh_size_move_interval(window_state &ws) noexcept
+        {
+            const HMONITOR mon = MonitorFromWindow(ws.hwnd, MONITOR_DEFAULTTONEAREST);
+            if (mon == ws.size_move_monitor && ws.size_move_interval_qpc != 0)
+                return;
+
+            ws.size_move_monitor = mon;
+            ws.size_move_interval_qpc = refresh_period_qpc_for_monitor(mon);
+        }
+
+        // -------------------------------------------------------------------------------------------------------------
+        // Size/move pacer thread
+        // -------------------------------------------------------------------------------------------------------------
+
+        /**
+         * @struct size_move_pacer
+         * @brief The thread that keeps a window rendering at display rate while the OS holds this thread inside a modal
+         * size/move loop.
+         * @details The modal loop dispatches posted messages, so a thread that posts one to the window once per
+         * composition gets the frame callback invoked at the display's rate even when the drag is stationary. A timer
+         * can do the same but only at the scheduler tick, ~64 Hz, which halves the frame rate of a drag on a 120 or 144
+         * Hz display. The thread paces on DwmFlush, which returns when the compositor has presented a frame, so the
+         * posts also line up with the vertical blank rather than landing at random points in the period.
+         *
+         * Only one modal loop can run on a thread at a time, so one pacer per process is enough. It is created at
+         * WM_ENTERSIZEMOVE and joined at WM_EXITSIZEMOVE; the join waits out at most one composition.
+         *
+         * `frame_pending` keeps the posts from piling up: if a frame takes longer than one period the thread skips the
+         * next post rather than queuing a backlog the window would have to catch up on after the drag.
+         */
+        struct size_move_pacer
+        {
+            HANDLE thread = nullptr;
+            HANDLE stop = nullptr;  ///< manual-reset event, signalled to end the thread
+            HWND hwnd = nullptr;    ///< the window being dragged
+            DWORD fallback_ms = 16; ///< the wait used when DwmFlush is unavailable (desktop composition off)
+            std::atomic<bool> frame_pending{false};
+        };
+
+        size_move_pacer g_pacer;
+
+        /** @brief The pacer thread's body. Posts k_wm_size_move_frame once per composition until told to stop. */
+        DWORD WINAPI size_move_pacer_proc(LPVOID) noexcept
+        {
+            for (;;)
+            {
+                if (FAILED(DwmFlush()))
+                {
+                    // No compositor to pace on: fall back to a plain wait for about one refresh period.
+                    if (WaitForSingleObject(g_pacer.stop, g_pacer.fallback_ms) != WAIT_TIMEOUT)
+                        break;
+                }
+                else if (WaitForSingleObject(g_pacer.stop, 0) == WAIT_OBJECT_0)
+                {
+                    break;
+                }
+
+                bool expected = false;
+                if (g_pacer.frame_pending.compare_exchange_strong(expected, true))
+                    PostMessageW(g_pacer.hwnd, k_wm_size_move_frame, 0, 0);
+            }
+            return 0;
+        }
+
+        /**
+         * @fn start_size_move_pacer
+         * @brief Starts pacing frames for @p ws, falling back to the size/move timer if the thread cannot be created.
+         */
+        void start_size_move_pacer(window_state &ws) noexcept
+        {
+            if (g_pacer.thread)
+                return; // a modal loop is already being paced; there is only ever one per thread
+
+            if (!g_pacer.stop)
+                g_pacer.stop = CreateEventW(nullptr, TRUE, FALSE, nullptr);
+
+            if (g_pacer.stop)
+            {
+                ResetEvent(g_pacer.stop);
+                g_pacer.hwnd = ws.hwnd;
+                g_pacer.frame_pending.store(false, std::memory_order_relaxed);
+
+                LARGE_INTEGER freq{};
+                QueryPerformanceFrequency(&freq);
+                g_pacer.fallback_ms =
+                    (freq.QuadPart > 0 && ws.size_move_interval_qpc > 0)
+                        ? static_cast<DWORD>(std::max<LONGLONG>(1, ws.size_move_interval_qpc * 1000 / freq.QuadPart))
+                        : 16;
+
+                g_pacer.thread = CreateThread(nullptr, 0, &size_move_pacer_proc, nullptr, 0, nullptr);
+                if (g_pacer.thread)
+                    return;
+
+                g_pacer.hwnd = nullptr;
+            }
+
+            SetTimer(ws.hwnd, k_size_move_timer_id, USER_TIMER_MINIMUM, nullptr);
+        }
+
+        /**
+         * @fn stop_size_move_pacer
+         * @brief Stops pacing frames for @p hwnd: joins the pacer thread if it is driving this window, and kills the
+         * fallback timer either way.
+         */
+        void stop_size_move_pacer(HWND hwnd) noexcept
+        {
+            KillTimer(hwnd, k_size_move_timer_id); // harmless if it was never armed
+
+            if (g_pacer.hwnd != hwnd || !g_pacer.thread)
+                return;
+
+            SetEvent(g_pacer.stop);
+            WaitForSingleObject(g_pacer.thread, INFINITE);
+            CloseHandle(g_pacer.thread);
+            g_pacer.thread = nullptr;
+            g_pacer.hwnd = nullptr;
+        }
+
+        /**
          * @fn request_frame
          * @brief Asks the application to render @p ws now, if it installed a frame callback.
          * @details Called from the paths on which the operating system either wants the window repainted or is about to
-         * keep the thread to itself: WM_PAINT, WM_SIZE, and the timer that runs for the duration of a modal size/move
-         * loop.
+         * keep the thread to itself: WM_PAINT, WM_SIZE during a drag, and the pacer thread's posts (or the fallback
+         * timer's ticks) for the duration of a modal size/move loop.
          *
-         * Inside a size/move loop the rate has to be capped here, because nothing else caps it. The timer runs at the
-         * shortest interval Windows accepts and its real resolution is finer still on a system where something has
-         * raised the timer frequency, so an ungated callback can be entered several hundred times a second while the
-         * user drags a border. Frames are therefore refused until one display refresh period has passed since the
-         * previous one began. Outside a size/move loop no gate applies: those calls come from the OS asking for a
-         * repaint, which is already as rare as it should be.
+         * Inside a size/move loop the rate has to be capped here, because nothing else caps it. WM_SIZE arrives per
+         * pixel of mouse travel, the pacer thread posts per composition of the primary display (which may be faster
+         * than the one the window is on), and the fallback timer's real resolution is finer than its nominal one on a
+         * system where something has raised the timer frequency; so an ungated callback can be entered several hundred
+         * times a second while the user drags a border. Frames are therefore refused until most of one refresh period
+         * of the window's own monitor has passed since the previous one began. Outside a size/move loop no gate
+         * applies: those calls come from the OS asking for a repaint, which is already as rare as it should be.
          *
          * The gate deliberately stops at a rate cap and does not also wait on the compositor (DwmFlush). Waiting for
          * vsync is the presenting code's job, and every graphics API offers it; doing it here as well would make an
@@ -441,13 +601,14 @@ namespace catalyst::platform::detail
                 LARGE_INTEGER now{};
                 QueryPerformanceCounter(&now);
 
-                // Three quarters of a refresh period, not a whole one. The size/move timer is asked for the shortest
-                // interval Windows accepts but is clamped to the system tick, which on a default configuration lands
-                // within noise of a 60 Hz refresh period; gating on the full period would refuse every other tick for
-                // being a fraction of a millisecond early and halve the frame rate of the drag. The margin makes this a
-                // guard against a runaway tick rate rather than an attempt to pace exactly, which is the presenting
-                // code's job in any case.
-                const LONGLONG minimum = frame_interval_qpc() - frame_interval_qpc() / 4;
+                // Three quarters of a refresh period, not a whole one. The pacer's posts land within noise of the
+                // period, and the fallback timer's ticks land within noise of a 60 Hz one; gating on the full period
+                // would refuse every other tick for being a fraction of a millisecond early and halve the frame rate
+                // of the drag. The margin makes this a guard against a runaway rate rather than an attempt to pace
+                // exactly, which is the presenting code's job in any case.
+                const LONGLONG interval =
+                    ws.size_move_interval_qpc != 0 ? ws.size_move_interval_qpc : frame_interval_qpc();
+                const LONGLONG minimum = interval - interval / 4;
 
                 if (ws.last_frame_qpc != 0 && (now.QuadPart - ws.last_frame_qpc) < minimum)
                     return;
@@ -523,25 +684,37 @@ namespace catalyst::platform::detail
 
         /**
          * @fn current_modifiers
-         * @brief Samples the modifier keys and lock states with GetKeyState, which is synchronised with the message
-         * being processed, so the result reflects the state at the time of the event rather than "now".
+         * @brief Samples the modifier keys and lock states from the thread's keyboard state, which is synchronised with
+         * the message being processed, so the result reflects the state at the time of the event rather than "now".
+         * @details One GetKeyboardState call rather than one GetKeyState per key: each GetKeyState is a kernel
+         * transition (about 0.3 us measured), and this runs on every mouse message, so the seven calls it replaces were
+         * the largest fixed cost on the input path. The state is deliberately not cached across messages. The thread's
+         * key table is updated whenever it retrieves input, including a mouse message over an unfocused window, so a
+         * cache refreshed only on key and focus messages would miss a modifier pressed while another window had focus.
          */
         input::key_modifiers current_modifiers() noexcept
         {
+            BYTE keys[256];
+            if (!GetKeyboardState(keys))
+                return input::key_modifiers::none;
+
+            const auto down = [&](int vk) noexcept { return (keys[vk] & 0x80u) != 0; };
+            const auto toggled = [&](int vk) noexcept { return (keys[vk] & 0x01u) != 0; };
+
             input::key_modifiers mods = input::key_modifiers::none;
 
-            if ((GetKeyState(VK_SHIFT) & 0x8000) != 0)
+            if (down(VK_SHIFT))
                 mods |= input::key_modifiers::shift;
-            if ((GetKeyState(VK_CONTROL) & 0x8000) != 0)
+            if (down(VK_CONTROL))
                 mods |= input::key_modifiers::control;
-            if ((GetKeyState(VK_MENU) & 0x8000) != 0)
+            if (down(VK_MENU))
                 mods |= input::key_modifiers::alt;
-            if ((GetKeyState(VK_LWIN) & 0x8000) != 0 || (GetKeyState(VK_RWIN) & 0x8000) != 0)
+            if (down(VK_LWIN) || down(VK_RWIN))
                 mods |= input::key_modifiers::super;
 
-            if ((GetKeyState(VK_CAPITAL) & 0x0001) != 0)
+            if (toggled(VK_CAPITAL))
                 mods |= input::key_modifiers::caps_lock;
-            if ((GetKeyState(VK_NUMLOCK) & 0x0001) != 0)
+            if (toggled(VK_NUMLOCK))
                 mods |= input::key_modifiers::num_lock;
 
             return mods;
@@ -807,6 +980,20 @@ namespace catalyst::platform::detail
         }
 
         /**
+         * @fn reclip_captured_cursor
+         * @brief Moves the cursor clip along with the client area when a captured window is resized or moved.
+         * @details This is the only part of apply_cursor_mode that a size or move changes. The full routine also
+         * re-registers raw input and hit-tests the cursor with WindowFromPoint to nudge WM_SETCURSOR, which is needed
+         * when the mode or focus changes but is wasted work on every WM_SIZE and WM_MOVE of a drag.
+         */
+        void reclip_captured_cursor(window_state &ws) noexcept
+        {
+            // g_raw_mouse_window is this window exactly while it is captured *and* focused; see apply_cursor_mode.
+            if (g_raw_mouse_window == ws.id)
+                clip_cursor_to_client(ws.hwnd);
+        }
+
+        /**
          * @fn release_captured_buttons
          * @brief Feeds a release for every mouse button this window holds the capture for, and drops the capture.
          * @details Used when the capture is taken away by another window (WM_CAPTURECHANGED): the matching button-up
@@ -1007,7 +1194,7 @@ namespace catalyst::platform::detail
                     g_raw_mouse_window = 0;
                 }
                 if (ws->in_size_move)
-                    KillTimer(hwnd, k_size_move_timer_id);
+                    stop_size_move_pacer(hwnd);
 
                 SetWindowLongPtrW(hwnd, GWLP_USERDATA, 0);
                 g_windows.erase(id); // ws dangles past this point
@@ -1041,13 +1228,17 @@ namespace catalyst::platform::detail
                     dispatch_event(we);
                 }
 
-                if (ws->cursor == cursor_mode::captured)
-                    apply_cursor_mode(*ws);
+                reclip_captured_cursor(*ws);
 
-                // Draw the new size straight away. During a resize drag this is the message that arrives per pixel of
+                // Draw the new size straight away during a resize drag: this is the message that arrives per pixel of
                 // mouse travel, so rendering from here is what makes the window track the border instead of lagging it.
-                if (publishes)
+                // Outside the modal loop (set_client_size, a snap, maximize from the caption) the application's own
+                // loop renders the next frame anyway, so a frame here would only be an unpaced duplicate of it.
+                if (publishes && ws->in_size_move)
+                {
+                    refresh_size_move_interval(*ws);
                     request_frame(*ws);
+                }
 
                 break;
             }
@@ -1064,8 +1255,10 @@ namespace catalyst::platform::detail
                     dispatch_event(me);
                 }
 
-                if (ws->cursor == cursor_mode::captured)
-                    apply_cursor_mode(*ws);
+                reclip_captured_cursor(*ws);
+
+                if (ws->in_size_move)
+                    refresh_size_move_interval(*ws); // the drag may have crossed onto a display with another rate
                 break;
             }
             case WM_GETMINMAXINFO:
@@ -1100,11 +1293,13 @@ namespace catalyst::platform::detail
             case WM_ENTERSIZEMOVE:
             {
                 // From here until WM_EXITSIZEMOVE the thread is inside the OS's own message loop and pump_events() will
-                // not return. The timer is the only thing that gets control back when the drag is not producing
+                // not return. The pacer is the only thing that gets control back when the drag is not producing
                 // messages.
                 ws->in_size_move = true;
                 ws->last_frame_qpc = 0; // let the first frame of the drag go out immediately
-                SetTimer(hwnd, k_size_move_timer_id, USER_TIMER_MINIMUM, nullptr);
+                ws->size_move_interval_qpc = 0;
+                refresh_size_move_interval(*ws);
+                start_size_move_pacer(*ws);
 
                 if (publishes)
                 {
@@ -1116,7 +1311,7 @@ namespace catalyst::platform::detail
             }
             case WM_EXITSIZEMOVE:
             {
-                KillTimer(hwnd, k_size_move_timer_id);
+                stop_size_move_pacer(hwnd);
                 ws->in_size_move = false;
 
                 if (publishes)
@@ -1135,6 +1330,16 @@ namespace catalyst::platform::detail
                     return 0;
                 }
                 break;
+            }
+            case k_wm_size_move_frame:
+            {
+                // Posted by the pacer thread once per composition. Clear the flag before rendering so the thread can
+                // queue the next one while this frame is in flight; a post that arrives after the drag ended (the
+                // thread may have posted just before it was stopped) is dropped.
+                g_pacer.frame_pending.store(false, std::memory_order_relaxed);
+                if (ws->in_size_move)
+                    request_frame(*ws);
+                return 0;
             }
             case WM_PAINT:
             {
@@ -1164,6 +1369,8 @@ namespace catalyst::platform::detail
                 SetWindowPos(hwnd, nullptr, suggested->left, suggested->top, suggested->right - suggested->left,
                              suggested->bottom - suggested->top, SWP_NOZORDER | SWP_NOACTIVATE);
 
+                win32::invalidate_monitor_cache(); // a per-monitor DPI changed, so the cached descriptors are stale
+
                 if (publishes)
                 {
                     window_dpi_changed_event we;
@@ -1178,6 +1385,7 @@ namespace catalyst::platform::detail
                 // Broadcast to every top-level window, so it would otherwise be republished once per window we own. All
                 // copies of one broadcast share a message time, which is enough to recognise and drop the duplicates.
                 g_frame_interval_qpc = 0; // the refresh rate may have changed with the mode
+                win32::invalidate_monitor_cache();
 
                 static LONG s_last_display_change = 0;
                 const LONG when = GetMessageTime();
@@ -1191,6 +1399,13 @@ namespace catalyst::platform::detail
                         dispatch_event(me);
                     }
                 }
+                break;
+            }
+            case WM_SETTINGCHANGE:
+            {
+                // The work area (taskbar moved or resized) is part of the monitor descriptor and changes without a
+                // WM_DISPLAYCHANGE.
+                win32::invalidate_monitor_cache();
                 break;
             }
 
@@ -1667,11 +1882,13 @@ namespace catalyst::platform::detail
     /**
      * @fn is_window_valid
      * @brief Whether @p id refers to a window that still exists.
+     * @details The registry alone answers this: ids are never reused, and WM_NCDESTROY erases the entry on every route
+     * a window can be destroyed by, so there is nothing an IsWindow round trip into the kernel could add. Applications
+     * call this once per frame.
      */
     bool is_window_valid(window_id id) noexcept
     {
-        HWND hwnd = hwnd_from_id(id);
-        return hwnd != nullptr && IsWindow(hwnd);
+        return hwnd_from_id(id) != nullptr;
     }
 
     /**
@@ -1739,15 +1956,60 @@ namespace catalyst::platform::detail
         MSG msg;
         while (PeekMessageW(&msg, nullptr, 0, 0, PM_REMOVE))
         {
-            // WM_QUIT belongs to the thread rather than to a window, so dispatching it would do nothing at all. Stop
-            // draining instead, leaving anything behind it for the next call.
+            // WM_QUIT belongs to the thread rather than to a window, so dispatching it would do nothing at all. It has
+            // already been removed from the queue (and the thread's quit flag cleared) by the time it is seen here, so
+            // it is simply dropped; nothing in Catalyst posts one, and a window closing is reported through
+            // window_close_requested_event instead. Stop draining so anything queued behind it waits for the next call.
             if (msg.message == WM_QUIT)
                 break;
 
-            TranslateMessage(&msg);
+            // TranslateMessage only does anything for key messages (it produces WM_CHAR and friends from WM_KEYDOWN),
+            // and mouse motion and raw input outnumber those by orders of magnitude; skip the call for everything else.
+            if (msg.message >= WM_KEYFIRST && msg.message <= WM_KEYLAST)
+                TranslateMessage(&msg);
+
             DispatchMessageW(&msg);
         }
     }
+
+    namespace
+    {
+        /**
+         * @struct thread_wait_timer
+         * @brief A high-resolution waitable timer owned by the calling thread, for finite wait_events() timeouts.
+         * @details MsgWaitForMultipleObjectsEx's own timeout is rounded to the scheduler tick, 15.6 ms by default, so a
+         * caller asking for a 2 ms wait gets 15.6 ms and cannot pace a frame. A waitable timer created with
+         * CREATE_WAITABLE_TIMER_HIGH_RESOLUTION (Windows 10 1803 and later) expires to within a fraction of a
+         * millisecond without raising the process-wide timer frequency. Where the flag is unsupported the creation
+         * fails and wait_events falls back to the plain timeout, which is what it always did.
+         */
+        struct thread_wait_timer
+        {
+            HANDLE handle = nullptr;
+            bool tried = false;
+
+            ~thread_wait_timer()
+            {
+                if (handle)
+                    CloseHandle(handle);
+            }
+        };
+
+        /** @brief The calling thread's high-resolution wait timer, or nullptr where the system cannot provide one. */
+        HANDLE high_resolution_wait_timer() noexcept
+        {
+            thread_local thread_wait_timer t;
+            if (!t.tried)
+            {
+                t.tried = true;
+                // Spelled out rather than using the SDK macro so this builds against older Windows SDKs too.
+                constexpr DWORD create_waitable_timer_high_resolution = 0x00000002;
+                t.handle =
+                    CreateWaitableTimerExW(nullptr, nullptr, create_waitable_timer_high_resolution, TIMER_ALL_ACCESS);
+            }
+            return t.handle;
+        }
+    } // namespace
 
     /**
      * @fn wait_events
@@ -1757,17 +2019,31 @@ namespace catalyst::platform::detail
      */
     bool wait_events(std::uint32_t timeout_ms) noexcept
     {
+        // A finite, non-zero timeout is waited out on a high-resolution timer where one is available, so the deadline
+        // is honoured to a fraction of a millisecond rather than to the scheduler tick. Infinite and zero timeouts need
+        // no timer: one never expires and the other is a poll.
+        if (timeout_ms != 0xFFFFFFFFu && timeout_ms != 0)
+        {
+            if (HANDLE timer = high_resolution_wait_timer())
+            {
+                LARGE_INTEGER due{};
+                due.QuadPart = -static_cast<LONGLONG>(timeout_ms) * 10000; // relative, in 100 ns units
+
+                if (SetWaitableTimer(timer, &due, 0, nullptr, nullptr, FALSE))
+                {
+                    // Wake for any kind of input/message without consuming it, or when the timer expires.
+                    const DWORD rc = MsgWaitForMultipleObjectsEx(1, &timer, INFINITE, QS_ALLINPUT, MWMO_INPUTAVAILABLE);
+                    return rc == WAIT_OBJECT_0 + 1; // WAIT_OBJECT_0 is the timer, anything else a failure
+                }
+            }
+        }
+
         const DWORD timeout = (timeout_ms == 0xFFFFFFFFu) ? INFINITE : static_cast<DWORD>(timeout_ms);
 
         // Wake for any kind of input/message without consuming it.
         const DWORD rc = MsgWaitForMultipleObjectsEx(0, nullptr, timeout, QS_ALLINPUT, MWMO_INPUTAVAILABLE);
 
-        if (rc == WAIT_TIMEOUT)
-            return false;
-        else if (rc == WAIT_FAILED)
-            return false;
-        else
-            return true;
+        return rc != WAIT_TIMEOUT && rc != WAIT_FAILED;
     }
 
     /**

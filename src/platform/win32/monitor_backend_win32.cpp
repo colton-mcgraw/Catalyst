@@ -6,13 +6,47 @@
 #include <win32/windows_lean.hpp>
 
 #include <algorithm>
+#include <array>
+#include <mutex>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace catalyst::platform::detail
 {
     namespace
     {
+        /**
+         * @struct monitor_cache
+         * @brief The last enumerated monitor list, kept so the queries below do not re-enumerate on every call.
+         * @details Enumerating costs a CreateDCW, an EnumDisplaySettingsW and a DPI query per monitor, which an
+         * application that asks for its monitor's refresh rate once per frame would otherwise pay every frame. The
+         * cache is dropped from the window backend's WM_DISPLAYCHANGE, WM_DPICHANGED and WM_SETTINGCHANGE handlers
+         * (see win32::invalidate_monitor_cache). Those messages only reach a process that owns a window, so a cheap
+         * fingerprint of the desktop geometry -- five GetSystemMetrics reads, which are user-mode lookups -- guards the
+         * windowless case against a monitor being plugged or unplugged unnoticed. A refresh-rate-only change in a
+         * windowless process is the one thing neither catches, and a process with no window has nothing to pace to it.
+         *
+         * Monitor queries carry no threading guarantee in the public API, so the cache takes a mutex rather than
+         * assuming the caller's thread; the lock is uncontended in practice and costs tens of nanoseconds.
+         */
+        struct monitor_cache
+        {
+            std::mutex mutex;
+            std::vector<monitor_desc> list;
+            std::array<int, 5> fingerprint{};
+            bool valid = false;
+        };
+
+        monitor_cache g_monitor_cache;
+
+        [[nodiscard]] std::array<int, 5> desktop_fingerprint() noexcept
+        {
+            return {GetSystemMetrics(SM_CMONITORS), GetSystemMetrics(SM_XVIRTUALSCREEN),
+                    GetSystemMetrics(SM_YVIRTUALSCREEN), GetSystemMetrics(SM_CXVIRTUALSCREEN),
+                    GetSystemMetrics(SM_CYVIRTUALSCREEN)};
+        }
+
         monitor_id monitor_id_from_hmonitor(HMONITOR m) noexcept
         {
             return static_cast<monitor_id>(reinterpret_cast<std::uintptr_t>(m));
@@ -108,34 +142,65 @@ namespace catalyst::platform::detail
 
             return out;
         }
+
+        /**
+         * @fn with_monitor_list
+         * @brief Runs @p fn against the cached monitor list, re-enumerating first if the cache is invalid or the
+         * desktop geometry has changed under it.
+         */
+        template <typename Fn>
+        auto with_monitor_list(Fn &&fn) noexcept -> decltype(fn(std::declval<const std::vector<monitor_desc> &>()))
+        {
+            std::lock_guard<std::mutex> lock(g_monitor_cache.mutex);
+
+            const std::array<int, 5> now = desktop_fingerprint();
+            if (!g_monitor_cache.valid || now != g_monitor_cache.fingerprint)
+            {
+                g_monitor_cache.list = enumerate_monitors();
+                g_monitor_cache.fingerprint = now;
+                g_monitor_cache.valid = true;
+            }
+
+            return fn(static_cast<const std::vector<monitor_desc> &>(g_monitor_cache.list));
+        }
     } // namespace
+
+    namespace win32
+    {
+        void invalidate_monitor_cache() noexcept
+        {
+            std::lock_guard<std::mutex> lock(g_monitor_cache.mutex);
+            g_monitor_cache.valid = false;
+        }
+    } // namespace win32
 
     std::size_t get_monitor_count() noexcept
     {
-        return enumerate_monitors().size();
+        return with_monitor_list([](const std::vector<monitor_desc> &list) { return list.size(); });
     }
 
     std::vector<monitor_desc> get_monitor_list() noexcept
     {
-        return enumerate_monitors();
+        return with_monitor_list([](const std::vector<monitor_desc> &list) { return list; });
     }
 
     monitor_desc get_monitor(monitor_id id) noexcept
     {
-        auto list = enumerate_monitors();
-        const auto it = std::find_if(list.begin(), list.end(), [&](const monitor_desc &m) { return m.id == id; });
-        if (it == list.end())
-            return {};
-        return *it;
+        return with_monitor_list(
+            [id](const std::vector<monitor_desc> &list)
+            {
+                const auto it =
+                    std::find_if(list.begin(), list.end(), [&](const monitor_desc &m) { return m.id == id; });
+                return it == list.end() ? monitor_desc{} : *it;
+            });
     }
 
     monitor_id primary_monitor() noexcept
     {
-        auto list = enumerate_monitors();
-        const auto it = std::find_if(list.begin(), list.end(), [](const monitor_desc &m) { return m.primary; });
-        if (it == list.end())
-            return 0;
-        return it->id;
+        // The primary monitor is the one containing the desktop origin, which the OS answers directly without any
+        // enumeration at all.
+        const HMONITOR mon = MonitorFromPoint(POINT{0, 0}, MONITOR_DEFAULTTOPRIMARY);
+        return mon ? monitor_id_from_hmonitor(mon) : 0;
     }
 
     monitor_id monitor_for_window(window_id w) noexcept

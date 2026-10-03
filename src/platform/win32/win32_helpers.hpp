@@ -53,4 +53,14 @@ namespace catalyst::platform::detail::win32
 
     // Attempts to read the monitor effective DPI (px/in). Returns true on success.
     [[nodiscard]] bool try_effective_dpi_for_monitor(hmonitor_handle mon, float &dpi_x, float &dpi_y) noexcept;
+
+    /**
+     * @fn invalidate_monitor_cache
+     * @brief Drops the monitor backend's cached descriptor list so the next query re-enumerates.
+     * @details Enumerating monitors is expensive (a display DC is created per monitor to read its physical size), so
+     * the monitor backend answers queries from a cache. The window backend owns the messages that say the cache is
+     * stale -- WM_DISPLAYCHANGE, WM_DPICHANGED and WM_SETTINGCHANGE -- and calls this from them. Defined in
+     * monitor_backend_win32.cpp.
+     */
+    void invalidate_monitor_cache() noexcept;
 } // namespace catalyst::platform::detail::win32

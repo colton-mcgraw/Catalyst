@@ -15,6 +15,12 @@
  * `pointer_enter_event` and `focus_gained_event` the tree publishes back on the same bus. Hover recolours a button,
  * clicking "Increment" or "Reset" rewrites the counter label, "G" flips the toast between group and per-node opacity,
  * "Quit" or Escape ends the loop.
+ *
+ * Every length in the tree is in `dp`, so the layout follows the monitor's DPI scale, and "+" / "-" / "0" multiply
+ * that scale by a zoom the user picks: the same tree, laid out and painted larger or smaller, text included. "P"
+ * shows a profiler panel: CPU time per phase of the frame loop (events, layout, paint, atlas upload, the frame ring
+ * wait, acquire, record, submit, present) averaged over the last half second, with the batch and atlas sizes behind
+ * them; a one-line summary also goes to the log every few seconds.
  * License: MIT (see LICENSE).
  */
 
@@ -34,12 +40,16 @@
 
 #include "font_provider.hpp"
 
+#include <algorithm>
+#include <array>
 #include <chrono>
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
 #include <cstdlib>
 #include <deque>
 #include <filesystem>
+#include <format>
 #include <span>
 #include <string>
 #include <string_view>
@@ -124,22 +134,31 @@ namespace
         ui::node toast = ui::null_node;
         ui::text_content *toast_label = nullptr;
         ui::node toast_node = ui::null_node;
+        ui::node profile_panel = ui::null_node;
+        ui::text_content *profile_label = nullptr;
+        ui::node profile_node = ui::null_node;
         std::vector<button> buttons;
         std::vector<std::pair<ui::node, const char *>> names;
 
-        /** @brief Creates a text leaf under `parent`. */
-        ui::node text(ui::node parent, std::string s, ui::color c, bool wrap = false, float size_px = 0.0f)
+        /**
+         * @brief Creates a text leaf under `parent`.
+         * @details The size goes on the node's `font_size` in `dp`, not on `text_style::size_px`: `size_px` is raw
+         * pixels, which ignore both the DPI scale and the zoom. Zero inherits the parent's size, and the root sets
+         * the default.
+         */
+        ui::node text(ui::node parent, std::string s, ui::color c, bool wrap = false, float size_dp = 0.0f)
         {
             const ui::node n = tree.create_child(parent);
             ui::text_content &content = texts.emplace_back();
             content.text = std::move(s);
             content.style.color = c;
             content.style.wrap = wrap;
-            content.style.size_px = size_px;
             content.provider = provider;
             content.attach(tree, n);
             if (wrap)
                 tree.mutable_style(n).flex_shrink = 1.0f;
+            if (size_dp > 0.0f)
+                tree.mutable_style(n).font_size = ui::dp(size_dp);
             return n;
         }
 
@@ -156,12 +175,12 @@ namespace
         {
             const ui::node n = box(parent);
             ui::style &st = tree.mutable_style(n);
-            st.height = ui::px(32.0f);
-            st.padding = ui::edges_length::symmetric(ui::px(14.0f), ui::px(0.0f));
+            st.height = ui::dp(32.0f);
+            st.padding = ui::edges_length::symmetric(ui::dp(14.0f), ui::dp(0.0f));
             st.background = fill;
             st.border = ui::edges_length::all(ui::px(1.0f));
             st.border_color = palette::border;
-            st.border_radius = ui::corners_length::all(ui::px(6.0f));
+            st.border_radius = ui::corners_length::all(ui::dp(6.0f));
             st.align_items = ui::align::center;
             st.justify_content = ui::justify::center;
 
@@ -192,6 +211,13 @@ namespace
             return nullptr;
         }
 
+        /**
+         * @brief Builds the tree.
+         * @details Sizes are in `dp`, which `layout_params` multiplies by the scale the loop passes (the monitor's
+         * DPI scale times the zoom), so the whole screen grows and shrinks together. Borders stay one real pixel:
+         * a hairline looks the same at every scale. An unscaled `px` elsewhere would be what it says on a 96 DPI
+         * display and a third of that on a 3K laptop panel, which is how the text here used to end up unreadable.
+         */
         void build()
         {
             root = tree.create();
@@ -203,8 +229,11 @@ namespace
                 st.width = ui::vw(100.0f);
                 st.height = ui::vh(100.0f);
                 st.background = palette::background;
-                st.padding = ui::edges_length::all(ui::px(16.0f));
-                st.set_gap(ui::px(12.0f));
+                st.padding = ui::edges_length::all(ui::dp(16.0f));
+                st.set_gap(ui::dp(12.0f));
+                // The default text size. Every text node without a size of its own inherits this; left `auto` the
+                // tree would fall back to 16 raw pixels, which no scale can reach.
+                st.font_size = ui::dp(15.0f);
             }
             names.emplace_back(root, "root");
 
@@ -212,20 +241,20 @@ namespace
             const ui::node header = box(root);
             {
                 ui::style &st = tree.mutable_style(header);
-                st.height = ui::px(48.0f);
-                st.padding = ui::edges_length::symmetric(ui::px(16.0f), ui::px(0.0f));
+                st.height = ui::dp(48.0f);
+                st.padding = ui::edges_length::symmetric(ui::dp(16.0f), ui::dp(0.0f));
                 st.background = palette::surface;
-                st.border_radius = ui::corners_length::all(ui::px(8.0f));
+                st.border_radius = ui::corners_length::all(ui::dp(8.0f));
                 st.align_items = ui::align::center;
                 st.justify_content = ui::justify::space_between;
             }
             names.emplace_back(header, "header");
             text(header, "Catalyst UI sample", palette::text, false, 20.0f);
-            text(header, "Escape quits", palette::text_dim);
+            text(header, "+ / - zoom   0 reset   P profiler   G opacity   Esc quits", palette::text_dim);
 
             // Toolbar: three buttons. The gap is on the container, so the buttons carry no margins.
             const ui::node toolbar = box(root);
-            tree.mutable_style(toolbar).set_gap(ui::px(8.0f));
+            tree.mutable_style(toolbar).set_gap(ui::dp(8.0f));
             names.emplace_back(toolbar, "toolbar");
             add_button(toolbar, "Increment", palette::accent, palette::accent_hover);
             add_button(toolbar, "Reset", palette::button, palette::button_hover);
@@ -236,14 +265,14 @@ namespace
             {
                 ui::style &st = tree.mutable_style(card);
                 st.flex_grow = 1.0f;
-                st.min_height = ui::px(0.0f);
-                st.padding = ui::edges_length::all(ui::px(12.0f));
+                st.min_height = ui::dp(0.0f);
+                st.padding = ui::edges_length::all(ui::dp(12.0f));
                 st.background = palette::surface;
                 st.border = ui::edges_length::all(ui::px(1.0f));
                 st.border_color = palette::border;
-                st.border_radius = ui::corners_length::all(ui::px(8.0f));
+                st.border_radius = ui::corners_length::all(ui::dp(8.0f));
                 st.overflow = ui::overflow_mode::hidden;
-                st.set_gap(ui::px(8.0f));
+                st.set_gap(ui::dp(8.0f));
             }
             names.emplace_back(card, "card");
             counter_node = text(card, "Clicks: 0", palette::text, false, 18.0f);
@@ -253,12 +282,13 @@ namespace
                  "and drawn through ui::renderer every frame. Text is set from a TrueType face by a small "
                  "stb_truetype provider that rasterises glyphs into an r8 atlas, which the renderer samples as a "
                  "coverage mask. Resize the window to see the layout follow it, move over the buttons to see hover, "
-                 "and click them to see click events routed through the bus.",
+                 "and click them to see click events routed through the bus. Every length is in dp, so + and - "
+                 "rescale the whole screen and the glyphs are rasterised again at the new size.",
                  palette::text_dim, true);
 
             // Status line: what the interaction state machine currently thinks.
             const ui::node status_bar = box(root);
-            tree.mutable_style(status_bar).height = ui::px(24.0f);
+            tree.mutable_style(status_bar).height = ui::dp(24.0f);
             tree.mutable_style(status_bar).align_items = ui::align::center;
             names.emplace_back(status_bar, "status");
             status_node = text(status_bar, "hover: -   focus: -", palette::text_dim);
@@ -271,13 +301,13 @@ namespace
             {
                 ui::style &st = tree.mutable_style(toast);
                 st.position = ui::position_mode::absolute;
-                st.inset.right = ui::px(24.0f);
-                st.inset.bottom = ui::px(48.0f);
-                st.padding = ui::edges_length::all(ui::px(10.0f));
+                st.inset.right = ui::dp(24.0f);
+                st.inset.bottom = ui::dp(48.0f);
+                st.padding = ui::edges_length::all(ui::dp(10.0f));
                 st.background = palette::surface;
                 st.border = ui::edges_length::all(ui::px(1.0f));
                 st.border_color = palette::border;
-                st.border_radius = ui::corners_length::all(ui::px(8.0f));
+                st.border_radius = ui::corners_length::all(ui::dp(8.0f));
                 st.opacity = 0.6f;
                 st.pointer_events = ui::pointer_mode::none;
             }
@@ -285,15 +315,177 @@ namespace
             const ui::node pill = box(toast);
             {
                 ui::style &st = tree.mutable_style(pill);
-                st.height = ui::px(32.0f);
-                st.padding = ui::edges_length::symmetric(ui::px(12.0f), ui::px(0.0f));
+                st.height = ui::dp(32.0f);
+                st.padding = ui::edges_length::symmetric(ui::dp(12.0f), ui::dp(0.0f));
                 st.background = palette::accent;
-                st.border_radius = ui::corners_length::all(ui::px(16.0f));
+                st.border_radius = ui::corners_length::all(ui::dp(16.0f));
                 st.align_items = ui::align::center;
             }
             toast_node = text(pill, "group opacity 0.6  (G toggles)", palette::text);
             toast_label = &texts.back();
+
+            // Profiler: a panel pinned under the header on the right, over the card, hidden until "P". Its label is
+            // one text node with newlines, rewritten a couple of times a second by the loop; that rewrite is itself
+            // a layout and a paint, which the numbers it shows include. `display::none` takes it out of layout
+            // entirely, so hidden it costs nothing.
+            profile_panel = box(root, ui::flex_direction::column);
+            {
+                ui::style &st = tree.mutable_style(profile_panel);
+                st.position = ui::position_mode::absolute;
+                st.inset.right = ui::dp(24.0f);
+                st.inset.top = ui::dp(84.0f);
+                st.padding = ui::edges_length::all(ui::dp(10.0f));
+                st.background = srgb(34, 37, 46, 235);
+                st.border = ui::edges_length::all(ui::px(1.0f));
+                st.border_color = palette::border;
+                st.border_radius = ui::corners_length::all(ui::dp(8.0f));
+                st.pointer_events = ui::pointer_mode::none;
+                st.display = ui::display_mode::none;
+            }
+            names.emplace_back(profile_panel, "profiler");
+            profile_node = text(profile_panel, "profiler: no frames yet", palette::text, false, 13.0f);
+            profile_label = &texts.back();
         }
+    };
+
+    // ---- profiling ------------------------------------------------------------------------------
+
+    /**
+     * @brief Wall-clock timing of the frame loop's phases, summarised over a reporting window.
+     * @details Each phase is bracketed by a `time()` guard that adds its elapsed time to the phase when it stops or
+     * goes out of scope. `report()` folds a window of frames into one `summary`: the frame rate, the average and
+     * worst whole-frame time, and for every phase how many times it ran and the average and worst time per run.
+     * Layout and paint run only on frames where something changed, so their run counts say how often the tree was
+     * dirty, and their averages are per layout, not per frame. All of it is CPU time: the GPU shows up only as the
+     * time `frame_ring::begin` spends waiting for the slot's previous frame, and as the time `present` blocks.
+     */
+    class frame_profiler
+    {
+    public:
+        using clock = std::chrono::steady_clock;
+
+        enum class phase : std::size_t
+        {
+            events,  ///< Pumping the window, polling and updating input, and every listener those drive.
+            layout,  ///< `ui::layout` over the whole tree.
+            paint,   ///< `ui::paint` into the batch.
+            atlas,   ///< Uploading a changed glyph atlas as a new texture.
+            wait,    ///< `frame_ring::begin`: blocked until the slot's previous frame has finished on the GPU.
+            acquire, ///< `acquire_next_image`.
+            record,  ///< Recording the command list, including the renderer's batch upload and layer passes.
+            submit,  ///< `submit`.
+            present, ///< `present`, ending the frame, and `pump`.
+            count,
+        };
+        static constexpr std::size_t phase_count = static_cast<std::size_t>(phase::count);
+        static constexpr std::array<const char *, phase_count> phase_names{
+            "events", "layout", "paint", "atlas", "wait", "acquire", "record", "submit", "present"};
+
+        /** @brief One phase over one window. Times are per run. */
+        struct phase_summary
+        {
+            double average_ms = 0.0;
+            double worst_ms = 0.0;
+            std::uint32_t runs = 0;
+        };
+
+        /** @brief One window of frames. */
+        struct summary
+        {
+            std::uint32_t frames = 0;
+            double seconds = 0.0; ///< How long the window was.
+            double fps = 0.0;
+            double frame_average_ms = 0.0;
+            double frame_worst_ms = 0.0;
+            std::array<phase_summary, phase_count> phases{};
+        };
+
+        /** @brief Times a phase from construction until `stop()` or destruction, whichever comes first. */
+        class guard
+        {
+        public:
+            guard(frame_profiler &owner, phase p) noexcept : owner_(&owner), phase_(p), start_(clock::now()) {}
+            guard(const guard &) = delete;
+            guard &operator=(const guard &) = delete;
+            ~guard() { stop(); }
+
+            void stop() noexcept
+            {
+                if (owner_ == nullptr)
+                    return;
+                owner_->add(phase_, clock::now() - start_);
+                owner_ = nullptr;
+            }
+
+        private:
+            frame_profiler *owner_;
+            phase phase_;
+            clock::time_point start_;
+        };
+
+        [[nodiscard]] guard time(phase p) noexcept { return guard{*this, p}; }
+
+        void add(phase p, clock::duration elapsed) noexcept { phases_[static_cast<std::size_t>(p)].add(elapsed); }
+
+        void begin_frame() noexcept { frame_start_ = clock::now(); }
+
+        void end_frame() noexcept { frame_.add(clock::now() - frame_start_); }
+
+        /**
+         * @brief Closes the window when `interval` has passed since the last one.
+         * @return True when a window closed; `out` then describes it and the counters start over.
+         */
+        bool report(clock::duration interval, summary &out) noexcept
+        {
+            const clock::time_point now = clock::now();
+            if (now - window_start_ < interval || frame_.runs == 0)
+                return false;
+
+            out.frames = frame_.runs;
+            out.seconds = std::chrono::duration<double>(now - window_start_).count();
+            out.fps = static_cast<double>(frame_.runs) / out.seconds;
+            out.frame_average_ms = ms(frame_.total) / static_cast<double>(frame_.runs);
+            out.frame_worst_ms = ms(frame_.worst);
+            for (std::size_t i = 0; i < phase_count; ++i)
+            {
+                const bucket &b = phases_[i];
+                out.phases[i] = phase_summary{
+                    .average_ms = b.runs == 0 ? 0.0 : ms(b.total) / static_cast<double>(b.runs),
+                    .worst_ms = ms(b.worst),
+                    .runs = b.runs,
+                };
+            }
+
+            frame_ = bucket{};
+            phases_.fill(bucket{});
+            window_start_ = now;
+            return true;
+        }
+
+    private:
+        struct bucket
+        {
+            clock::duration total{};
+            clock::duration worst{};
+            std::uint32_t runs = 0;
+
+            void add(clock::duration elapsed) noexcept
+            {
+                total += elapsed;
+                worst = std::max(worst, elapsed);
+                ++runs;
+            }
+        };
+
+        [[nodiscard]] static double ms(clock::duration d) noexcept
+        {
+            return std::chrono::duration<double, std::milli>(d).count();
+        }
+
+        std::array<bucket, phase_count> phases_{};
+        bucket frame_{};
+        clock::time_point frame_start_ = clock::now();
+        clock::time_point window_start_ = clock::now();
     };
 
     // ---- input -> ui bridge ---------------------------------------------------------------------
@@ -404,8 +596,9 @@ int main(int argc, char **argv)
 
     platform::window_desc desc;
     desc.title = "Catalyst - ui_sample";
-    desc.width_px = ui::px(800.0f);
-    desc.height_px = ui::px(450.0f);
+    // dp, so the window is this size in 96 DPI terms on every monitor: twice as many pixels at 200 % scale.
+    desc.width_px = ui::dp(900.0f);
+    desc.height_px = ui::dp(540.0f);
     desc.visible = true;
     desc.resizable = true;
 
@@ -493,26 +686,49 @@ int main(int argc, char **argv)
     ui::render_batch batch;
     ui::opacity_mode compositing = ui::opacity_mode::group; // What a translucent node becomes; "G" flips it.
 
-    // Lays the tree out to the swapchain's size at the window's DPI and paints it. `layout` clears the dirty flags,
-    // so the loop calls this only when something marked the tree dirty since the last frame; the batch it fills is
-    // drawn every frame regardless.
+    // The zoom multiplies the DPI scale, so every dp in the tree, text included, grows with it. "+" and "-" step it,
+    // "0" puts it back.
+    float zoom = 1.0f;
+    constexpr float zoom_step = 1.1f;
+    constexpr float zoom_min = 0.5f;
+    constexpr float zoom_max = 4.0f;
+
+    frame_profiler profiler;
+    bool show_profile = false;
+    constexpr auto report_interval = 500ms; // How often the panel is rewritten and the counters start over.
+    constexpr int log_every = 10;           // Reports per summary line in the log: one every five seconds.
+    int reports = 0;
+
+    // Lays the tree out to the swapchain's size at the window's DPI times the zoom and paints it. `layout` clears the
+    // dirty flags, so the loop calls this only when something marked the tree dirty since the last frame; the batch
+    // it fills is drawn every frame regardless.
     const auto relayout = [&](std::string_view reason)
     {
         const ui::extent viewport{static_cast<float>(sd.extent.width), static_cast<float>(sd.extent.height)};
-        const float scale = platform::dpi_scale(w);
+        const float scale = platform::dpi_scale(w) * zoom;
 
-        ui::layout(s.tree, s.root, ui::layout_params::for_viewport(viewport, scale));
+        {
+            const auto timed = profiler.time(frame_profiler::phase::layout);
+            ui::layout(s.tree, s.root, ui::layout_params::for_viewport(viewport, scale));
+        }
+        {
+            const auto timed = profiler.time(frame_profiler::phase::paint);
+            batch.clear();
+            ui::batch_builder builder(batch, ui::rect::from_pos_size(ui::point{0.0f, 0.0f}, viewport));
+            ui::paint_params params = ui::paint_params::for_viewport(viewport, scale);
+            params.compositing = compositing;
+            ui::paint(s.tree, s.root, builder, params);
+        }
 
-        batch.clear();
-        ui::batch_builder builder(batch, ui::rect::from_pos_size(ui::point{0.0f, 0.0f}, viewport));
-        ui::paint_params params = ui::paint_params::for_viewport(viewport, scale);
-        params.compositing = compositing;
-        ui::paint(s.tree, s.root, builder, params);
-
-        logging::info<example_log>(
-            "layout  {:<8} viewport={}x{} scale={:.2f} nodes={} commands={} vertices={} layers={}", reason,
-            sd.extent.width, sd.extent.height, scale, s.tree.node_count(), batch.commands.size(), batch.vertices.size(),
-            batch.layers.size());
+        // The profiler panel rewrites itself twice a second; that is noise at info level, so it logs at debug.
+        const std::string line =
+            std::format("layout  {:<8} viewport={}x{} scale={:.2f} nodes={} commands={} vertices={} layers={}", reason,
+                        sd.extent.width, sd.extent.height, scale, s.tree.node_count(), batch.commands.size(),
+                        batch.vertices.size(), batch.layers.size());
+        if (reason == "stats")
+            logging::debug<example_log>("{}", line);
+        else
+            logging::info<example_log>("{}", line);
     };
 
     // ---- the glyph atlas as a texture ----
@@ -533,6 +749,7 @@ int main(int argc, char **argv)
     {
         if (!have_font || !font.take_dirty())
             return;
+        const auto timed = profiler.time(frame_profiler::phase::atlas);
 
         rendering::texture_desc td;
         td.extent = {font.width(), font.height(), 1};
@@ -571,6 +788,27 @@ int main(int argc, char **argv)
     {
         s.status->text = std::string("hover: ") + s.name_of(ux.hovered()) + "   focus: " + s.name_of(ux.focused());
         s.tree.mark_dirty(s.status_node);
+    };
+
+    // The profiler panel's text: one line per phase, then what the batch and the atlas currently hold.
+    const auto describe = [&](const frame_profiler::summary &st)
+    {
+        std::string text = std::format("frame    {:6.2f} ms avg  {:6.2f} ms worst  {:5.0f} fps  ({} frames)\n",
+                                       st.frame_average_ms, st.frame_worst_ms, st.fps, st.frames);
+        for (std::size_t i = 0; i < frame_profiler::phase_count; ++i)
+        {
+            const frame_profiler::phase_summary &p = st.phases[i];
+            text += std::format("{:<8} {:6.2f} ms avg  {:6.2f} ms worst  x{}\n", frame_profiler::phase_names[i],
+                                p.average_ms, p.worst_ms, p.runs);
+        }
+        text += std::format("batch    {} nodes  {} commands  {} vertices  {} indices  {} layers\n", s.tree.node_count(),
+                            batch.commands.size(), batch.vertices.size(), batch.indices.size(), batch.layers.size());
+        if (have_font)
+            text += std::format("atlas    {}x{}  {} glyphs  {} dropped\n", font.width(), font.height(), font.cached(),
+                                font.dropped());
+        const float dpi = platform::dpi_scale(w);
+        text += std::format("scale    dpi {:.2f} x zoom {:.2f} = {:.2f}", dpi, zoom, dpi * zoom);
+        return text;
     };
 
     bool running = true;
@@ -689,25 +927,58 @@ int main(int argc, char **argv)
                                            input::key_name(static_cast<input::key_code>(e.key)), s.name_of(e.target));
         });
 
-    logging::info<example_log>("UI sample: {} nodes. Move over and click the buttons; resize the window; Escape quits.",
+    logging::info<example_log>("UI sample: {} nodes. Move over and click the buttons; resize the window; + and - zoom, "
+                               "0 resets; P shows the profiler; Escape quits.",
                                s.tree.node_count());
 
     while (running && platform::is_valid(w))
     {
+        profiler.begin_frame();
+
         // Order matters: clear this frame's edges, let the window fill them (which drives the listeners above), poll
         // what has no window, then evaluate. Only then does the tree know whether it needs a new layout.
-        in.new_frame();
-        platform::pump_events();
-        in.poll();
-        in.update();
+        {
+            const auto timed = profiler.time(frame_profiler::phase::events);
+            in.new_frame();
+            platform::pump_events();
+            in.poll();
+            in.update();
+        }
 
-        if (in.state().was_key_pressed(input::key_code::escape))
+        const auto &keys = in.state();
+        if (keys.was_key_pressed(input::key_code::escape))
             running = false;
         if (!running)
             break;
 
+        // Zoom in 10 % steps. The new scale reaches the tree through `relayout`, so all it takes is a dirty root.
+        {
+            float next = zoom;
+            if (keys.was_key_pressed(input::key_code::equal) || keys.was_key_pressed(input::key_code::keypad_plus))
+                next = std::min(zoom * zoom_step, zoom_max);
+            if (keys.was_key_pressed(input::key_code::minus) || keys.was_key_pressed(input::key_code::keypad_minus))
+                next = std::max(zoom / zoom_step, zoom_min);
+            if (keys.was_key_pressed(input::key_code::digit_0))
+                next = 1.0f;
+            if (next != zoom)
+            {
+                zoom = next;
+                s.tree.mark_dirty(s.root);
+                dirty_reason = "zoom";
+            }
+        }
+
+        if (keys.was_key_pressed(input::key_code::p))
+        {
+            show_profile = !show_profile;
+            s.tree.mutable_style(s.profile_panel).display =
+                show_profile ? ui::display_mode::flex : ui::display_mode::none;
+            s.tree.mark_dirty(s.profile_panel);
+            dirty_reason = "profiler";
+        }
+
         // Flip the toast between group opacity (a layer the renderer composites) and per-node alpha scaling.
-        if (in.state().was_key_pressed(input::key_code::g))
+        if (keys.was_key_pressed(input::key_code::g))
         {
             const bool group = compositing != ui::opacity_mode::group;
             compositing = group ? ui::opacity_mode::group : ui::opacity_mode::multiply;
@@ -737,7 +1008,9 @@ int main(int argc, char **argv)
             refresh(dirty_reason);
 
         // ---- draw the batch ----
+        auto waiting = profiler.time(frame_profiler::phase::wait);
         auto f = frames->begin(); // Waits for the frame three back, which is what makes this slot's buffers free.
+        waiting.stop();
         if (!f)
         {
             logging::error<example_log>("frame_ring: {}", f.error().message());
@@ -758,7 +1031,9 @@ int main(int argc, char **argv)
             lists.push_back(rendering::create_command_list(f->pool(), "ui_sample frame"));
         const rendering::command_list cl = lists[f->slot()];
 
+        auto acquiring = profiler.time(frame_profiler::phase::acquire);
         rendering::texture back_buffer = rendering::acquire_next_image(sc);
+        acquiring.stop();
         if (!back_buffer)
         {
             // Out of date: the next iteration's client-size check recreates it. Nothing was submitted this frame.
@@ -774,17 +1049,22 @@ int main(int argc, char **argv)
             .clear = {palette::background.r, palette::background.g, palette::background.b, 1.0f},
         };
 
-        rendering::begin_recording(cl);
-        // Layers (group opacity) are drawn offscreen before the swapchain pass; the batch is uploaded here too.
-        if (!ui_renderer->prepare(cl, batch, sd.extent, f->slot()))
-            logging::warn<example_log>("ui renderer: could not prepare this frame's batch");
-        rendering::begin_render_pass(cl, {.color_attachments = std::span{&color, 1}, .debug_name = "ui"});
-        if (!ui_renderer->render(cl, batch, sd.extent, f->slot()))
-            logging::warn<example_log>("ui renderer: could not draw this frame's batch");
-        rendering::end_render_pass(cl);
-        rendering::end_recording(cl);
+        {
+            const auto timed = profiler.time(frame_profiler::phase::record);
+            rendering::begin_recording(cl);
+            // Layers (group opacity) are drawn offscreen before the swapchain pass; the batch is uploaded here too.
+            if (!ui_renderer->prepare(cl, batch, sd.extent, f->slot()))
+                logging::warn<example_log>("ui renderer: could not prepare this frame's batch");
+            rendering::begin_render_pass(cl, {.color_attachments = std::span{&color, 1}, .debug_name = "ui"});
+            if (!ui_renderer->render(cl, batch, sd.extent, f->slot()))
+                logging::warn<example_log>("ui renderer: could not draw this frame's batch");
+            rendering::end_render_pass(cl);
+            rendering::end_recording(cl);
+        }
 
+        auto submitting = profiler.time(frame_profiler::phase::submit);
         const auto done = rendering::submit(graphics, cl);
+        submitting.stop();
         if (!done)
         {
             logging::error<example_log>("submit failed: {}", done.error().message());
@@ -794,9 +1074,39 @@ int main(int argc, char **argv)
             continue;
         }
 
-        rendering::present(sc);
-        f->end(*done);
-        rendering::pump(dev); // Retires what the GPU has finished with, including buffers the renderer outgrew.
+        {
+            const auto timed = profiler.time(frame_profiler::phase::present);
+            rendering::present(sc);
+            f->end(*done);
+            rendering::pump(dev); // Retires what the GPU has finished with, including buffers the renderer outgrew.
+        }
+        profiler.end_frame();
+
+        // ---- report ----
+        // The panel is rewritten here, after this frame's refresh, so the rewrite is laid out on the next frame and
+        // shows up in the window after that one.
+        frame_profiler::summary stats;
+        if (profiler.report(report_interval, stats))
+        {
+            if (show_profile)
+            {
+                s.profile_label->text = describe(stats);
+                s.tree.mark_dirty(s.profile_node);
+                dirty_reason = "stats";
+            }
+            if (++reports % log_every == 0)
+            {
+                const auto &layout_phase = stats.phases[static_cast<std::size_t>(frame_profiler::phase::layout)];
+                const auto &paint_phase = stats.phases[static_cast<std::size_t>(frame_profiler::phase::paint)];
+                const auto &wait_phase = stats.phases[static_cast<std::size_t>(frame_profiler::phase::wait)];
+                logging::info<example_log>(
+                    "profile frame {:.2f} ms avg {:.2f} ms worst {:.0f} fps | layout {:.2f} ms x{} | paint {:.2f} ms "
+                    "x{} | wait {:.2f} ms | commands={} vertices={}",
+                    stats.frame_average_ms, stats.frame_worst_ms, stats.fps, layout_phase.average_ms, layout_phase.runs,
+                    paint_phase.average_ms, paint_phase.runs, wait_phase.average_ms, batch.commands.size(),
+                    batch.vertices.size());
+            }
+        }
     }
 
     // Teardown in dependency order: nothing may be in flight, the pools go before the device, and so does the renderer.

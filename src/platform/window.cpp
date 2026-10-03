@@ -215,9 +215,9 @@ namespace catalyst::platform
      * processed and dispatched to the appropriate handlers. The timeout parameter allows the function to return after a
      * certain amount of time if no events have occurred, preventing indefinite blocking. This can be useful for
      * applications that want to perform periodic updates even when no user input or other events are occurring.
-     * @param timeout_ms The maximum amount of time (in milliseconds) to wait for events before returning. If set to 0,
-     * the function will block indefinitely until an event is available. If set to a positive value, the function will
-     * return after the specified time if no events have occurred.
+     * @param timeout_ms The maximum amount of time (in milliseconds) to wait for events before returning. If set to
+     * 0xFFFFFFFF, the function will block indefinitely until an event is available. If set to zero it polls and returns
+     * at once. Any other value makes the function return after that time if no events have occurred.
      * @return A boolean value indicating whether any events were processed during the wait period. True if events were
      * processed, false if the timeout elapsed without any events occurring.
      */
