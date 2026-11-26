@@ -9,12 +9,15 @@
 
 #pragma once
 
+#include <catalyst/platform/clipboard.hpp>
 #include <catalyst/platform/dialog.hpp>
 #include <catalyst/platform/monitor.hpp>
 #include <catalyst/platform/window.hpp>
 
 #include <expected>
 #include <filesystem>
+#include <string>
+#include <string_view>
 #include <vector>
 
 /**
@@ -239,5 +242,30 @@ namespace catalyst::platform::detail
      * @return The button chosen, or dialog_error::unsupported / dialog_error::failed. Never dialog_error::cancelled.
      */
     [[nodiscard]] std::expected<message_box_result, dialog_error> show_message_box(const message_box_desc &desc);
+
+    // ----------------------
+    // Clipboard backend API
+    // ----------------------
+
+    /**
+     * @fn get_clipboard_text
+     * @brief Reads the clipboard's text as UTF-8, as the platform stores it. See platform::get_clipboard_text.
+     * @details The caller (clipboard.cpp) truncates at the first NUL and normalises line breaks, so a backend returns
+     * the text as it found it, in whatever convention the program that wrote it used, and must not do either itself.
+     * @return The text, or clipboard_error::no_text / busy / failed.
+     */
+    [[nodiscard]] std::expected<std::string, clipboard_error> get_clipboard_text();
+
+    /**
+     * @fn set_clipboard_text
+     * @brief Replaces the clipboard's contents with text. See platform::set_clipboard_text.
+     * @param text Canonical text: UTF-8 (or what the application passed for it), no NUL, and every line break a lone
+     * "\n". A backend whose platform convention differs converts it (to_crlf_line_breaks in clipboard_text.hpp).
+     * @return Nothing, or clipboard_error::busy / failed. Never clipboard_error::no_text.
+     */
+    [[nodiscard]] std::expected<void, clipboard_error> set_clipboard_text(std::string_view text);
+
+    /** @brief Whether the clipboard holds text. See platform::has_clipboard_text. */
+    [[nodiscard]] bool has_clipboard_text() noexcept;
 
 } // namespace catalyst::platform::detail

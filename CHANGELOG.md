@@ -31,6 +31,16 @@ release may break the API and a patch release may not.
   multi-threaded one (as the audio backends leave the thread that opens a stream) has the dialog
   shown from a helper thread while it keeps dispatching its own window messages. The null backend
   returns `unsupported`. New `catalyst.platform.dialog` test (null backend).
+- `catalyst::platform` clipboard (`<catalyst/platform/clipboard.hpp>`): `get_clipboard_text`,
+  `set_clipboard_text` and `has_clipboard_text`, UTF-8, callable from any thread and needing no
+  window. Line breaks are normalised at the boundary -- reads come back with `\n` whatever the
+  writer used, writes go out in the platform convention (`\r\n` on Windows) -- and text ends at the
+  first NUL. Failures are a `clipboard_error` of `no_text`, `busy` (another program holds the
+  clipboard past a 50 ms retry budget) or `failed`. The Win32 backend uses `CF_UNICODETEXT` and
+  opens the clipboard with a per-call message-only owner window, for reads too, because an open
+  with a null owner does not exclude other programs. The null backend keeps an in-process
+  clipboard, so copy and paste round-trip in headless tests. New `catalyst.platform.clipboard`
+  test (null backend).
 
 ### Changed
 
